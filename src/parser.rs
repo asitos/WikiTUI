@@ -123,6 +123,43 @@ fn process_element(
                 link_target: None,
             });
         }
+        // images
+        "img" => {
+            let alt_text = element
+                .value()
+                .attr("alt")
+                .or_else(|| element.value().attr("title"))
+                .unwrap_or("image");
+
+            let clean_alt = alt_text.trim();
+            let label = if clean_alt.is_empty() {
+                "[image]".to_string()
+            } else {
+                format!("[image: {}]", clean_alt)
+            };
+
+            let img_target = element
+                .value()
+                .attr("src")
+                .and_then(|src| {
+                    if src.starts_with("//") {
+                        Some(format!("https:{}", src))
+                    } else if src.starts_with("http") {
+                        Some(src.to_string())
+                    } else {
+                        extract_title_from_href(src)
+                    }
+                })
+                .or_else(|| current_link.clone());
+
+            current_tokens.push(StyledToken {
+                text: format!(" {} ", label),
+                style: Style::default()
+                    .fg(theme::BEIGE)
+                    .add_modifier(Modifier::ITALIC),
+                link_target: img_target,
+            });
+        }
         _ => {}
     }
 

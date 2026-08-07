@@ -10,6 +10,18 @@ pub enum InputMode {
     LocalSearch,
 }
 
+fn is_article_link(title: &str) -> bool {
+    let lower = title.to_lowercase();
+    !lower.starts_with("http://")
+        && !lower.starts_with("https://")
+        && !lower.ends_with(".jpg")
+        && !lower.ends_with(".png")
+        && !lower.ends_with(".svg")
+        && !lower.ends_with(".gif")
+        && !lower.ends_with(".jpeg")
+        && !lower.ends_with(".webp")
+}
+
 #[derive(Clone, Debug)]
 pub enum PaneContent {
     Empty,
@@ -240,7 +252,7 @@ impl App {
             }
         };
 
-        if let Some(title) = selected_title {
+        if let Some(title) = selected_title.filter(|t| is_article_link(t)) {
             let active_pane = self.active_pane_mut();
             active_pane.is_loading = true;
             active_pane.selected_link_idx = None;
@@ -265,7 +277,7 @@ impl App {
             }
         };
 
-        if let Some(title) = selected_title {
+        if let Some(title) = selected_title.filter(|t| is_article_link(t)) {
             self.new_tab();
             let pane_id = self.active_pane().id;
             let active_pane = self.active_pane_mut();
