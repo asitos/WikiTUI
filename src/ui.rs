@@ -4,10 +4,10 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
     prelude::{Line, Span, Style, Stylize},
-    widgets::{Block, Paragraph, Wrap},
+    widgets::{Block, Paragraph},
 };
 
-pub fn draw(f: &mut Frame, app: &App) {
+pub fn draw(f: &mut Frame, app: &mut App) {
     let size = f.size();
 
     let chunks = Layout::default()
@@ -44,10 +44,12 @@ pub fn draw(f: &mut Frame, app: &App) {
 
     // status bar
     let status_text = match app.input_mode {
+        // for when in search mode
         InputMode::Search => format!(
             " search: {}_ | press enter to submit, esc to cancel ",
             app.search_input
         ),
+        // normally
         InputMode::Normal => {
             "ctrl-s: search | j/k: navigate/scroll | enter: open article | ctrl-w s/v: split | alt-h/l: tabs | q: quit".to_string()
         }
@@ -61,12 +63,18 @@ pub fn draw(f: &mut Frame, app: &App) {
     f.render_widget(status_paragraph, status_area);
 
     // panes
-    let active_tab = app.active_tab();
-    let rects = active_tab.layout_root.compute_rects(main_area);
+    let active_tab_idx = app.active_tab_idx;
+    let rects = app.tabs[active_tab_idx]
+        .layout_root
+        .compute_rects(main_area);
+    let active_pane_idx = app.tabs[active_tab_idx].active_pane_idx;
 
     for (pane_idx, rect) in rects {
-        let is_active = pane_idx == active_tab.active_pane_idx;
-        let pane = &active_tab.panes[pane_idx];
+        let is_active = pane_idx == active_pane_idx;
+        let content_width = rect.width.saturating_sub(2) as usize;
+
+        let pane = &mut app.tabs[active_tab_idx].panes[pane_idx];
+        pane.ensure_parsed_width(content_width);
 
         let border_color = if is_active {
             theme::PINK
@@ -92,7 +100,7 @@ pub fn draw(f: &mut Frame, app: &App) {
 
         if pane.is_loading {
             let loading_p = Paragraph::new(" loading wikipedia data... ")
-                .fg(theme::GOLD)
+                .fg(theme::YELLOW)
                 .block(block);
             f.render_widget(loading_p, rect);
             continue;
@@ -142,10 +150,9 @@ pub fn draw(f: &mut Frame, app: &App) {
                     f.render_widget(results_p, rect);
                 }
             }
-            PaneContent::ArticleText { text, .. } => {
-                let paragraph = Paragraph::new(text.as_str())
+            PaneContent::ArticleText { parsed_doc, .. } => {
+                let paragraph = Paragraph::new(parsed_doc.lines.clone())
                     .block(block)
-                    .wrap(Wrap { trim: true })
                     .scroll((pane.scroll_offset as u16, 0));
                 f.render_widget(paragraph, rect);
             }

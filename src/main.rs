@@ -14,6 +14,7 @@ use tokio::sync::{Mutex, mpsc};
 mod api;
 mod app;
 mod layout;
+mod parser;
 mod theme;
 mod ui;
 
@@ -66,7 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             app.handle_network_event(ev);
         }
 
-        terminal.draw(|f| ui::draw(f, &app))?;
+        terminal.draw(|f| ui::draw(f, &mut app))?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())

@@ -1,5 +1,6 @@
 use crate::api::{NetworkCommand, NetworkEvent, SearchResultItem};
 use crate::layout::{LayoutNode, SplitDirection};
+use crate::parser::{parse_wikipedia_html, ParsedDocument};
 use tokio::sync::mpsc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -17,7 +18,9 @@ pub enum PaneContent {
     },
     ArticleText {
         title: String,
-        text: String,
+        raw_html: String,
+        parsed_doc: ParsedDocument,
+        last_width: usize,
     },
     Error(String),
 }
@@ -39,6 +42,22 @@ impl Pane {
             selected_idx: 0,
             scroll_offset: 0,
             is_loading: false,
+        }
+    }
+
+    pub fn ensure_parsed_width(&mut self, width: usize) {
+        if let PaneContent::ArticleText {
+            raw_html,
+            parsed_doc,
+            last_width,
+            ..
+        } = &mut self.content
+        {
+            if *last_width == width {
+                return;
+            }
+            *parsed_doc = parse_wikipedia_html(raw_html, width);
+            *last_width = width;
         }
     }
 }
@@ -157,8 +176,8 @@ impl App {
                     pane.selected_idx = (pane.selected_idx + 1).min(items.len() - 1);
                 }
             }
-            PaneContent::ArticleText { text, .. } => {
-                let lines_count = text.lines().count();
+            PaneContent::ArticleText { parsed_doc, .. } => {
+                let lines_count = parsed_doc.lines.len();
                 if pane.scroll_offset + 1 < lines_count {
                     pane.scroll_offset += 1;
                 }
@@ -229,9 +248,13 @@ impl App {
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     pane.is_loading = false;
                     pane.scroll_offset = 0;
+                    let initial_width = 80;
+                    let parsed_doc = parse_wikipedia_html(&content, initial_width);
                     pane.content = PaneContent::ArticleText {
                         title,
-                        text: content,
+                        raw_html: content,
+                        parsed_doc,
+                        last_width: initial_width,
                     };
                 }
             }

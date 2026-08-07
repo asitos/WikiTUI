@@ -46,22 +46,6 @@ struct WikiSearchResponse {
     query: Option<WikiSearchQuery>,
 }
 
-#[derive(Deserialize)]
-struct WikiPageExtract {
-    _title: Option<String>,
-    extract: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct WikiQueryPages {
-    pages: std::collections::HashMap<String, WikiPageExtract>,
-}
-
-#[derive(Deserialize)]
-struct WikiExtractResponse {
-    query: Option<WikiQueryPages>,
-}
-
 pub async fn run_worker(
     cmd_rx: Arc<Mutex<mpsc::UnboundedReceiver<NetworkCommand>>>,
     ev_tx: Arc<Mutex<mpsc::UnboundedSender<NetworkEvent>>>,
@@ -159,34 +143,52 @@ async fn search_wikipedia(
     Ok(items)
 }
 
+#[derive(Deserialize)]
+struct WikiParseText {
+    #[serde(rename = "*")]
+    html: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct WikiParseObject {
+    text: Option<WikiParseText>,
+}
+
+#[derive(Deserialize)]
+struct WikiParseResponse {
+    parse: Option<WikiParseObject>,
+}
+
 async fn fetch_article_wikipedia(client: &reqwest::Client, title: &str) -> Result<String, String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let res = client
         .get(url)
         .query(&[
-            ("action", "query"),
-            ("prop", "extracts"),
-            ("explaintext", "1"),
-            ("titles", title),
+            ("action", "parse"),
+            ("page", title),
+            ("prop", "text"),
             ("format", "json"),
-            ("exintro", "0"),
+            ("disableeditsection", "1"),
+            ("disabletoc", "1"),
         ])
         .send()
         .await
         .map_err(|e| format!("network error: {}", e))?;
 
-    let extract_resp: WikiExtractResponse = res
+    let parse_resp: WikiParseResponse = res
         .json()
         .await
         .map_err(|e| format!("parse error: {}", e))?;
 
-    if let Some(q) = extract_resp.query {
-        for (_page_id, page) in q.pages {
-            if let Some(extract) = page.extract.filter(|e| !e.trim().is_empty()) {
-                return Ok(extract);
-            }
-        }
-    }
+    let html = parse_resp
+        .parse
+        .and_then(|p| p.text)
+        .and_then(|t| t.html)
+        .filter(|h| !h.trim().is_empty());
 
-    Err("article text not found".to_string())
+    if let Some(h) = html {
+        Ok(h)
+    } else {
+        Err("article HTML content not found".to_string())
+    }
 }
