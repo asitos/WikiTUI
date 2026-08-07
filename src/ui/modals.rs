@@ -6,7 +6,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{block::Title, Block, Clear, Paragraph},
+    widgets::{Block, Clear, Paragraph, block::Title},
 };
 
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

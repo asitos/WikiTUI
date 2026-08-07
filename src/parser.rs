@@ -154,8 +154,7 @@ fn process_element(
         }
         // links
         "a" => {
-            current_style = current_style
-                .fg(theme::BLUE);
+            current_style = current_style.fg(theme::BLUE);
             if let Some(href) = element.value().attr("href") {
                 if let Some(title) = extract_title_from_href(href) {
                     current_link = Some(title);

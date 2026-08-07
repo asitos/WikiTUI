@@ -1,6 +1,6 @@
 use crate::api::NetworkCommand;
 use crate::app::pane::PaneContent;
-use crate::app::{is_article_link, App};
+use crate::app::{App, is_article_link};
 use crate::layout::SplitDirection;
 
 impl App {
@@ -311,7 +311,11 @@ impl App {
         pane.scroll_offset = 0;
         pane.selected_idx = 0;
         if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
-            pane.selected_link_idx = if !parsed_doc.links.is_empty() { Some(0) } else { None };
+            pane.selected_link_idx = if !parsed_doc.links.is_empty() {
+                Some(0)
+            } else {
+                None
+            };
         }
     }
 

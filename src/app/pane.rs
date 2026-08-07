@@ -1,5 +1,5 @@
 use crate::api::SearchResultItem;
-use crate::parser::{parse_wikipedia_html, ParsedDocument};
+use crate::parser::{ParsedDocument, parse_wikipedia_html};
 
 #[derive(Clone, Debug)]
 pub enum PaneContent {

@@ -119,7 +119,11 @@ impl App {
                     pane.toc_focused = false;
                     let initial_width = 80;
                     let parsed_doc = parse_wikipedia_html(&content, initial_width);
-                    let initial_link_idx = if !parsed_doc.links.is_empty() { Some(0) } else { None };
+                    let initial_link_idx = if !parsed_doc.links.is_empty() {
+                        Some(0)
+                    } else {
+                        None
+                    };
                     pane.content = PaneContent::ArticleText {
                         title,
                         raw_html: content,

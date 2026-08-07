@@ -1,6 +1,6 @@
 use crate::api::{NetworkCommand, SearchResultItem};
-use crate::app::pane::{LocalMatch, PaneContent};
 use crate::app::App;
+use crate::app::pane::{LocalMatch, PaneContent};
 
 impl App {
     pub fn enter_search_mode(&mut self) {
