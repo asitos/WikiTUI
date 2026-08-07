@@ -7,6 +7,7 @@ use tokio::sync::mpsc;
 pub enum InputMode {
     Normal,
     Search,
+    LocalSearch,
 }
 
 #[derive(Clone, Debug)]
@@ -25,6 +26,12 @@ pub enum PaneContent {
     Error(String),
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct LocalMatch {
+    pub line_idx: usize,
+    pub span_idx: usize,
+}
+
 #[derive(Clone, Debug)]
 pub struct Pane {
     pub id: usize,
@@ -32,6 +39,9 @@ pub struct Pane {
     pub selected_idx: usize,
     pub scroll_offset: usize,
     pub selected_link_idx: Option<usize>,
+    pub local_search_query: String,
+    pub local_matches: Vec<LocalMatch>,
+    pub selected_match_idx: Option<usize>,
     pub is_loading: bool,
 }
 
@@ -43,6 +53,9 @@ impl Pane {
             selected_idx: 0,
             scroll_offset: 0,
             selected_link_idx: None,
+            local_search_query: String::new(),
+            local_matches: Vec::new(),
+            selected_match_idx: None,
             is_loading: false,
         }
     }
@@ -311,6 +324,73 @@ impl App {
                 pane.scroll_offset = link_line.saturating_sub(5);
             }
         }
+    }
+
+    pub fn enter_local_search_mode(&mut self) {
+        self.input_mode = InputMode::LocalSearch;
+        let pane = self.active_pane_mut();
+        pane.local_search_query.clear();
+        pane.local_matches.clear();
+        pane.selected_match_idx = None;
+    }
+
+    pub fn update_local_search(&mut self) {
+        let pane = self.active_pane_mut();
+        pane.local_matches.clear();
+        pane.selected_match_idx = None;
+
+        let query = pane.local_search_query.trim().to_lowercase();
+        if query.is_empty() {
+            return;
+        }
+
+        // iterate every line to look for a match (case insensitive)
+        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            for (line_idx, line) in parsed_doc.lines.iter().enumerate() {
+                for (span_idx, span) in line.spans.iter().enumerate() {
+                    if span.content.to_lowercase().contains(&query) {
+                        pane.local_matches.push(LocalMatch { line_idx, span_idx });
+                    }
+                }
+            }
+            if !pane.local_matches.is_empty() {
+                pane.selected_match_idx = Some(0);
+                pane.scroll_offset = pane.local_matches[0].line_idx;
+            }
+        }
+    }
+
+    pub fn next_local_match(&mut self) {
+        let pane = self.active_pane_mut();
+        if pane.local_matches.is_empty() {
+            return;
+        }
+        let next_idx = match pane.selected_match_idx {
+            Some(idx) => (idx + 1) % pane.local_matches.len(),
+            None => 0,
+        };
+        pane.selected_match_idx = Some(next_idx);
+        pane.scroll_offset = pane.local_matches[next_idx].line_idx;
+    }
+
+    pub fn prev_local_match(&mut self) {
+        let pane = self.active_pane_mut();
+        if pane.local_matches.is_empty() {
+            return;
+        }
+        let len = pane.local_matches.len();
+        let prev_idx = match pane.selected_match_idx {
+            Some(idx) => {
+                if idx == 0 {
+                    len - 1
+                } else {
+                    idx - 1
+                }
+            }
+            None => len - 1,
+        };
+        pane.selected_match_idx = Some(prev_idx);
+        pane.scroll_offset = pane.local_matches[prev_idx].line_idx;
     }
 
     // network event handling

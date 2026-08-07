@@ -49,15 +49,32 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             " search: {}_ | press enter to submit, esc to cancel ",
             app.search_input
         ),
+        // for when in local search mode
+        InputMode::LocalSearch => {
+            let active_pane = app.active_pane();
+            let matches_info = if active_pane.local_matches.is_empty() {
+                "no matches".to_string()
+            } else {
+                format!(
+                    "match {}/{}",
+                    active_pane.selected_match_idx.unwrap_or(0) + 1,
+                    active_pane.local_matches.len()
+                )
+            };
+            format!(
+                " /: {}_ | {} | n: next | N: prev | esc: exit ",
+                active_pane.local_search_query, matches_info
+            )
+        }
         // normally
         InputMode::Normal => {
-            "ctrl-s: search | tab/backtab: links | enter/t: open (new tab) | ctrl-w s/v: split | alt-h/l: tabs | q: quit".to_string()
+            "ctrl-s: search | /: local search | tab/backtab: links | enter/t: open (new tab) | ctrl-w s/v: split | alt-h/l: tabs | q: quit".to_string()
         }
     };
-    let status_style = if app.input_mode == InputMode::Search {
-        Style::default().fg(theme::BEIGE).bold()
-    } else {
-        Style::default().fg(theme::GREY)
+    let status_style = match app.input_mode {
+        InputMode::Search => Style::default().fg(theme::BEIGE).bold(),
+        InputMode::LocalSearch => Style::default().fg(theme::YELLOW).bold(),
+        InputMode::Normal => Style::default().fg(theme::GREY),
     };
     let status_paragraph = Paragraph::new(status_text).style(status_style);
     f.render_widget(status_paragraph, status_area);
@@ -169,6 +186,34 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                                 .bg(theme::VIOLET)
                                 .fg(theme::FG)
                                 .bold();
+                        }
+                    }
+                }
+
+                // highlight local search matches
+                if !pane.local_search_query.trim().is_empty() {
+                    let active_match = pane
+                        .selected_match_idx
+                        .and_then(|idx| pane.local_matches.get(idx));
+
+                    for (m_idx, m) in pane.local_matches.iter().enumerate() {
+                        let span = rendered_lines
+                            .get_mut(m.line_idx)
+                            .and_then(|line| line.spans.get_mut(m.span_idx));
+
+                        if let Some(span) = span {
+                            let is_active_match = active_match.is_some_and(|active| {
+                                active.line_idx == m.line_idx
+                                    && active.span_idx == m.span_idx
+                                    && pane.selected_match_idx == Some(m_idx)
+                            });
+
+                            if is_active_match {
+                                span.style =
+                                    Style::default().bg(theme::YELLOW).fg(theme::BG).bold();
+                            } else {
+                                span.style = Style::default().bg(theme::BEIGE).fg(theme::BG);
+                            }
                         }
                     }
                 }

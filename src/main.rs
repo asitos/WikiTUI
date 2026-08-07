@@ -77,6 +77,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if event::poll(timeout)? {
             match event::read()? {
                 Event::Key(key) if key.kind == event::KeyEventKind::Press => match app.input_mode {
+                    InputMode::LocalSearch => match key.code {
+                        KeyCode::Char(c) => {
+                            let pane = app.active_pane_mut();
+                            pane.local_search_query.push(c);
+                            app.update_local_search();
+                        }
+                        KeyCode::Backspace => {
+                            let pane = app.active_pane_mut();
+                            pane.local_search_query.pop();
+                            app.update_local_search();
+                        }
+                        KeyCode::Enter | KeyCode::Esc => {
+                            app.input_mode = InputMode::Normal;
+                        }
+                        _ => {}
+                    },
                     InputMode::Search => match key.code {
                         KeyCode::Char(c) => {
                             app.type_search_char(c);
@@ -108,6 +124,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             match key.code {
                                 KeyCode::Char('q') => {
                                     app.quit();
+                                }
+                                KeyCode::Char('/') => {
+                                    app.enter_local_search_mode();
+                                }
+                                KeyCode::Char('n') => {
+                                    app.next_local_match();
+                                }
+                                KeyCode::Char('N') => {
+                                    app.prev_local_match();
                                 }
                                 KeyCode::Char('s')
                                     if key.modifiers.contains(KeyModifiers::CONTROL) =>
