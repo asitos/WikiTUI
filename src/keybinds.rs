@@ -91,6 +91,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         app.enter_search_mode();
                     }
+                    KeyCode::Char('i') => {
+                        app.edit_search_mode();
+                    }
                     KeyCode::Char('s') => {
                         app.activate_selected_in_split(SplitDirection::Horizontal);
                     }

@@ -116,6 +116,7 @@ pub struct App {
     pub active_tab_idx: usize,
     pub input_mode: InputMode,
     pub search_input: String,
+    pub search_opens_new_tab: bool,
     pub waiting_for_split_cmd: bool,
     next_pane_id: usize,
     cmd_tx: mpsc::UnboundedSender<NetworkCommand>,
@@ -129,6 +130,7 @@ impl App {
             active_tab_idx: 0,
             input_mode: InputMode::Normal,
             search_input: String::new(),
+            search_opens_new_tab: true,
             waiting_for_split_cmd: false,
             next_pane_id: 1,
             cmd_tx,
@@ -162,7 +164,22 @@ impl App {
     // search mode
     pub fn enter_search_mode(&mut self) {
         self.input_mode = InputMode::Search;
+        self.search_opens_new_tab = true;
         self.search_input.clear();
+    }
+
+    pub fn edit_search_mode(&mut self) {
+        self.input_mode = InputMode::Search;
+        self.search_opens_new_tab = false;
+        let existing_query = match &self.active_pane().content {
+            PaneContent::SearchResults { query, .. } => Some(query.clone()),
+            _ => None,
+        };
+        if let Some(query) = existing_query {
+            self.search_input = query;
+        } else {
+            self.search_input.clear();
+        }
     }
 
     pub fn exit_search_mode(&mut self) {
@@ -184,12 +201,15 @@ impl App {
 
     pub fn submit_search(&mut self) {
         let query = self.search_input.trim().to_string();
+        let open_new_tab = self.search_opens_new_tab;
         self.exit_search_mode();
 
         if !query.is_empty() {
-            let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
-            if !is_empty {
-                self.new_tab();
+            if open_new_tab {
+                let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
+                if !is_empty {
+                    self.new_tab();
+                }
             }
             let active_pane = self.active_pane_mut();
             let pane_id = active_pane.id;
