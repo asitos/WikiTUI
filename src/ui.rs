@@ -61,9 +61,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     // status bar
     let status_text = match app.input_mode {
-        // for when in search mode
         InputMode::Search => " search wikipedia ".to_string(),
-        // for when in local search mode
         InputMode::LocalSearch => {
             let active_pane = app.active_pane();
             let matches_info = if active_pane.local_matches.is_empty() {
@@ -85,7 +83,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         }
         // normally
         InputMode::Normal => {
-            "ctrl-s: search | ?: help | q: quit".to_string()
+            if app.active_pane().toc_focused {
+                "j/k: navigate contents | enter: jump | o: close".to_string()
+            } else {
+                "ctrl-s: search | o: contents | ?: help | q: quit".to_string()
+            }
         }
     };
     let status_style = match app.input_mode {
@@ -134,7 +136,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
         let block = Block::bordered()
             .border_style(Style::default().fg(border_color))
-            .title(title);
+            .title(title.clone());
 
         if pane.is_loading {
             let loading_p = Paragraph::new(" loading wikipedia data... ")
@@ -203,7 +205,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     for &span_idx in &link.span_indices {
                         if let Some(span) = line.spans.get_mut(span_idx) {
                             span.style = Style::default()
-                                // focused link
                                 .fg(theme::BLUE)
                                 .bold()
                                 .add_modifier(Modifier::UNDERLINED);
@@ -243,6 +244,64 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     .block(block)
                     .scroll((pane.scroll_offset as u16, 0));
                 f.render_widget(paragraph, rect);
+
+                if is_active && pane.show_toc && !parsed_doc.headings.is_empty() {
+                    let toc_area = centered_rect(60, 60, rect);
+                    f.render_widget(Clear, toc_area);
+
+                    let toc_block = Block::bordered()
+                        .border_style(Style::default().fg(theme::LIME))
+                        .title(" contents ")
+                        .title(
+                            ratatui::widgets::block::Title::from(" enter: jump | o: close ")
+                                .position(ratatui::widgets::block::Position::Bottom)
+                                .alignment(ratatui::layout::Alignment::Right),
+                        );
+
+                    let current_scroll = pane.scroll_offset;
+                    let active_heading_idx = parsed_doc
+                        .headings
+                        .iter()
+                        .rposition(|h| h.line_idx <= current_scroll)
+                        .unwrap_or(0);
+
+                    let selected_idx = pane.selected_toc_idx.unwrap_or(active_heading_idx);
+
+                    let mut toc_lines = Vec::new();
+                    for (idx, h) in parsed_doc.headings.iter().enumerate() {
+                        let is_selected = idx == selected_idx;
+                        let indent_len = ((h.level.saturating_sub(1)) * 2) as usize;
+                        let indent = " ".repeat(indent_len);
+                        let prefix = if is_selected { "> " } else { "  " };
+
+                        let style = if is_selected {
+                            Style::default().fg(theme::LIME).bold()
+                        } else {
+                            Style::default().fg(theme::FG)
+                        };
+
+                        let avail_w = (toc_area.width as usize).saturating_sub(6 + indent_len);
+                        let truncated_title = if h.title.len() > avail_w && avail_w > 3 {
+                            format!("{}...", &h.title[..avail_w.saturating_sub(3)])
+                        } else {
+                            h.title.clone()
+                        };
+
+                        toc_lines.push(Line::from(vec![
+                            Span::styled(prefix, style),
+                            Span::raw(indent),
+                            Span::styled(truncated_title, style),
+                        ]));
+                    }
+
+                    let visible_rows = (toc_area.height.saturating_sub(2)) as usize;
+                    let toc_scroll = selected_idx.saturating_sub(visible_rows / 2);
+
+                    let toc_p = Paragraph::new(toc_lines)
+                        .block(toc_block)
+                        .scroll((toc_scroll as u16, 0));
+                    f.render_widget(toc_p, toc_area);
+                }
             }
             PaneContent::Error(err_msg) => {
                 let err_p = Paragraph::new(format!("error: {}", err_msg))
@@ -264,6 +323,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             Line::from("  f/b            scroll page down / up"),
             Line::from("  g/G            jump to top / bottom"),
             Line::from("  ]/[            jump to next / prev section heading"),
+            Line::from("  o              toggle table of contents"),
             Line::from(""),
             Line::from(vec![Span::styled("links & selection", Style::default().fg(theme::VIOLET).bold())]),
             Line::from("  tab/backtab    focus next / prev link"),

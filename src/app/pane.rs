@@ -35,6 +35,9 @@ pub struct Pane {
     pub local_matches: Vec<LocalMatch>,
     pub selected_match_idx: Option<usize>,
     pub is_loading: bool,
+    pub show_toc: bool,
+    pub selected_toc_idx: Option<usize>,
+    pub toc_focused: bool,
 }
 
 impl Pane {
@@ -50,6 +53,9 @@ impl Pane {
             local_matches: Vec::new(),
             selected_match_idx: None,
             is_loading: false,
+            show_toc: false,
+            selected_toc_idx: None,
+            toc_focused: false,
         }
     }
 

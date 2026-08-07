@@ -101,6 +101,7 @@ impl App {
                     pane.is_loading = false;
                     pane.selected_idx = 0;
                     pane.scroll_offset = 0;
+                    pane.toc_focused = false;
                     pane.content = PaneContent::SearchResults {
                         query,
                         items: results,
@@ -115,6 +116,7 @@ impl App {
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     pane.is_loading = false;
                     pane.scroll_offset = 0;
+                    pane.toc_focused = false;
                     let initial_width = 80;
                     let parsed_doc = parse_wikipedia_html(&content, initial_width);
                     let initial_link_idx = if !parsed_doc.links.is_empty() { Some(0) } else { None };

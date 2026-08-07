@@ -42,7 +42,23 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
             _ => {}
         },
         InputMode::Normal => {
-            if app.waiting_for_split_cmd {
+            if app.active_pane().toc_focused {
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('o') => {
+                        app.toggle_toc();
+                    }
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        app.select_next_toc_item();
+                    }
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        app.select_prev_toc_item();
+                    }
+                    KeyCode::Enter => {
+                        app.activate_toc_selection(term_height);
+                    }
+                    _ => {}
+                }
+            } else if app.waiting_for_split_cmd {
                 app.waiting_for_split_cmd = false;
                 match key.code {
                     KeyCode::Char('v') => {
@@ -57,6 +73,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                 match key.code {
                     KeyCode::Char('q') => {
                         app.quit();
+                    }
+                    KeyCode::Char('o') => {
+                        app.toggle_toc();
                     }
                     KeyCode::Char('?') => {
                         app.toggle_help_popup();
