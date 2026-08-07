@@ -113,7 +113,7 @@ async fn search_wikipedia(
             ("srsearch", query),
             ("utf8", "1"),
             ("format", "json"),
-            ("srlimit", "15"),
+            ("srlimit", "50"),
         ])
         .send()
         .await
