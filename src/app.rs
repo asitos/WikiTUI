@@ -1,6 +1,6 @@
 use crate::api::{NetworkCommand, NetworkEvent, SearchResultItem};
 use crate::layout::{LayoutNode, SplitDirection};
-use crate::parser::{parse_wikipedia_html, ParsedDocument};
+use crate::parser::{ParsedDocument, parse_wikipedia_html};
 use tokio::sync::mpsc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -31,6 +31,7 @@ pub struct Pane {
     pub content: PaneContent,
     pub selected_idx: usize,
     pub scroll_offset: usize,
+    pub selected_link_idx: Option<usize>,
     pub is_loading: bool,
 }
 
@@ -41,6 +42,7 @@ impl Pane {
             content: PaneContent::Empty,
             selected_idx: 0,
             scroll_offset: 0,
+            selected_link_idx: None,
             is_loading: false,
         }
     }
@@ -202,23 +204,112 @@ impl App {
     pub fn activate_selected(&mut self) {
         let (pane_id, selected_title) = {
             let pane = self.active_pane();
-            if let PaneContent::SearchResults { items, .. } = &pane.content {
-                if let Some(item) = items.get(pane.selected_idx) {
-                    (pane.id, Some(item.title.clone()))
-                } else {
-                    (pane.id, None)
+            match &pane.content {
+                PaneContent::SearchResults { items, .. } => {
+                    if let Some(item) = items.get(pane.selected_idx) {
+                        (pane.id, Some(item.title.clone()))
+                    } else {
+                        (pane.id, None)
+                    }
                 }
-            } else {
-                (pane.id, None)
+                PaneContent::ArticleText { parsed_doc, .. } => {
+                    if let Some(link_idx) = pane.selected_link_idx {
+                        if let Some(link) = parsed_doc.links.get(link_idx) {
+                            (pane.id, Some(link.title.clone()))
+                        } else {
+                            (pane.id, None)
+                        }
+                    } else {
+                        (pane.id, None)
+                    }
+                }
+                _ => (pane.id, None),
             }
         };
 
         if let Some(title) = selected_title {
             let active_pane = self.active_pane_mut();
             active_pane.is_loading = true;
+            active_pane.selected_link_idx = None;
             let _ = self
                 .cmd_tx
                 .send(NetworkCommand::FetchArticle { pane_id, title });
+        }
+    }
+
+    pub fn activate_selected_in_new_tab(&mut self) {
+        let selected_title = {
+            let pane = self.active_pane();
+            match &pane.content {
+                PaneContent::SearchResults { items, .. } => {
+                    items.get(pane.selected_idx).map(|item| item.title.clone())
+                }
+                PaneContent::ArticleText { parsed_doc, .. } => pane
+                    .selected_link_idx
+                    .and_then(|idx| parsed_doc.links.get(idx))
+                    .map(|link| link.title.clone()),
+                _ => None,
+            }
+        };
+
+        if let Some(title) = selected_title {
+            self.new_tab();
+            let pane_id = self.active_pane().id;
+            let active_pane = self.active_pane_mut();
+            active_pane.is_loading = true;
+            active_pane.selected_link_idx = None;
+            let _ = self
+                .cmd_tx
+                .send(NetworkCommand::FetchArticle { pane_id, title });
+        }
+    }
+
+    pub fn focus_next_link(&mut self) {
+        let pane = self.active_pane_mut();
+        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            if parsed_doc.links.is_empty() {
+                return;
+            }
+            let next_idx = match pane.selected_link_idx {
+                Some(idx) => (idx + 1) % parsed_doc.links.len(),
+                None => 0,
+            };
+            pane.selected_link_idx = Some(next_idx);
+
+            let link_line = parsed_doc.links[next_idx].line_idx;
+            if link_line < pane.scroll_offset {
+                pane.scroll_offset = link_line;
+            } else if link_line >= pane.scroll_offset + 10 {
+                pane.scroll_offset = link_line.saturating_sub(5);
+            }
+        }
+    }
+
+    pub fn focus_prev_link(&mut self) {
+        let pane = self.active_pane_mut();
+        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            if parsed_doc.links.is_empty() {
+                return;
+            }
+            let len = parsed_doc.links.len();
+            let prev_idx = match pane.selected_link_idx {
+                Some(idx) => {
+                    if idx == 0 {
+                        len - 1
+                    } else {
+                        idx - 1
+                    }
+                }
+                None => len - 1,
+            };
+            pane.selected_link_idx = Some(prev_idx);
+
+            let link_line = parsed_doc.links[prev_idx].line_idx;
+            if link_line < pane.scroll_offset {
+                pane.scroll_offset = link_line;
+            } else if link_line >= pane.scroll_offset + 10 {
+                pane.scroll_offset = link_line.saturating_sub(5);
+            }
         }
     }
 

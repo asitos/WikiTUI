@@ -8,8 +8,7 @@ pub struct Link {
     pub title: String,
     pub text: String,
     pub line_idx: usize,
-    pub start_col: usize,
-    pub end_col: usize,
+    pub span_indices: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -178,6 +177,8 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
 
     for token in tokens {
         let words = token.text.split_inclusive(|c: char| c.is_whitespace());
+        let mut link_span_indices = Vec::new();
+        let mut current_link_line_idx = doc.lines.len();
 
         for word in words {
             if word.is_empty() {
@@ -187,35 +188,46 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
             let word_len = word.chars().count();
 
             if current_line_len + word_len > max_width && current_line_len > 0 {
-                let line_idx = doc.lines.len();
+                if let Some(target) = token
+                    .link_target
+                    .as_ref()
+                    .filter(|_| !link_span_indices.is_empty())
+                {
+                    doc.links.push(Link {
+                        title: target.clone(),
+                        text: token.text.trim().to_string(),
+                        line_idx: current_link_line_idx,
+                        span_indices: link_span_indices.clone(),
+                    });
+                    link_span_indices.clear();
+                }
+
                 doc.lines.push(Line::from(current_line_spans.clone()));
                 current_line_spans.clear();
                 current_line_len = 0;
+                current_link_line_idx = doc.lines.len();
+            }
 
-                if let Some(target) = &token.link_target {
-                    doc.links.push(Link {
-                        title: target.clone(),
-                        text: word.trim().to_string(),
-                        line_idx,
-                        start_col: 0,
-                        end_col: word_len,
-                    });
-                }
-            } else if let Some(target) = &token.link_target {
-                let start_col = current_line_len;
-                let end_col = current_line_len + word_len;
-                doc.links.push(Link {
-                    title: target.clone(),
-                    text: word.trim().to_string(),
-                    line_idx: doc.lines.len(),
-                    start_col,
-                    end_col,
-                });
+            if token.link_target.is_some() {
+                link_span_indices.push(current_line_spans.len());
             }
 
             let trimmed_word = word.to_string();
             current_line_spans.push(Span::styled(trimmed_word, token.style));
             current_line_len += word_len;
+        }
+
+        if let Some(target) = token
+            .link_target
+            .as_ref()
+            .filter(|_| !link_span_indices.is_empty())
+        {
+            doc.links.push(Link {
+                title: target.clone(),
+                text: token.text.trim().to_string(),
+                line_idx: current_link_line_idx,
+                span_indices: link_span_indices,
+            });
         }
     }
 

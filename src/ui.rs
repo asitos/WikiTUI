@@ -51,7 +51,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         ),
         // normally
         InputMode::Normal => {
-            "ctrl-s: search | j/k: navigate/scroll | enter: open article | ctrl-w s/v: split | alt-h/l: tabs | q: quit".to_string()
+            "ctrl-s: search | tab/backtab: links | enter/t: open (new tab) | ctrl-w s/v: split | alt-h/l: tabs | q: quit".to_string()
         }
     };
     let status_style = if app.input_mode == InputMode::Search {
@@ -151,7 +151,29 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 }
             }
             PaneContent::ArticleText { parsed_doc, .. } => {
-                let paragraph = Paragraph::new(parsed_doc.lines.clone())
+                let mut rendered_lines = parsed_doc.lines.clone();
+
+                if let Some((link, line)) = pane
+                    .selected_link_idx
+                    .and_then(|idx| parsed_doc.links.get(idx))
+                    .and_then(|link| {
+                        rendered_lines
+                            .get_mut(link.line_idx)
+                            .map(|line| (link, line))
+                    })
+                {
+                    for &span_idx in &link.span_indices {
+                        if let Some(span) = line.spans.get_mut(span_idx) {
+                            span.style = Style::default()
+                                // focused link color
+                                .bg(theme::VIOLET)
+                                .fg(theme::FG)
+                                .bold();
+                        }
+                    }
+                }
+
+                let paragraph = Paragraph::new(rendered_lines)
                     .block(block)
                     .scroll((pane.scroll_offset as u16, 0));
                 f.render_widget(paragraph, rect);

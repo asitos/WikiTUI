@@ -157,11 +157,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     let size = terminal.size()?;
                                     app.navigate_panes('k', size.width, size.height);
                                 }
+                                KeyCode::Tab => {
+                                    app.focus_next_link();
+                                }
+                                KeyCode::BackTab => {
+                                    app.focus_prev_link();
+                                }
                                 KeyCode::Char('j') => {
                                     app.select_next_item();
                                 }
                                 KeyCode::Char('k') => {
                                     app.select_prev_item();
+                                }
+                                KeyCode::Char('t') => {
+                                    app.activate_selected_in_new_tab();
+                                }
+                                KeyCode::Enter if key.modifiers.contains(KeyModifiers::ALT) => {
+                                    app.activate_selected_in_new_tab();
                                 }
                                 KeyCode::Enter => {
                                     app.activate_selected();
