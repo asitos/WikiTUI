@@ -194,8 +194,13 @@ impl App {
         }
     }
 
+fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
+    let half_screen = (term_height as usize / 2).max(1);
+    total_lines.saturating_sub(half_screen)
+}
+
     // navigation inside active pane (search results / article text)
-    pub fn select_next_item(&mut self) {
+    pub fn select_next_item(&mut self, term_height: u16) {
         let pane = self.active_pane_mut();
         match &pane.content {
             PaneContent::SearchResults { items, .. } => {
@@ -204,8 +209,8 @@ impl App {
                 }
             }
             PaneContent::ArticleText { parsed_doc, .. } => {
-                let lines_count = parsed_doc.lines.len();
-                if pane.scroll_offset + 1 < lines_count {
+                let max_scroll = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
+                if pane.scroll_offset < max_scroll {
                     pane.scroll_offset += 1;
                 }
             }
@@ -436,7 +441,7 @@ impl App {
         let pane = self.active_pane_mut();
         match &pane.content {
             PaneContent::ArticleText { parsed_doc, .. } => {
-                let max_scroll = parsed_doc.lines.len().saturating_sub(1);
+                let max_scroll = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
                 pane.scroll_offset = (pane.scroll_offset + step).min(max_scroll);
             }
             PaneContent::SearchResults { items, .. } if !items.is_empty() => {
@@ -456,6 +461,26 @@ impl App {
             }
             PaneContent::SearchResults { .. } => {
                 pane.selected_idx = pane.selected_idx.saturating_sub(step);
+                pane.scroll_offset = pane.selected_idx;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn jump_to_top(&mut self) {
+        let pane = self.active_pane_mut();
+        pane.scroll_offset = 0;
+        pane.selected_idx = 0;
+    }
+
+    pub fn jump_to_bottom(&mut self, term_height: u16) {
+        let pane = self.active_pane_mut();
+        match &pane.content {
+            PaneContent::ArticleText { parsed_doc, .. } => {
+                pane.scroll_offset = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
+            }
+            PaneContent::SearchResults { items, .. } if !items.is_empty() => {
+                pane.selected_idx = items.len() - 1;
                 pane.scroll_offset = pane.selected_idx;
             }
             _ => {}

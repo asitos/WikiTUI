@@ -73,6 +73,12 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('b') => {
                         app.scroll_page_up(term_height);
                     }
+                    KeyCode::Char('g') => {
+                        app.jump_to_top();
+                    }
+                    KeyCode::Char('G') => {
+                        app.jump_to_bottom(term_height);
+                    }
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         app.enter_search_mode();
                     }
@@ -110,7 +116,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                         app.focus_prev_link();
                     }
                     KeyCode::Char('j') => {
-                        app.select_next_item();
+                        app.select_next_item(term_height);
                     }
                     KeyCode::Char('k') => {
                         app.select_prev_item();
