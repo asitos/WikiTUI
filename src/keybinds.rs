@@ -71,10 +71,10 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                         app.prev_local_match();
                     }
                     KeyCode::Char(']') => {
-                        app.jump_next_heading();
+                        app.jump_next_heading(term_height);
                     }
                     KeyCode::Char('[') => {
-                        app.jump_prev_heading();
+                        app.jump_prev_heading(term_height);
                     }
                     KeyCode::Char('f') => {
                         app.scroll_page_down(term_height);
@@ -134,7 +134,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                         app.select_next_item(term_height);
                     }
                     KeyCode::Char('k') => {
-                        app.select_prev_item();
+                        app.select_prev_item(term_height);
                     }
                     KeyCode::Char('t') => {
                         app.activate_selected_in_new_tab();

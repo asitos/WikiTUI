@@ -212,37 +212,89 @@ impl App {
         (start, end)
     }
 
-    // navigation inside active pane (search results / article text)
-    pub fn select_next_item(&mut self, term_height: u16) {
+    pub fn clamp_link_selection_to_viewport(&mut self, term_height: u16) {
         let pane = self.active_pane_mut();
-        match &pane.content {
-            PaneContent::SearchResults { items, .. } => {
-                if !items.is_empty() {
-                    pane.selected_idx = (pane.selected_idx + 1).min(items.len() - 1);
-                    Self::keep_search_selection_visible(pane, term_height);
-                }
+        let PaneContent::ArticleText { parsed_doc, .. } = &pane.content else {
+            return;
+        };
+        if parsed_doc.links.is_empty() {
+            pane.selected_link_idx = None;
+            return;
+        }
+
+        let viewport_h = if pane.viewport_height > 0 {
+            pane.viewport_height
+        } else {
+            (term_height as usize).saturating_sub(4).max(1)
+        };
+
+        let view_start = pane.scroll_offset;
+        let view_end = pane.scroll_offset + viewport_h;
+
+        let is_visible = pane.selected_link_idx.is_some_and(|idx| {
+            if let Some(link) = parsed_doc.links.get(idx) {
+                link.line_idx >= view_start && link.line_idx < view_end
+            } else {
+                false
             }
-            PaneContent::ArticleText { parsed_doc, .. } => {
+        });
+
+        if !is_visible {
+            let first_in_view = parsed_doc
+                .links
+                .iter()
+                .position(|link| link.line_idx >= view_start && link.line_idx < view_end);
+
+            if let Some(idx) = first_in_view {
+                pane.selected_link_idx = Some(idx);
+            } else {
+                let closest = parsed_doc
+                    .links
+                    .iter()
+                    .position(|link| link.line_idx >= view_start)
+                    .unwrap_or(parsed_doc.links.len() - 1);
+                pane.selected_link_idx = Some(closest);
+            }
+        }
+    }
+
+    pub fn select_next_item(&mut self, term_height: u16) {
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        if is_article {
+            let pane = self.active_pane_mut();
+            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                 let max_scroll = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
                 if pane.scroll_offset < max_scroll {
                     pane.scroll_offset += 1;
                 }
             }
-            _ => {}
+            self.clamp_link_selection_to_viewport(term_height);
+        } else {
+            let pane = self.active_pane_mut();
+            match &pane.content {
+                PaneContent::SearchResults { items, .. } if !items.is_empty() => {
+                    pane.selected_idx = (pane.selected_idx + 1).min(items.len() - 1);
+                    Self::keep_search_selection_visible(pane, term_height);
+                }
+                _ => {}
+            }
         }
     }
 
-    pub fn select_prev_item(&mut self) {
-        let pane = self.active_pane_mut();
-        match &pane.content {
-            PaneContent::SearchResults { .. } if pane.selected_idx > 0 => {
+    pub fn select_prev_item(&mut self, term_height: u16) {
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        if is_article {
+            let pane = self.active_pane_mut();
+            if pane.scroll_offset > 0 {
+                pane.scroll_offset -= 1;
+            }
+            self.clamp_link_selection_to_viewport(term_height);
+        } else {
+            let pane = self.active_pane_mut();
+            if pane.selected_idx > 0 {
                 pane.selected_idx -= 1;
                 Self::keep_search_selection_visible(pane, 0);
             }
-            PaneContent::ArticleText { .. } if pane.scroll_offset > 0 => {
-                pane.scroll_offset -= 1;
-            }
-            _ => {}
         }
     }
 
@@ -411,7 +463,6 @@ impl App {
             return;
         }
 
-        // iterate every line to look for a match (case insensitive)
         if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
             for (line_idx, line) in parsed_doc.lines.iter().enumerate() {
                 for (span_idx, span) in line.spans.iter().enumerate() {
@@ -460,60 +511,75 @@ impl App {
         pane.scroll_offset = pane.local_matches[prev_idx].line_idx;
     }
 
-    pub fn jump_next_heading(&mut self) {
-        let pane = self.active_pane_mut();
-        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
-            let next_h = parsed_doc
-                .headings
-                .iter()
-                .find(|h| h.line_idx > pane.scroll_offset);
-            if let Some(next_h) = next_h {
-                pane.scroll_offset = next_h.line_idx;
+    pub fn jump_next_heading(&mut self, term_height: u16) {
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        if is_article {
+            let pane = self.active_pane_mut();
+            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+                let next_h = parsed_doc
+                    .headings
+                    .iter()
+                    .find(|h| h.line_idx > pane.scroll_offset);
+                if let Some(next_h) = next_h {
+                    pane.scroll_offset = next_h.line_idx;
+                }
             }
+            self.clamp_link_selection_to_viewport(term_height);
         }
     }
 
-    pub fn jump_prev_heading(&mut self) {
-        let pane = self.active_pane_mut();
-        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
-            let prev_h = parsed_doc
-                .headings
-                .iter()
-                .rfind(|h| h.line_idx < pane.scroll_offset);
-            if let Some(prev_h) = prev_h {
-                pane.scroll_offset = prev_h.line_idx;
+    pub fn jump_prev_heading(&mut self, term_height: u16) {
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        if is_article {
+            let pane = self.active_pane_mut();
+            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+                let prev_h = parsed_doc
+                    .headings
+                    .iter()
+                    .rfind(|h| h.line_idx < pane.scroll_offset);
+                if let Some(prev_h) = prev_h {
+                    pane.scroll_offset = prev_h.line_idx;
+                }
             }
+            self.clamp_link_selection_to_viewport(term_height);
         }
     }
 
     pub fn scroll_page_down(&mut self, term_height: u16) {
         let step = (term_height as usize * 3 / 4).max(1);
-        let pane = self.active_pane_mut();
-        match &pane.content {
-            PaneContent::ArticleText { parsed_doc, .. } => {
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        if is_article {
+            let pane = self.active_pane_mut();
+            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                 let max_scroll = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
                 pane.scroll_offset = (pane.scroll_offset + step).min(max_scroll);
             }
-            PaneContent::SearchResults { items, .. } if !items.is_empty() => {
-                pane.selected_idx = (pane.selected_idx + step).min(items.len() - 1);
-                Self::keep_search_selection_visible(pane, term_height);
+            self.clamp_link_selection_to_viewport(term_height);
+        } else {
+            let pane = self.active_pane_mut();
+            match &pane.content {
+                PaneContent::SearchResults { items, .. } if !items.is_empty() => {
+                    pane.selected_idx = (pane.selected_idx + step).min(items.len() - 1);
+                    Self::keep_search_selection_visible(pane, term_height);
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 
     pub fn scroll_page_up(&mut self, term_height: u16) {
         let step = (term_height as usize * 3 / 4).max(1);
-        let pane = self.active_pane_mut();
-        match &pane.content {
-            PaneContent::ArticleText { .. } => {
-                pane.scroll_offset = pane.scroll_offset.saturating_sub(step);
-            }
-            PaneContent::SearchResults { .. } => {
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        if is_article {
+            let pane = self.active_pane_mut();
+            pane.scroll_offset = pane.scroll_offset.saturating_sub(step);
+            self.clamp_link_selection_to_viewport(term_height);
+        } else {
+            let pane = self.active_pane_mut();
+            if let PaneContent::SearchResults { .. } = &pane.content {
                 pane.selected_idx = pane.selected_idx.saturating_sub(step);
                 Self::keep_search_selection_visible(pane, term_height);
             }
-            _ => {}
         }
     }
 
@@ -521,19 +587,28 @@ impl App {
         let pane = self.active_pane_mut();
         pane.scroll_offset = 0;
         pane.selected_idx = 0;
+        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            pane.selected_link_idx = if !parsed_doc.links.is_empty() { Some(0) } else { None };
+        }
     }
 
     pub fn jump_to_bottom(&mut self, term_height: u16) {
-        let pane = self.active_pane_mut();
-        match &pane.content {
-            PaneContent::ArticleText { parsed_doc, .. } => {
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        if is_article {
+            let pane = self.active_pane_mut();
+            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                 pane.scroll_offset = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
             }
-            PaneContent::SearchResults { items, .. } if !items.is_empty() => {
-                pane.selected_idx = items.len() - 1;
-                Self::keep_search_selection_visible(pane, term_height);
+            self.clamp_link_selection_to_viewport(term_height);
+        } else {
+            let pane = self.active_pane_mut();
+            match &pane.content {
+                PaneContent::SearchResults { items, .. } if !items.is_empty() => {
+                    pane.selected_idx = items.len() - 1;
+                    Self::keep_search_selection_visible(pane, term_height);
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 
@@ -588,12 +663,14 @@ impl App {
                     pane.scroll_offset = 0;
                     let initial_width = 80;
                     let parsed_doc = parse_wikipedia_html(&content, initial_width);
+                    let initial_link_idx = if !parsed_doc.links.is_empty() { Some(0) } else { None };
                     pane.content = PaneContent::ArticleText {
                         title,
                         raw_html: content,
                         parsed_doc,
                         last_width: initial_width,
                     };
+                    pane.selected_link_idx = initial_link_idx;
                 }
             }
             NetworkEvent::Error { pane_id, message } => {

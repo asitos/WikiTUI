@@ -42,7 +42,7 @@ fn search_selection_scrolls_by_rendered_lines() {
         (2, 3)
     );
 
-    app.select_prev_item();
+    app.select_prev_item(24);
     assert_eq!(
         (
             app.active_pane().selected_idx,
