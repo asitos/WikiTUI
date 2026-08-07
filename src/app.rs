@@ -187,6 +187,10 @@ impl App {
         self.exit_search_mode();
 
         if !query.is_empty() {
+            let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
+            if !is_empty {
+                self.new_tab();
+            }
             let active_pane = self.active_pane_mut();
             let pane_id = active_pane.id;
             active_pane.is_loading = true;
