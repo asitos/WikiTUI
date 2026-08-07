@@ -60,7 +60,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
         Line::from("   ctrl-w s/v     split active pane horizontally / vertically"),
         Line::from("   ctrl-h/j/k/l   navigate focus between split panes"),
         Line::from("   alt-c          close active pane"),
-        Line::from("   ctrl-t         create new tab"),
+        Line::from("   alt-t          create new tab"),
         Line::from("   alt-h/l        switch to prev / next tab"),
         Line::from(""),
         Line::from(vec![Span::styled(

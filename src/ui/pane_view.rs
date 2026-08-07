@@ -6,7 +6,7 @@ use ratatui::{
     layout::{Alignment, Rect},
     style::{Modifier, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Paragraph},
+    widgets::{Block, Padding, Paragraph},
 };
 
 pub fn render_single_active_pane(f: &mut Frame, app: &mut App, area: Rect) {
@@ -37,9 +37,9 @@ fn render_pane_at(
     is_active: bool,
 ) {
     let content_width = if app.zen_mode {
-        rect.width as usize
-    } else {
         rect.width.saturating_sub(2) as usize
+    } else {
+        rect.width.saturating_sub(4) as usize
     };
 
     let pane = &mut app.tabs[tab_idx].panes[pane_idx];
@@ -79,11 +79,12 @@ fn render_pane_at(
     };
 
     let block = if app.zen_mode {
-        Block::default()
+        Block::default().padding(Padding::horizontal(1))
     } else {
         Block::bordered()
             .border_style(Style::default().fg(border_color))
             .title(title)
+            .padding(Padding::horizontal(1))
     };
 
     if pane.is_loading {

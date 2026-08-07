@@ -31,7 +31,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             if app.active_pane().toc_focused {
                 "j/k: navigate contents | enter: jump | o: close".to_string()
             } else {
-                "ctrl-s: search | r: random | o: contents | ?: help | q: quit".to_string()
+                "ctrl-s: search | r: random | ?: help | q: quit".to_string()
             }
         }
     };
