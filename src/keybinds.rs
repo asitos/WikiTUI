@@ -82,6 +82,12 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         app.enter_search_mode();
                     }
+                    KeyCode::Char('s') => {
+                        app.activate_selected_in_split(SplitDirection::Horizontal);
+                    }
+                    KeyCode::Char('v') => {
+                        app.activate_selected_in_split(SplitDirection::Vertical);
+                    }
                     KeyCode::Char('t') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         app.new_tab();
                     }

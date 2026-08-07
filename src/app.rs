@@ -308,6 +308,33 @@ impl App {
         }
     }
 
+    pub fn activate_selected_in_split(&mut self, direction: SplitDirection) {
+        let selected_title = {
+            let pane = self.active_pane();
+            match &pane.content {
+                PaneContent::SearchResults { items, .. } => {
+                    items.get(pane.selected_idx).map(|item| item.title.clone())
+                }
+                PaneContent::ArticleText { parsed_doc, .. } => pane
+                    .selected_link_idx
+                    .and_then(|idx| parsed_doc.links.get(idx))
+                    .map(|link| link.title.clone()),
+                _ => None,
+            }
+        };
+
+        if let Some(title) = selected_title.filter(|t| is_article_link(t)) {
+            self.split_active_pane(direction);
+            let pane_id = self.active_pane().id;
+            let active_pane = self.active_pane_mut();
+            active_pane.is_loading = true;
+            active_pane.selected_link_idx = None;
+            let _ = self
+                .cmd_tx
+                .send(NetworkCommand::FetchArticle { pane_id, title });
+        }
+    }
+
     pub fn focus_next_link(&mut self) {
         let pane = self.active_pane_mut();
         if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
