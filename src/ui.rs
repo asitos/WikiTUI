@@ -3,7 +3,7 @@ use crate::theme;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
-    prelude::{Line, Span, Style, Stylize},
+    prelude::{Line, Span, Style, Stylize, Modifier},
     widgets::{Block, Clear, Paragraph},
 };
 
@@ -132,7 +132,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
         match &pane.content {
             PaneContent::Empty => {
-                let empty_p = Paragraph::new("press 'ctrl-s' to search wikipedia")
+                let empty_p = Paragraph::new("")
                     .fg(theme::GREY)
                     .block(block)
                     .alignment(ratatui::layout::Alignment::Center);
@@ -189,10 +189,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     for &span_idx in &link.span_indices {
                         if let Some(span) = line.spans.get_mut(span_idx) {
                             span.style = Style::default()
-                                // focused link color
-                                .bg(theme::VIOLET)
-                                .fg(theme::FG)
-                                .bold();
+                                // focused link
+                                .fg(theme::BLUE)
+                                .bold()
+                                .add_modifier(Modifier::UNDERLINED);
                         }
                     }
                 }
@@ -246,28 +246,28 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
         let help_text = vec![
             Line::from(vec![Span::styled("navigation", Style::default().fg(theme::VIOLET).bold())]),
-            Line::from("  j / k          scroll down / up"),
-            Line::from("  f / b          scroll page down / up (75%)"),
-            Line::from("  g / G          jump to top / bottom"),
-            Line::from("  ] / [          jump to next / prev section heading"),
+            Line::from("  j/k            scroll down / up"),
+            Line::from("  f/b            scroll page down / up"),
+            Line::from("  g/G            jump to top / bottom"),
+            Line::from("  ]/[            jump to next / prev section heading"),
             Line::from(""),
             Line::from(vec![Span::styled("links & selection", Style::default().fg(theme::VIOLET).bold())]),
-            Line::from("  tab / backtab  focus next / prev link"),
+            Line::from("  tab/backtab    focus next / prev link"),
             Line::from("  enter          open link in current pane"),
             Line::from("  t              open link in new tab"),
-            Line::from("  s / v          open link in horizontal / vertical split"),
+            Line::from("  s/v            open link in horizontal / vertical split"),
             Line::from(""),
             Line::from(vec![Span::styled("panes & tabs", Style::default().fg(theme::VIOLET).bold())]),
-            Line::from("  ctrl-w s / v   split active pane horizontally / vertically"),
+            Line::from("  ctrl-w s/v     split active pane horizontally / vertically"),
             Line::from("  ctrl-h/j/k/l   navigate focus between split panes"),
             Line::from("  alt-c          close active pane"),
             Line::from("  ctrl-t         create new tab"),
-            Line::from("  alt-h / l      switch to prev / next tab"),
+            Line::from("  alt-h/l        switch to prev / next tab"),
             Line::from(""),
             Line::from(vec![Span::styled("search", Style::default().fg(theme::VIOLET).bold())]),
             Line::from("  ctrl-s         search wikipedia articles"),
             Line::from("  /              in-page text search"),
-            Line::from("  n / N          jump to next / prev search match"),
+            Line::from("  n/N            jump to next / prev search match"),
             Line::from(""),
             Line::from(vec![Span::styled("general", Style::default().fg(theme::VIOLET).bold())]),
             Line::from("  ?              toggle this help popup"),
@@ -276,7 +276,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
         let help_block = Block::bordered()
             .border_style(Style::default().fg(theme::PINK))
-            .title(ratatui::widgets::block::Title::from(" keybindings ").alignment(ratatui::layout::Alignment::Left))
+            .title(ratatui::widgets::block::Title::from(" keybindings ").alignment(ratatui::layout::Alignment::Center))
             .title(
                 ratatui::widgets::block::Title::from(Span::styled(
                     " esc to close ",
@@ -290,7 +290,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         f.render_widget(help_paragraph, area);
     }
 
-    // search modal popup
+    // search popup
     if app.input_mode == InputMode::Search {
         let popup_layout = Layout::default()
             .direction(Direction::Vertical)
