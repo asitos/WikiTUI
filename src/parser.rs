@@ -4,6 +4,13 @@ use ratatui::text::{Line, Span};
 use scraper::{ElementRef, Html, Node};
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Heading {
+    pub title: String,
+    pub level: u8,
+    pub line_idx: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Link {
     pub title: String,
     pub text: String,
@@ -15,6 +22,7 @@ pub struct Link {
 pub struct ParsedDocument {
     pub lines: Vec<Line<'static>>,
     pub links: Vec<Link>,
+    pub headings: Vec<Heading>,
 }
 
 #[derive(Debug, Clone)]
@@ -114,14 +122,23 @@ fn process_element(
     // styling for each tag
     match tag_name {
         // headings
-        "h1" | "h2" => {
-            current_style = current_style.fg(theme::RED).add_modifier(Modifier::BOLD);
-        }
-        "h3" | "h4" => {
-            current_style = current_style.fg(theme::ORANGE).add_modifier(Modifier::BOLD);
-        }
-        "h5" | "h6" => {
-            current_style = current_style.fg(theme::YELLOW).add_modifier(Modifier::BOLD);
+        "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
+            let level = tag_name.chars().nth(1).and_then(|c| c.to_digit(10)).unwrap_or(1) as u8;
+            let title = element.text().collect::<String>().trim().to_string();
+            // store location of each heading
+            if !title.is_empty() {
+                doc.headings.push(Heading {
+                    title,
+                    level,
+                    line_idx: doc.lines.len(),
+                });
+            }
+
+            current_style = match tag_name {
+                "h1" | "h2" => current_style.fg(theme::RED).add_modifier(Modifier::BOLD),
+                "h3" | "h4" => current_style.fg(theme::ORANGE).add_modifier(Modifier::BOLD),
+                _ => current_style.fg(theme::YELLOW).add_modifier(Modifier::BOLD),
+            };
         }
         // bold
         "b" | "strong" => {

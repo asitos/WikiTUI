@@ -405,6 +405,32 @@ impl App {
         pane.scroll_offset = pane.local_matches[prev_idx].line_idx;
     }
 
+    pub fn jump_next_heading(&mut self) {
+        let pane = self.active_pane_mut();
+        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            let next_h = parsed_doc
+                .headings
+                .iter()
+                .find(|h| h.line_idx > pane.scroll_offset);
+            if let Some(next_h) = next_h {
+                pane.scroll_offset = next_h.line_idx;
+            }
+        }
+    }
+
+    pub fn jump_prev_heading(&mut self) {
+        let pane = self.active_pane_mut();
+        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            let prev_h = parsed_doc
+                .headings
+                .iter()
+                .rfind(|h| h.line_idx < pane.scroll_offset);
+            if let Some(prev_h) = prev_h {
+                pane.scroll_offset = prev_h.line_idx;
+            }
+        }
+    }
+
     // network event handling
     pub fn handle_network_event(&mut self, ev: NetworkEvent) {
         match ev {

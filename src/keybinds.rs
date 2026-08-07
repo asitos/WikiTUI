@@ -61,6 +61,12 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('N') => {
                         app.prev_local_match();
                     }
+                    KeyCode::Char(']') => {
+                        app.jump_next_heading();
+                    }
+                    KeyCode::Char('[') => {
+                        app.jump_prev_heading();
+                    }
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         app.enter_search_mode();
                     }
