@@ -68,7 +68,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         }
         // normally
         InputMode::Normal => {
-            "ctrl-s: search | /: local search | ]/[: headings | tab/backtab: links | enter/t: open (new tab) | ctrl-w s/v: split | alt-h/l: tabs | q: quit".to_string()
+            "ctrl-s: search | /: local search | ]/[: headings | f/b: page | tab/backtab: links | enter/t: open (new tab) | ctrl-w s/v: split | alt-h/l: tabs | q: quit".to_string()
         }
     };
     let status_style = match app.input_mode {

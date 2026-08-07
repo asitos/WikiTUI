@@ -431,6 +431,37 @@ impl App {
         }
     }
 
+    pub fn scroll_page_down(&mut self, term_height: u16) {
+        let step = (term_height as usize * 3 / 4).max(1);
+        let pane = self.active_pane_mut();
+        match &pane.content {
+            PaneContent::ArticleText { parsed_doc, .. } => {
+                let max_scroll = parsed_doc.lines.len().saturating_sub(1);
+                pane.scroll_offset = (pane.scroll_offset + step).min(max_scroll);
+            }
+            PaneContent::SearchResults { items, .. } if !items.is_empty() => {
+                pane.selected_idx = (pane.selected_idx + step).min(items.len() - 1);
+                pane.scroll_offset = pane.selected_idx;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn scroll_page_up(&mut self, term_height: u16) {
+        let step = (term_height as usize * 3 / 4).max(1);
+        let pane = self.active_pane_mut();
+        match &pane.content {
+            PaneContent::ArticleText { .. } => {
+                pane.scroll_offset = pane.scroll_offset.saturating_sub(step);
+            }
+            PaneContent::SearchResults { .. } => {
+                pane.selected_idx = pane.selected_idx.saturating_sub(step);
+                pane.scroll_offset = pane.selected_idx;
+            }
+            _ => {}
+        }
+    }
+
     // network event handling
     pub fn handle_network_event(&mut self, ev: NetworkEvent) {
         match ev {
