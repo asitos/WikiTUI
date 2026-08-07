@@ -1,5 +1,3 @@
-#![allow(dead_code)] // suppresses warnings for unused colors
-
 use ratatui::style::Color;
 
 pub const BG: Color = Color::Rgb(26, 27, 31); // #1a1b1f

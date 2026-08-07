@@ -2,9 +2,9 @@ use crate::app::{App, InputMode, PaneContent};
 use crate::theme;
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     prelude::{Line, Span, Style, Stylize},
-    widgets::{Block, Paragraph},
+    widgets::{Block, Clear, Paragraph},
 };
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -23,22 +23,25 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let main_area = chunks[1];
     let status_area = chunks[2];
 
-    // tab bar
+    // render tabs
     let mut tab_spans = Vec::new();
-    for (idx, tab) in app.tabs.iter().enumerate() {
-        let name = tab.name.to_lowercase();
-        if idx == app.active_tab_idx {
-            tab_spans.push(Span::styled(
-                format!(" [ {} ] ", name),
-                Style::default().fg(theme::LIME).bold(),
-            ));
+    tab_spans.push(Span::styled(" [ ", Style::default().fg(theme::GREY)));
+    for (i, tab) in app.tabs.iter().enumerate() {
+        let is_active = i == app.active_tab_idx;
+        let style = if is_active {
+            Style::default().fg(theme::LIME).bold()
         } else {
-            tab_spans.push(Span::styled(
-                format!("  {}  ", name),
-                Style::default().fg(theme::DARK_GREY),
-            ));
+            Style::default().fg(theme::GREY)
+        };
+        tab_spans.push(Span::styled(
+            format!("{}:{}", i + 1, tab.name.to_lowercase()),
+            style,
+        ));
+        if i < app.tabs.len() - 1 {
+            tab_spans.push(Span::styled(" | ", Style::default().fg(theme::GREY)));
         }
     }
+    tab_spans.push(Span::styled(" ] ", Style::default().fg(theme::GREY)));
     let tab_bar_paragraph = Paragraph::new(Line::from(tab_spans));
     f.render_widget(tab_bar_paragraph, tab_bar_area);
 
@@ -66,17 +69,23 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 active_pane.local_search_query, matches_info
             )
         }
+        InputMode::Help => {
+            "".to_string()
+        }
         // normally
         InputMode::Normal => {
-            "ctrl-s: search | /: local search | ]/[: headings | g/G: top/bottom | f/b: page | tab/backtab: links | enter/t/s/v: open (tab/split) | ctrl-w s/v: split | alt-h/l: tabs | q: quit".to_string()
+            "ctrl-s: search | ?: help | q: quit".to_string()
         }
     };
     let status_style = match app.input_mode {
         InputMode::Search => Style::default().fg(theme::BEIGE).bold(),
         InputMode::LocalSearch => Style::default().fg(theme::YELLOW).bold(),
+        InputMode::Help => Style::default().fg(theme::GREY).bold(),
         InputMode::Normal => Style::default().fg(theme::GREY),
     };
-    let status_paragraph = Paragraph::new(status_text).style(status_style);
+    let status_paragraph = Paragraph::new(status_text)
+        .style(status_style)
+        .alignment(ratatui::layout::Alignment::Center);
     f.render_widget(status_paragraph, status_area);
 
     // panes
@@ -102,14 +111,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
         // determine title for pane
         let title = match &pane.content {
-            PaneContent::Empty => format!(" pane {} ", pane.id),
+            PaneContent::Empty => String::new(),
             PaneContent::SearchResults { query, .. } => {
-                format!(" pane {} - search: {} ", pane.id, query.to_lowercase())
+                format!(" search: {} ", query.to_lowercase())
             }
             PaneContent::ArticleText { title, .. } => {
-                format!(" pane {} - {} ", pane.id, title.to_lowercase())
+                format!(" {} ", title.to_lowercase())
             }
-            PaneContent::Error(_) => format!(" pane {} - error ", pane.id),
+            PaneContent::Error(_) => " error ".to_string(),
         };
 
         let block = Block::bordered()
@@ -232,4 +241,75 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             }
         }
     }
+
+    // help popup
+    if app.input_mode == InputMode::Help {
+        let area = centered_rect(70, 85, size);
+        f.render_widget(Clear, area);
+
+        let help_text = vec![
+            Line::from(vec![Span::styled("navigation", Style::default().fg(theme::VIOLET).bold())]),
+            Line::from("  j / k          scroll down / up"),
+            Line::from("  f / b          scroll page down / up (75%)"),
+            Line::from("  g / G          jump to top / bottom"),
+            Line::from("  ] / [          jump to next / prev section heading"),
+            Line::from(""),
+            Line::from(vec![Span::styled("links & selection", Style::default().fg(theme::VIOLET).bold())]),
+            Line::from("  tab / backtab  focus next / prev link"),
+            Line::from("  enter          open link in current pane"),
+            Line::from("  t              open link in new tab"),
+            Line::from("  s / v          open link in horizontal / vertical split"),
+            Line::from(""),
+            Line::from(vec![Span::styled("panes & tabs", Style::default().fg(theme::VIOLET).bold())]),
+            Line::from("  ctrl-w s / v   split active pane horizontally / vertically"),
+            Line::from("  ctrl-h/j/k/l   navigate focus between split panes"),
+            Line::from("  alt-c          close active pane"),
+            Line::from("  ctrl-t         create new tab"),
+            Line::from("  alt-h / l      switch to prev / next tab"),
+            Line::from(""),
+            Line::from(vec![Span::styled("search", Style::default().fg(theme::VIOLET).bold())]),
+            Line::from("  ctrl-s         search wikipedia articles"),
+            Line::from("  /              in-page text search"),
+            Line::from("  n / N          jump to next / prev search match"),
+            Line::from(""),
+            Line::from(vec![Span::styled("general", Style::default().fg(theme::VIOLET).bold())]),
+            Line::from("  ?              toggle this help popup"),
+            Line::from("  q              quit wiki-tui"),
+        ];
+
+        let help_block = Block::bordered()
+            .border_style(Style::default().fg(theme::PINK))
+            .title(ratatui::widgets::block::Title::from(" keybindings ").alignment(ratatui::layout::Alignment::Left))
+            .title(
+                ratatui::widgets::block::Title::from(Span::styled(
+                    " esc to close ",
+                    Style::default().fg(theme::GREY).italic(),
+                ))
+                .position(ratatui::widgets::block::Position::Bottom)
+                .alignment(ratatui::layout::Alignment::Right),
+            );
+
+        let help_paragraph = Paragraph::new(help_text).block(help_block);
+        f.render_widget(help_paragraph, area);
+    }
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }

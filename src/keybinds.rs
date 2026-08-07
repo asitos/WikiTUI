@@ -4,6 +4,12 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_height: u16) {
     match app.input_mode {
+        InputMode::Help => match key.code {
+            KeyCode::Char('?') | KeyCode::Esc | KeyCode::Char('q') => {
+                app.input_mode = InputMode::Normal;
+            }
+            _ => {}
+        },
         InputMode::LocalSearch => match key.code {
             KeyCode::Char(c) => {
                 let pane = app.active_pane_mut();
@@ -52,6 +58,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('q') => {
                         app.quit();
                     }
+                    KeyCode::Char('?') => {
+                        app.toggle_help_popup();
+                    }
                     KeyCode::Char('/') => {
                         app.enter_local_search_mode();
                     }
@@ -88,7 +97,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('v') => {
                         app.activate_selected_in_split(SplitDirection::Vertical);
                     }
-                    KeyCode::Char('t') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    KeyCode::Char('t') if key.modifiers.contains(KeyModifiers::ALT) => {
                         app.new_tab();
                     }
                     KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {

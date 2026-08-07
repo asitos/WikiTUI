@@ -8,6 +8,7 @@ pub enum InputMode {
     Normal,
     Search,
     LocalSearch,
+    Help,
 }
 
 fn is_article_link(title: &str) -> bool {
@@ -390,6 +391,14 @@ impl App {
         pane.local_search_query.clear();
         pane.local_matches.clear();
         pane.selected_match_idx = None;
+    }
+
+    pub fn toggle_help_popup(&mut self) {
+        if self.input_mode == InputMode::Help {
+            self.input_mode = InputMode::Normal;
+        } else {
+            self.input_mode = InputMode::Help;
+        }
     }
 
     pub fn update_local_search(&mut self) {
