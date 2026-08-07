@@ -11,16 +11,10 @@ use std::{
 };
 use tokio::sync::{Mutex, mpsc};
 
-mod api;
-mod app;
-mod keybinds;
-mod layout;
-mod parser;
-mod theme;
-mod ui;
-
-use crate::api::{NetworkCommand, NetworkEvent};
-use crate::app::App;
+use wiki_tui::api::{self, NetworkCommand, NetworkEvent};
+use wiki_tui::app::App;
+use wiki_tui::keybinds;
+use wiki_tui::ui;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // terminal setup
