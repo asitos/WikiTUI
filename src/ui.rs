@@ -48,10 +48,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     // status bar
     let status_text = match app.input_mode {
         // for when in search mode
-        InputMode::Search => format!(
-            " search: {}_ | press enter to submit, esc to cancel ",
-            app.search_input
-        ),
+        InputMode::Search => " search wikipedia ".to_string(),
         // for when in local search mode
         InputMode::LocalSearch => {
             let active_pane = app.active_pane();
@@ -291,6 +288,45 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
         let help_paragraph = Paragraph::new(help_text).block(help_block);
         f.render_widget(help_paragraph, area);
+    }
+
+    // search modal popup
+    if app.input_mode == InputMode::Search {
+        let popup_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(33),
+                Constraint::Length(3), // 1 character tall
+                Constraint::Min(0),
+            ])
+            .split(size);
+
+        let area = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(36),
+                Constraint::Percentage(28),
+                Constraint::Percentage(36),
+            ])
+            .split(popup_layout[1])[1];
+
+        f.render_widget(Clear, area);
+
+        let search_block = Block::bordered()
+            .border_style(Style::default().fg(theme::BEIGE))
+            .title(
+                ratatui::widgets::block::Title::from(" search wikipedia ")
+                    .alignment(ratatui::layout::Alignment::Left),
+            );
+
+        let input_text = Line::from(vec![
+            Span::styled(" > ", Style::default().fg(theme::BEIGE).bold()),
+            Span::styled(&app.search_input, Style::default().fg(theme::FG).bold()),
+            Span::styled("_", Style::default().fg(theme::BEIGE).bold()),
+        ]);
+
+        let search_paragraph = Paragraph::new(input_text).block(search_block);
+        f.render_widget(search_paragraph, area);
     }
 }
 
