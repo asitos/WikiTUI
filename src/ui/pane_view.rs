@@ -179,29 +179,56 @@ fn render_pane_at(
             }
 
             // highlight local search matches
-            if !pane.local_search_query.trim().is_empty() {
+            let query = pane.local_search_query.trim().to_lowercase();
+            if !query.is_empty() {
                 let active_match = pane
                     .selected_match_idx
                     .and_then(|idx| pane.local_matches.get(idx));
 
-                for (m_idx, m) in pane.local_matches.iter().enumerate() {
-                    let span = rendered_lines
-                        .get_mut(m.line_idx)
-                        .and_then(|line| line.spans.get_mut(m.span_idx));
+                for (line_idx, line) in rendered_lines.iter_mut().enumerate() {
+                    let mut new_spans = Vec::new();
+                    for (span_idx, span) in line.spans.iter().enumerate() {
+                        let text = &span.content;
+                        let text_lower = text.to_lowercase();
 
-                    if let Some(span) = span {
-                        let is_active_match = active_match.is_some_and(|active| {
-                            active.line_idx == m.line_idx
-                                && active.span_idx == m.span_idx
-                                && pane.selected_match_idx == Some(m_idx)
-                        });
+                        if text_lower.contains(&query) {
+                            let is_active_span = active_match
+                                .is_some_and(|m| m.line_idx == line_idx && m.span_idx == span_idx);
+                            let bg_color = if is_active_span {
+                                theme::YELLOW
+                            } else {
+                                theme::BEIGE
+                            };
 
-                        if is_active_match {
-                            span.style = Style::default().bg(theme::YELLOW).fg(theme::BG).bold();
+                            let mut start = 0;
+                            while let Some(rel_pos) = text_lower[start..].find(&query) {
+                                let match_start = start + rel_pos;
+                                let match_end = match_start + query.len();
+
+                                if match_start > start {
+                                    new_spans.push(Span::styled(
+                                        text[start..match_start].to_string(),
+                                        span.style,
+                                    ));
+                                }
+
+                                let matched_text = text[match_start..match_end].to_string();
+                                new_spans.push(Span::styled(
+                                    matched_text,
+                                    Style::default().bg(bg_color).fg(theme::BG).bold(),
+                                ));
+
+                                start = match_end;
+                            }
+
+                            if start < text.len() {
+                                new_spans.push(Span::styled(text[start..].to_string(), span.style));
+                            }
                         } else {
-                            span.style = Style::default().bg(theme::BEIGE).fg(theme::BG);
+                            new_spans.push(span.clone());
                         }
                     }
+                    line.spans = new_spans;
                 }
             }
 
@@ -210,7 +237,6 @@ fn render_pane_at(
                 .scroll((pane.scroll_offset as u16, 0));
             f.render_widget(paragraph, rect);
 
-            // Render centered Table of Contents popup modal if toggled
             if is_active && pane.show_toc && !parsed_doc.headings.is_empty() {
                 render_toc_modal(f, pane, parsed_doc, rect);
             }

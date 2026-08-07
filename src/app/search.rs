@@ -131,7 +131,34 @@ impl App {
         pane.selected_match_idx = None;
     }
 
-    pub fn update_local_search(&mut self) {
+    pub(crate) fn keep_local_match_visible(
+        pane: &mut crate::app::pane::Pane,
+        term_height: u16,
+    ) {
+        let target_line = match (pane.selected_match_idx, &pane.local_matches) {
+            (Some(idx), matches) if !matches.is_empty() => matches[idx].line_idx,
+            _ => return,
+        };
+
+        let viewport_height = if pane.viewport_height > 0 {
+            pane.viewport_height
+        } else {
+            (term_height as usize).saturating_sub(4).max(1)
+        };
+
+        let margin = 8.min(viewport_height.saturating_sub(1) / 2);
+
+        let top_threshold = pane.scroll_offset.saturating_add(margin);
+        let bottom_threshold = (pane.scroll_offset + viewport_height).saturating_sub(margin);
+
+        if target_line < top_threshold {
+            pane.scroll_offset = target_line.saturating_sub(margin);
+        } else if target_line >= bottom_threshold {
+            pane.scroll_offset = (target_line + margin + 1).saturating_sub(viewport_height);
+        }
+    }
+
+    pub fn update_local_search(&mut self, term_height: u16) {
         let pane = self.active_pane_mut();
         pane.local_matches.clear();
         pane.selected_match_idx = None;
@@ -151,12 +178,12 @@ impl App {
             }
             if !pane.local_matches.is_empty() {
                 pane.selected_match_idx = Some(0);
-                pane.scroll_offset = pane.local_matches[0].line_idx;
+                Self::keep_local_match_visible(pane, term_height);
             }
         }
     }
 
-    pub fn next_local_match(&mut self) {
+    pub fn next_local_match(&mut self, term_height: u16) {
         let pane = self.active_pane_mut();
         if pane.local_matches.is_empty() {
             return;
@@ -166,10 +193,10 @@ impl App {
             None => 0,
         };
         pane.selected_match_idx = Some(next_idx);
-        pane.scroll_offset = pane.local_matches[next_idx].line_idx;
+        Self::keep_local_match_visible(pane, term_height);
     }
 
-    pub fn prev_local_match(&mut self) {
+    pub fn prev_local_match(&mut self, term_height: u16) {
         let pane = self.active_pane_mut();
         if pane.local_matches.is_empty() {
             return;
@@ -186,6 +213,6 @@ impl App {
             None => len - 1,
         };
         pane.selected_match_idx = Some(prev_idx);
-        pane.scroll_offset = pane.local_matches[prev_idx].line_idx;
+        Self::keep_local_match_visible(pane, term_height);
     }
 }

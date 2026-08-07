@@ -14,12 +14,12 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
             KeyCode::Char(c) => {
                 let pane = app.active_pane_mut();
                 pane.local_search_query.push(c);
-                app.update_local_search();
+                app.update_local_search(term_height);
             }
             KeyCode::Backspace => {
                 let pane = app.active_pane_mut();
                 pane.local_search_query.pop();
-                app.update_local_search();
+                app.update_local_search(term_height);
             }
             KeyCode::Enter | KeyCode::Esc => {
                 app.input_mode = InputMode::Normal;
@@ -90,10 +90,10 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                         app.enter_local_search_mode();
                     }
                     KeyCode::Char('n') => {
-                        app.next_local_match();
+                        app.next_local_match(term_height);
                     }
                     KeyCode::Char('N') => {
-                        app.prev_local_match();
+                        app.prev_local_match(term_height);
                     }
                     KeyCode::Char(']') => {
                         app.jump_next_heading(term_height);
