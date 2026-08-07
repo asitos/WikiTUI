@@ -216,9 +216,18 @@ fn render_pane_at(
             }
         }
         PaneContent::Error(err_msg) => {
-            let err_p = Paragraph::new(format!("error: {}", err_msg))
-                .fg(theme::RED)
-                .block(block);
+            let vertical_offset = (rect.height.saturating_sub(2) / 2) as usize;
+            let mut lines = Vec::new();
+            for _ in 0..vertical_offset {
+                lines.push(Line::from(""));
+            }
+            lines.push(Line::from(Span::styled(
+                format!("error: {}", err_msg),
+                Style::default().fg(theme::RED).bold(),
+            )));
+            let err_p = Paragraph::new(lines)
+                .block(block)
+                .alignment(Alignment::Center);
             f.render_widget(err_p, rect);
         }
     }

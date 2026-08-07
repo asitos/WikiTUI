@@ -245,11 +245,35 @@ fn process_element(
     }
 }
 
+pub fn url_decode(s: &str) -> String {
+    let mut bytes = Vec::with_capacity(s.len());
+    let mut i = 0;
+    let s_bytes = s.as_bytes();
+    while i < s_bytes.len() {
+        if s_bytes[i] == b'%' && i + 2 < s_bytes.len() {
+            let parsed_byte = u8::from_str_radix(&s[i + 1..i + 3], 16);
+            if let Ok(b) = parsed_byte {
+                bytes.push(b);
+                i += 3;
+                continue;
+            }
+        }
+        if s_bytes[i] == b'+' {
+            bytes.push(b' ');
+        } else {
+            bytes.push(s_bytes[i]);
+        }
+        i += 1;
+    }
+    String::from_utf8_lossy(&bytes).to_string()
+}
+
 // extract title from wiki links
 fn extract_title_from_href(href: &str) -> Option<String> {
     if href.starts_with("/wiki/") && !href.contains(':') {
         let title_part = href.trim_start_matches("/wiki/");
-        let decoded = title_part.replace('_', " ");
+        let raw_title = title_part.split('#').next().unwrap_or(title_part);
+        let decoded = url_decode(raw_title).replace('_', " ");
         Some(decoded)
     } else {
         None

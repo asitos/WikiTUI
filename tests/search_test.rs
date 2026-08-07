@@ -51,3 +51,10 @@ fn search_selection_scrolls_by_rendered_lines() {
         (1, 2)
     );
 }
+
+#[test]
+fn test_url_decode_norse_and_special_chars() {
+    use wiki_tui::parser::url_decode;
+    assert_eq!(url_decode("%C3%9Eingvellir"), "Þingvellir");
+    assert_eq!(url_decode("Hello%20World"), "Hello World");
+}

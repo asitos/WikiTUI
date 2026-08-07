@@ -45,7 +45,9 @@ impl App {
             pane.is_loading = true;
         }
 
-        let _ = self.cmd_tx.send(NetworkCommand::FetchRandomArticle { pane_id });
+        let _ = self
+            .cmd_tx
+            .send(NetworkCommand::FetchRandomArticle { pane_id });
     }
 
     pub fn type_search_char(&mut self, c: char) {
