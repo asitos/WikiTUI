@@ -69,6 +69,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
         )]),
         Line::from("   ctrl-s         search wikipedia (opens new tab)"),
         Line::from("   i              edit search query in current tab"),
+        Line::from("   r              open random wikipedia article"),
         Line::from("   /              in-page text search"),
         Line::from("   n/N            jump to next / prev search match"),
         Line::from(""),

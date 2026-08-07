@@ -11,6 +11,7 @@ pub struct SearchResultItem {
 pub enum NetworkCommand {
     Search { pane_id: usize, query: String },
     FetchArticle { pane_id: usize, title: String },
+    FetchRandomArticle { pane_id: usize },
 }
 
 pub enum NetworkEvent {
@@ -51,7 +52,7 @@ pub async fn run_worker(
     ev_tx: Arc<Mutex<mpsc::UnboundedSender<NetworkEvent>>>,
 ) {
     let client = reqwest::Client::builder()
-        .user_agent("wiki-tui/0.1.0 (https://github.com/sharkthakftw/WikiTUI)") // unique id required or else wikipedia blocks the requests
+        .user_agent("wiki-tui/0.1.0 (https://github.com/sharkthakftw/WikiTUI)")
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
 
@@ -81,6 +82,23 @@ pub async fn run_worker(
                 NetworkCommand::FetchArticle { pane_id, title } => {
                     match fetch_article_wikipedia(&client_ref, &title).await {
                         Ok(content) => {
+                            let _ = ev_tx_ref.lock().await.send(NetworkEvent::ArticleResult {
+                                pane_id,
+                                title,
+                                content,
+                            });
+                        }
+                        Err(err) => {
+                            let _ = ev_tx_ref.lock().await.send(NetworkEvent::Error {
+                                pane_id,
+                                message: err,
+                            });
+                        }
+                    }
+                }
+                NetworkCommand::FetchRandomArticle { pane_id } => {
+                    match fetch_random_article(&client_ref).await {
+                        Ok((title, content)) => {
                             let _ = ev_tx_ref.lock().await.send(NetworkEvent::ArticleResult {
                                 pane_id,
                                 title,
@@ -191,4 +209,49 @@ async fn fetch_article_wikipedia(client: &reqwest::Client, title: &str) -> Resul
     } else {
         Err("article HTML content not found".to_string())
     }
+}
+
+#[derive(Deserialize)]
+struct WikiRandomItem {
+    title: String,
+}
+
+#[derive(Deserialize)]
+struct WikiRandomQuery {
+    random: Vec<WikiRandomItem>,
+}
+
+#[derive(Deserialize)]
+struct WikiRandomResponse {
+    query: Option<WikiRandomQuery>,
+}
+
+async fn fetch_random_article(client: &reqwest::Client) -> Result<(String, String), String> {
+    let url = "https://en.wikipedia.org/w/api.php";
+    let res = client
+        .get(url)
+        .query(&[
+            ("action", "query"),
+            ("list", "random"),
+            ("rnnamespace", "0"),
+            ("rnlimit", "1"),
+            ("format", "json"),
+        ])
+        .send()
+        .await
+        .map_err(|e| format!("network error: {}", e))?;
+
+    let rand_resp: WikiRandomResponse = res
+        .json()
+        .await
+        .map_err(|e| format!("parse error: {}", e))?;
+
+    let title = rand_resp
+        .query
+        .and_then(|q| q.random.into_iter().next())
+        .map(|r| r.title)
+        .ok_or_else(|| "no random article returned".to_string())?;
+
+    let content = fetch_article_wikipedia(client, &title).await?;
+    Ok((title, content))
 }

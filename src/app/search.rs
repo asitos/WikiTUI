@@ -28,6 +28,26 @@ impl App {
         self.search_input.clear();
     }
 
+    pub fn fetch_random_article(&mut self) {
+        let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
+        let pane_id = if is_empty {
+            self.active_pane().id
+        } else {
+            let next_id = self.next_pane_id;
+            self.next_pane_id += 1;
+            let tab_name = "loading...".to_string();
+            self.tabs.push(crate::app::tab::Tab::new(tab_name, next_id));
+            self.active_tab_idx = self.tabs.len() - 1;
+            next_id
+        };
+
+        if let Some(pane) = self.find_pane_mut(pane_id) {
+            pane.is_loading = true;
+        }
+
+        let _ = self.cmd_tx.send(NetworkCommand::FetchRandomArticle { pane_id });
+    }
+
     pub fn type_search_char(&mut self, c: char) {
         if self.input_mode == crate::app::InputMode::Search {
             self.search_input.push(c);
