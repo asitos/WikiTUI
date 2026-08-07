@@ -76,6 +76,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
             " general",
             Style::default().fg(theme::VIOLET).bold(),
         )]),
+        Line::from("   z              toggle zen mode"),
         Line::from("   ?              toggle this help popup"),
         Line::from("   q              quit wiki-tui"),
     ];

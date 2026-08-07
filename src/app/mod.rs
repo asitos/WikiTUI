@@ -39,6 +39,7 @@ pub struct App {
     pub search_input: String,
     pub search_opens_new_tab: bool,
     pub waiting_for_split_cmd: bool,
+    pub zen_mode: bool,
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: mpsc::UnboundedSender<NetworkCommand>,
 }
@@ -53,6 +54,7 @@ impl App {
             search_input: String::new(),
             search_opens_new_tab: true,
             waiting_for_split_cmd: false,
+            zen_mode: false,
             next_pane_id: 1,
             cmd_tx,
         };
@@ -62,6 +64,10 @@ impl App {
 
     pub fn quit(&mut self) {
         self.running = false;
+    }
+
+    pub fn toggle_zen_mode(&mut self) {
+        self.zen_mode = !self.zen_mode;
     }
 
     pub fn active_tab(&self) -> &Tab {

@@ -9,6 +9,12 @@ use ratatui::{
     widgets::{Block, Paragraph},
 };
 
+pub fn render_single_active_pane(f: &mut Frame, app: &mut App, area: Rect) {
+    let active_tab_idx = app.active_tab_idx;
+    let active_pane_idx = app.tabs[active_tab_idx].active_pane_idx;
+    render_pane_at(f, app, active_tab_idx, active_pane_idx, area, true);
+}
+
 pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
     let active_tab_idx = app.active_tab_idx;
     let rects = app.tabs[active_tab_idx]
@@ -18,43 +24,67 @@ pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
 
     for (pane_idx, rect) in rects {
         let is_active = pane_idx == active_pane_idx;
-        let content_width = rect.width.saturating_sub(2) as usize;
+        render_pane_at(f, app, active_tab_idx, pane_idx, rect, is_active);
+    }
+}
 
-        let pane = &mut app.tabs[active_tab_idx].panes[pane_idx];
-        pane.ensure_parsed_width(content_width);
-        pane.viewport_height = rect.height.saturating_sub(2) as usize;
+fn render_pane_at(
+    f: &mut Frame,
+    app: &mut App,
+    tab_idx: usize,
+    pane_idx: usize,
+    rect: Rect,
+    is_active: bool,
+) {
+    let content_width = if app.zen_mode {
+        rect.width as usize
+    } else {
+        rect.width.saturating_sub(2) as usize
+    };
 
-        let border_color = match &pane.content {
-            PaneContent::SearchResults { .. } => {
-                if is_active {
-                    theme::YELLOW
-                } else {
-                    theme::DARK_GREY
-                }
-            }
-            _ => {
-                if is_active {
-                    theme::PINK
-                } else {
-                    theme::DARK_GREY
-                }
-            }
-        };
+    let pane = &mut app.tabs[tab_idx].panes[pane_idx];
+    pane.ensure_parsed_width(content_width);
+    pane.viewport_height = if app.zen_mode {
+        rect.height as usize
+    } else {
+        rect.height.saturating_sub(2) as usize
+    };
 
-        let title = match &pane.content {
-            PaneContent::Empty => String::new(),
-            PaneContent::SearchResults { query, .. } => {
-                format!(" search: {} ", query.to_lowercase())
+    let border_color = match &pane.content {
+        PaneContent::SearchResults { .. } => {
+            if is_active {
+                theme::YELLOW
+            } else {
+                theme::DARK_GREY
             }
-            PaneContent::ArticleText { title, .. } => {
-                format!(" {} ", title.to_lowercase())
+        }
+        _ => {
+            if is_active {
+                theme::PINK
+            } else {
+                theme::DARK_GREY
             }
-            PaneContent::Error(_) => " error ".to_string(),
-        };
+        }
+    };
 
-        let block = Block::bordered()
+    let title = match &pane.content {
+        PaneContent::Empty => String::new(),
+        PaneContent::SearchResults { query, .. } => {
+            format!(" search: {} ", query.to_lowercase())
+        }
+        PaneContent::ArticleText { title, .. } => {
+            format!(" {} ", title.to_lowercase())
+        }
+        PaneContent::Error(_) => " error ".to_string(),
+    };
+
+    let block = if app.zen_mode {
+        Block::default()
+    } else {
+        Block::bordered()
             .border_style(Style::default().fg(border_color))
-            .title(title);
+            .title(title)
+    };
 
         if pane.is_loading {
             let vertical_offset = (rect.height.saturating_sub(2) / 2) as usize;
@@ -70,7 +100,7 @@ pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
                 .block(block)
                 .alignment(Alignment::Center);
             f.render_widget(loading_p, rect);
-            continue;
+            return;
         }
 
         match &pane.content {
@@ -141,7 +171,7 @@ pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
                     for &span_idx in &link.span_indices {
                         if let Some(span) = line.spans.get_mut(span_idx) {
                             span.style = Style::default()
-                                .fg(theme::BLUE)
+                                .fg(theme::VIOLET)
                                 .bold()
                                 .add_modifier(Modifier::UNDERLINED);
                         }
@@ -194,4 +224,3 @@ pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
             }
         }
     }
-}

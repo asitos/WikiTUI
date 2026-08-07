@@ -74,6 +74,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('q') => {
                         app.quit();
                     }
+                    KeyCode::Char('z') => {
+                        app.toggle_zen_mode();
+                    }
                     KeyCode::Char('o') => {
                         app.toggle_toc();
                     }
