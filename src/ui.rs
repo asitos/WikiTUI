@@ -92,6 +92,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
         let pane = &mut app.tabs[active_tab_idx].panes[pane_idx];
         pane.ensure_parsed_width(content_width);
+        pane.viewport_height = rect.height.saturating_sub(2) as usize;
 
         let border_color = if is_active {
             theme::PINK

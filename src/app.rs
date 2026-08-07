@@ -1,6 +1,6 @@
 use crate::api::{NetworkCommand, NetworkEvent, SearchResultItem};
 use crate::layout::{LayoutNode, SplitDirection};
-use crate::parser::{ParsedDocument, parse_wikipedia_html};
+use crate::parser::{parse_wikipedia_html, ParsedDocument};
 use tokio::sync::mpsc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -8,6 +8,61 @@ pub enum InputMode {
     Normal,
     Search,
     LocalSearch,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn result(title: &str, snippet: &str) -> SearchResultItem {
+        SearchResultItem {
+            title: title.to_string(),
+            snippet: snippet.to_string(),
+        }
+    }
+
+    #[test]
+    fn search_selection_scrolls_by_rendered_lines() {
+        let (tx, _) = mpsc::unbounded_channel();
+        let mut app = App::new(tx);
+        let pane = app.active_pane_mut();
+        pane.viewport_height = 4;
+        pane.content = PaneContent::SearchResults {
+            query: "test".to_string(),
+            items: vec![
+                result("one", ""),
+                result("two", "snippet"),
+                result("three", ""),
+            ],
+        };
+
+        app.select_next_item(24);
+        assert_eq!(
+            (
+                app.active_pane().selected_idx,
+                app.active_pane().scroll_offset
+            ),
+            (1, 1)
+        );
+
+        app.select_next_item(24);
+        assert_eq!(
+            (
+                app.active_pane().selected_idx,
+                app.active_pane().scroll_offset
+            ),
+            (2, 3)
+        );
+
+        app.select_prev_item();
+        assert_eq!(
+            (
+                app.active_pane().selected_idx,
+                app.active_pane().scroll_offset
+            ),
+            (1, 2)
+        );
+    }
 }
 
 fn is_article_link(title: &str) -> bool {
@@ -50,6 +105,7 @@ pub struct Pane {
     pub content: PaneContent,
     pub selected_idx: usize,
     pub scroll_offset: usize,
+    pub viewport_height: usize,
     pub selected_link_idx: Option<usize>,
     pub local_search_query: String,
     pub local_matches: Vec<LocalMatch>,
@@ -64,6 +120,7 @@ impl Pane {
             content: PaneContent::Empty,
             selected_idx: 0,
             scroll_offset: 0,
+            viewport_height: 0,
             selected_link_idx: None,
             local_search_query: String::new(),
             local_matches: Vec::new(),
@@ -194,10 +251,20 @@ impl App {
         }
     }
 
-fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
-    let half_screen = (term_height as usize / 2).max(1);
-    total_lines.saturating_sub(half_screen)
-}
+    fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
+        let half_screen = (term_height as usize / 2).max(1);
+        total_lines.saturating_sub(half_screen)
+    }
+
+    fn search_result_line_range(items: &[SearchResultItem], selected_idx: usize) -> (usize, usize) {
+        let start = items
+            .iter()
+            .take(selected_idx)
+            .map(|item| 2 + usize::from(!item.snippet.is_empty()))
+            .sum();
+        let end = start + 2 + usize::from(!items[selected_idx].snippet.is_empty());
+        (start, end)
+    }
 
     // navigation inside active pane (search results / article text)
     pub fn select_next_item(&mut self, term_height: u16) {
@@ -206,6 +273,7 @@ fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
             PaneContent::SearchResults { items, .. } => {
                 if !items.is_empty() {
                     pane.selected_idx = (pane.selected_idx + 1).min(items.len() - 1);
+                    Self::keep_search_selection_visible(pane, term_height);
                 }
             }
             PaneContent::ArticleText { parsed_doc, .. } => {
@@ -223,6 +291,7 @@ fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
         match &pane.content {
             PaneContent::SearchResults { .. } if pane.selected_idx > 0 => {
                 pane.selected_idx -= 1;
+                Self::keep_search_selection_visible(pane, 0);
             }
             PaneContent::ArticleText { .. } if pane.scroll_offset > 0 => {
                 pane.scroll_offset -= 1;
@@ -446,7 +515,7 @@ fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
             }
             PaneContent::SearchResults { items, .. } if !items.is_empty() => {
                 pane.selected_idx = (pane.selected_idx + step).min(items.len() - 1);
-                pane.scroll_offset = pane.selected_idx;
+                Self::keep_search_selection_visible(pane, term_height);
             }
             _ => {}
         }
@@ -461,7 +530,7 @@ fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
             }
             PaneContent::SearchResults { .. } => {
                 pane.selected_idx = pane.selected_idx.saturating_sub(step);
-                pane.scroll_offset = pane.selected_idx;
+                Self::keep_search_selection_visible(pane, term_height);
             }
             _ => {}
         }
@@ -481,9 +550,32 @@ fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
             }
             PaneContent::SearchResults { items, .. } if !items.is_empty() => {
                 pane.selected_idx = items.len() - 1;
-                pane.scroll_offset = pane.selected_idx;
+                Self::keep_search_selection_visible(pane, term_height);
             }
             _ => {}
+        }
+    }
+
+    fn keep_search_selection_visible(pane: &mut Pane, term_height: u16) {
+        let PaneContent::SearchResults { items, .. } = &pane.content else {
+            return;
+        };
+        if items.is_empty() {
+            return;
+        }
+
+        let (selected_start, selected_end) =
+            Self::search_result_line_range(items, pane.selected_idx);
+        let viewport_height = if pane.viewport_height > 0 {
+            pane.viewport_height
+        } else {
+            (term_height as usize).saturating_sub(4).max(1)
+        };
+
+        if selected_start < pane.scroll_offset {
+            pane.scroll_offset = selected_start;
+        } else if selected_end > pane.scroll_offset + viewport_height {
+            pane.scroll_offset = selected_end - viewport_height;
         }
     }
 
