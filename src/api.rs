@@ -178,16 +178,18 @@ struct WikiParseResponse {
 }
 
 async fn fetch_article_wikipedia(client: &reqwest::Client, title: &str) -> Result<String, String> {
+    let decoded_title = crate::parser::url_decode(title).replace('_', " ");
     let url = "https://en.wikipedia.org/w/api.php";
     let res = client
         .get(url)
         .query(&[
             ("action", "parse"),
-            ("page", title),
+            ("page", &decoded_title),
             ("prop", "text"),
             ("format", "json"),
             ("disableeditsection", "1"),
             ("disabletoc", "1"),
+            ("redirects", "1"),
         ])
         .send()
         .await
