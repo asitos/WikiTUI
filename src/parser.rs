@@ -123,7 +123,11 @@ fn process_element(
     match tag_name {
         // headings
         "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
-            let level = tag_name.chars().nth(1).and_then(|c| c.to_digit(10)).unwrap_or(1) as u8;
+            let level = tag_name
+                .chars()
+                .nth(1)
+                .and_then(|c| c.to_digit(10))
+                .unwrap_or(1) as u8;
             let title = element.text().collect::<String>().trim().to_string();
             // store location of each heading
             if !title.is_empty() {

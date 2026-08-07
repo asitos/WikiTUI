@@ -1,6 +1,6 @@
 use crate::api::{NetworkCommand, NetworkEvent, SearchResultItem};
 use crate::layout::{LayoutNode, SplitDirection};
-use crate::parser::{parse_wikipedia_html, ParsedDocument};
+use crate::parser::{ParsedDocument, parse_wikipedia_html};
 use tokio::sync::mpsc;
 
 #[derive(Clone, Debug, PartialEq)]
