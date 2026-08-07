@@ -24,10 +24,21 @@ pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
         pane.ensure_parsed_width(content_width);
         pane.viewport_height = rect.height.saturating_sub(2) as usize;
 
-        let border_color = if is_active {
-            theme::PINK
-        } else {
-            theme::DARK_GREY
+        let border_color = match &pane.content {
+            PaneContent::SearchResults { .. } => {
+                if is_active {
+                    theme::YELLOW
+                } else {
+                    theme::DARK_GREY
+                }
+            }
+            _ => {
+                if is_active {
+                    theme::PINK
+                } else {
+                    theme::DARK_GREY
+                }
+            }
         };
 
         let title = match &pane.content {
@@ -46,9 +57,18 @@ pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
             .title(title);
 
         if pane.is_loading {
-            let loading_p = Paragraph::new(" loading wikipedia data... ")
-                .fg(theme::YELLOW)
-                .block(block);
+            let vertical_offset = (rect.height.saturating_sub(2) / 2) as usize;
+            let mut lines = Vec::new();
+            for _ in 0..vertical_offset {
+                lines.push(Line::from(""));
+            }
+            lines.push(Line::from(Span::styled(
+                "loading wikipedia data...",
+                Style::default().fg(theme::YELLOW).bold(),
+            )));
+            let loading_p = Paragraph::new(lines)
+                .block(block)
+                .alignment(Alignment::Center);
             f.render_widget(loading_p, rect);
             continue;
         }
@@ -63,9 +83,18 @@ pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
             }
             PaneContent::SearchResults { items, .. } => {
                 if items.is_empty() {
-                    let no_res_p = Paragraph::new("no search results found")
-                        .fg(theme::RED)
-                        .block(block);
+                    let vertical_offset = (rect.height.saturating_sub(2) / 2) as usize;
+                    let mut lines = Vec::new();
+                    for _ in 0..vertical_offset {
+                        lines.push(Line::from(""));
+                    }
+                    lines.push(Line::from(Span::styled(
+                        "no search results found",
+                        Style::default().fg(theme::RED).bold(),
+                    )));
+                    let no_res_p = Paragraph::new(lines)
+                        .block(block)
+                        .alignment(Alignment::Center);
                     f.render_widget(no_res_p, rect);
                 } else {
                     let mut lines = Vec::new();
