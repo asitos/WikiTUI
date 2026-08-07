@@ -58,6 +58,35 @@ fn process_element(
 ) {
     let tag_name = element.value().name();
 
+    // skip metadata tags
+    if matches!(
+        tag_name,
+        "style" | "script" | "noscript" | "head" | "template" | "link" | "meta"
+    ) {
+        return;
+    }
+
+    // skip wikipedia hidden elements
+    if element.value().attr("class").is_some_and(|class_attr| {
+        class_attr.split_whitespace().any(|cls| {
+            matches!(
+                cls,
+                "sidebar"
+                    | "infobox"
+                    | "navbox"
+                    | "mw-empty-elt"
+                    | "noprint"
+                    | "hatnote"
+                    | "mw-jump-link"
+                    | "catlinks"
+                    | "vector-menu"
+                    | "mw-cite-backlink"
+            )
+        })
+    }) {
+        return;
+    }
+
     let is_block_element = matches!(
         tag_name,
         "p" | "h1"
@@ -118,7 +147,7 @@ fn process_element(
         // lists
         "li" => {
             current_tokens.push(StyledToken {
-                text: "•".to_string(),
+                text: "• ".to_string(),
                 style: Style::default().fg(theme::GREY),
                 link_target: None,
             });
@@ -166,8 +195,8 @@ fn process_element(
     for child in element.children() {
         match child.value() {
             Node::Text(text) => {
-                let cleaned_text = text.to_string();
-                if !cleaned_text.is_empty() {
+                let cleaned_text = text.replace(['\n', '\r', '\t'], " ");
+                if !cleaned_text.trim().is_empty() {
                     current_tokens.push(StyledToken {
                         text: cleaned_text,
                         style: current_style,
@@ -270,5 +299,6 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
 
     if !current_line_spans.is_empty() {
         doc.lines.push(Line::from(current_line_spans));
+        doc.lines.push(Line::from(""));
     }
 }
