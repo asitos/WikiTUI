@@ -33,8 +33,22 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         } else {
             Style::default().fg(theme::GREY)
         };
+
+        let tab_title = if let Some(active_pane) = tab.panes.get(tab.active_pane_idx) {
+            match &active_pane.content {
+                PaneContent::ArticleText { title, .. } => title.to_lowercase(),
+                PaneContent::SearchResults { query, .. } => {
+                    format!("search: {}", query.to_lowercase())
+                }
+                PaneContent::Error(_) => "error".to_string(),
+                PaneContent::Empty => tab.name.to_lowercase(),
+            }
+        } else {
+            tab.name.to_lowercase()
+        };
+
         tab_spans.push(Span::styled(
-            format!("{}:{}", i + 1, tab.name.to_lowercase()),
+            tab_title,
             style,
         ));
         if i < app.tabs.len() - 1 {
