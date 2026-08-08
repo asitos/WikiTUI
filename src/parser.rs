@@ -271,9 +271,17 @@ pub fn url_decode(s: &str) -> String {
 
 // extract title from wiki links
 fn extract_title_from_href(href: &str) -> Option<String> {
-    if href.starts_with("/wiki/") && !href.contains(':') {
-        let title_part = href.trim_start_matches("/wiki/");
-        let raw_title = title_part.split('#').next().unwrap_or(title_part);
+    if let Some(path) = href.strip_prefix("/wiki/") {
+        if let Some(colon_idx) = path.find(':') {
+            let prefix = &path[..colon_idx];
+            if matches!(
+                prefix,
+                "Special" | "File" | "Category" | "Help" | "Wikipedia" | "Template" | "User" | "Talk" | "Portal" | "Draft" | "MediaWiki" | "Media"
+            ) || prefix.ends_with("_talk") {
+                return None;
+            }
+        }
+        let raw_title = path.split('#').next().unwrap_or(path);
         let decoded = url_decode(raw_title).replace('_', " ");
         Some(decoded)
     } else {
