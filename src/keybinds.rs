@@ -26,20 +26,46 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
             }
             _ => {}
         },
-        InputMode::Search => match key.code {
-            KeyCode::Char(c) => {
-                app.type_search_char(c);
+        InputMode::Search => {
+            if key.modifiers.contains(KeyModifiers::CONTROL) {
+                match key.code {
+                    KeyCode::Char('w') | KeyCode::Char('h') | KeyCode::Backspace => {
+                        app.delete_word_left();
+                        return;
+                    }
+                    _ => {}
+                }
             }
-            KeyCode::Backspace => {
-                app.backspace_search_char();
+            match key.code {
+                KeyCode::Char(c) => {
+                    app.type_search_char(c);
+                }
+                KeyCode::Backspace => {
+                    app.backspace_search_char();
+                }
+                KeyCode::Delete => {
+                    app.delete_search_char();
+                }
+                KeyCode::Left => {
+                    app.move_search_cursor_left();
+                }
+                KeyCode::Right => {
+                    app.move_search_cursor_right();
+                }
+                KeyCode::Home => {
+                    app.move_search_cursor_home();
+                }
+                KeyCode::End => {
+                    app.move_search_cursor_end();
+                }
+                KeyCode::Enter => {
+                    app.submit_search();
+                }
+                KeyCode::Esc => {
+                    app.exit_search_mode();
+                }
+                _ => {}
             }
-            KeyCode::Enter => {
-                app.submit_search();
-            }
-            KeyCode::Esc => {
-                app.exit_search_mode();
-            }
-            _ => {}
         },
         InputMode::Normal => {
             if app.active_pane().toc_focused {

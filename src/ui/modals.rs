@@ -103,7 +103,7 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Percentage(33),
-            Constraint::Length(3), // 1 character tall
+            Constraint::Length(3),
             Constraint::Min(0),
         ])
         .split(size);
@@ -124,22 +124,41 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
         .title(Title::from(" search wikipedia ").alignment(Alignment::Left));
 
     let visible_width = (area.width as usize).saturating_sub(6);
-    let char_count = app.search_input.chars().count();
-    let display_input: String = if char_count > visible_width && visible_width > 0 {
-        app.search_input
-            .chars()
-            .skip(char_count - visible_width)
-            .collect()
-    } else {
-        app.search_input.clone()
-    };
+    let chars: Vec<char> = app.search_input.chars().collect();
+    let total_len = chars.len();
+    let cursor_pos = app.search_cursor_pos.min(total_len);
 
-    let input_text = Line::from(vec![
-        Span::styled(" > ", Style::default().fg(theme::BEIGE).bold()),
-        Span::styled(display_input, Style::default().fg(theme::FG).bold()),
-        Span::styled("_", Style::default().fg(theme::BEIGE).bold()),
-    ]);
+    let mut scroll_offset = 0;
+    if cursor_pos >= visible_width && visible_width > 0 {
+        scroll_offset = cursor_pos + 1 - visible_width;
+    }
 
+    let end_idx = (scroll_offset + visible_width).min(total_len);
+    let visible_chars = &chars[scroll_offset..end_idx];
+    let rel_cursor_pos = cursor_pos.saturating_sub(scroll_offset);
+
+    let mut spans = Vec::new();
+    spans.push(Span::styled(" > ", Style::default().fg(theme::BEIGE).bold()));
+
+    for (i, &ch) in visible_chars.iter().enumerate() {
+        if i == rel_cursor_pos {
+            spans.push(Span::styled(
+                ch.to_string(),
+                Style::default().bg(theme::BEIGE).fg(theme::BG).bold(),
+            ));
+        } else {
+            spans.push(Span::styled(
+                ch.to_string(),
+                Style::default().fg(theme::FG).bold(),
+            ));
+        }
+    }
+
+    if rel_cursor_pos >= visible_chars.len() {
+        spans.push(Span::styled("_", Style::default().fg(theme::BEIGE).bold()));
+    }
+
+    let input_text = Line::from(spans);
     let search_paragraph = Paragraph::new(input_text).block(search_block);
     f.render_widget(search_paragraph, area);
 }
