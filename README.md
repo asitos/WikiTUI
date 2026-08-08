@@ -5,16 +5,16 @@
 
 a feature-rich terminal wikipedia client.
 
-## ✨ features
+## features
 
-- 📑 **tabs and splits**: work with multiple articles side-by-side or in tabs.
-- ⌨️ **vim-like navigation**: intuitive keybindings for fast scrolling, jumping, and pane movement.
-- 🧘 **zen mode (`z`)**: distraction-free reading canvas with no borders, tab bars, or status indicators.
-- 📋 **table of contents (`o`)**: pop-up article outline modal with instant heading jumping (`enter`).
-- 🎲 **random article discovery (`r`)**: instantly discover and load random wikipedia articles in new tabs.
-- 🔍 **in-page substring search (`/`)**: exact match highlighting and jumping through matches (`n` / `N`).
+- **tabs and splits**: work with multiple articles side-by-side or in tabs.
+- **vim-like navigation**: intuitive keybindings for fast scrolling, jumping, and pane movement.
+- **zen mode (`z`)**: distraction-free reading canvas with no borders, tab bars, or status indicators.
+- **table of contents (`o`)**: pop-up article outline modal with instant heading jumping (`enter`).
+- **random article discovery (`r`)**: instantly discover and load random wikipedia articles in new tabs.
+- **in-page substring search (`/`)**: exact match highlighting and jumping through matches (`n` / `N`).
 
-## 📦 installation
+## installation
 
 ### from crates.io
 
@@ -34,7 +34,7 @@ cargo build --release
 sudo install -Dm755 target/release/wikid /usr/bin/wikid
 ```
 
-## ⌨️ keybindings
+## keybindings
 
 | action | keybinding | description |
 | :--- | :---: | :--- |
@@ -62,6 +62,6 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **quit** | `q` | exit wikid |
 
 
-## 📜 license
+## license
 
 distributed under the [MIT license](LICENSE).
