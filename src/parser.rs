@@ -302,7 +302,7 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
                 continue;
             }
 
-            let word_len = word.chars().count();
+            let word_len = unicode_width::UnicodeWidthStr::width(word);
 
             if current_line_len + word_len > max_width && current_line_len > 0 {
                 doc.lines.push(Line::from(current_line_spans.clone()));
