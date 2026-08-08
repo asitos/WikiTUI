@@ -90,7 +90,7 @@ impl App {
             let pane = self.active_pane_mut();
             if pane.selected_idx > 0 {
                 pane.selected_idx -= 1;
-                Self::keep_search_selection_visible(pane, 0);
+                Self::keep_search_selection_visible(pane, term_height);
             }
         }
     }
