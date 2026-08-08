@@ -14,8 +14,7 @@ pub struct Heading {
 pub struct Link {
     pub title: String,
     pub text: String,
-    pub line_idx: usize,
-    pub span_indices: Vec<usize>,
+    pub span_indices: Vec<(usize, usize)>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -251,11 +250,12 @@ pub fn url_decode(s: &str) -> String {
     let s_bytes = s.as_bytes();
     while i < s_bytes.len() {
         if s_bytes[i] == b'%' && i + 2 < s_bytes.len() {
-            let parsed_byte = u8::from_str_radix(&s[i + 1..i + 3], 16);
-            if let Ok(b) = parsed_byte {
-                bytes.push(b);
-                i += 3;
-                continue;
+            if let Ok(hex_str) = std::str::from_utf8(&s_bytes[i + 1..i + 3]) {
+                if let Ok(b) = u8::from_str_radix(hex_str, 16) {
+                    bytes.push(b);
+                    i += 3;
+                    continue;
+                }
             }
         }
         if s_bytes[i] == b'+' {
@@ -270,9 +270,17 @@ pub fn url_decode(s: &str) -> String {
 
 // extract title from wiki links
 fn extract_title_from_href(href: &str) -> Option<String> {
-    if href.starts_with("/wiki/") && !href.contains(':') {
-        let title_part = href.trim_start_matches("/wiki/");
-        let raw_title = title_part.split('#').next().unwrap_or(title_part);
+    if let Some(path) = href.strip_prefix("/wiki/") {
+        if let Some(colon_idx) = path.find(':') {
+            let prefix = &path[..colon_idx];
+            if matches!(
+                prefix,
+                "Special" | "File" | "Category" | "Help" | "Wikipedia" | "Template" | "User" | "Talk" | "Portal" | "Draft" | "MediaWiki" | "Media"
+            ) || prefix.ends_with("_talk") {
+                return None;
+            }
+        }
+        let raw_title = path.split('#').next().unwrap_or(path);
         let decoded = url_decode(raw_title).replace('_', " ");
         Some(decoded)
     } else {
@@ -294,23 +302,9 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
                 continue;
             }
 
-            let word_len = word.chars().count();
+            let word_len = unicode_width::UnicodeWidthStr::width(word);
 
             if current_line_len + word_len > max_width && current_line_len > 0 {
-                if let Some(target) = token
-                    .link_target
-                    .as_ref()
-                    .filter(|_| !link_span_indices.is_empty())
-                {
-                    doc.links.push(Link {
-                        title: target.clone(),
-                        text: token.text.trim().to_string(),
-                        line_idx: current_link_line_idx,
-                        span_indices: link_span_indices.clone(),
-                    });
-                    link_span_indices.clear();
-                }
-
                 doc.lines.push(Line::from(current_line_spans.clone()));
                 current_line_spans.clear();
                 current_line_len = 0;
@@ -318,7 +312,7 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
             }
 
             if token.link_target.is_some() {
-                link_span_indices.push(current_line_spans.len());
+                link_span_indices.push((current_link_line_idx, current_line_spans.len()));
             }
 
             let trimmed_word = word.to_string();
@@ -334,7 +328,6 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
             doc.links.push(Link {
                 title: target.clone(),
                 text: token.text.trim().to_string(),
-                line_idx: current_link_line_idx,
                 span_indices: link_span_indices,
             });
         }

@@ -93,7 +93,12 @@ impl App {
             .take(selected_idx)
             .map(|item| 2 + usize::from(!item.snippet.is_empty()))
             .sum();
-        let end = start + 2 + usize::from(!items[selected_idx].snippet.is_empty());
+        
+        let end = if let Some(item) = items.get(selected_idx) {
+            start + 2 + usize::from(!item.snippet.is_empty())
+        } else {
+            start
+        };
         (start, end)
     }
 
