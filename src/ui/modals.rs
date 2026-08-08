@@ -174,8 +174,14 @@ pub fn render_toc_modal(
         };
 
         let avail_w = (toc_area.width as usize).saturating_sub(6 + indent_len);
-        let truncated_title = if h.title.len() > avail_w && avail_w > 3 {
-            format!("{}...", &h.title[..avail_w.saturating_sub(3)])
+        let truncated_title = if h.title.chars().count() > avail_w && avail_w > 3 {
+            let byte_end = h
+                .title
+                .char_indices()
+                .nth(avail_w.saturating_sub(3))
+                .map(|(i, _)| i)
+                .unwrap_or(h.title.len());
+            format!("{}...", &h.title[..byte_end])
         } else {
             h.title.clone()
         };
