@@ -251,11 +251,12 @@ pub fn url_decode(s: &str) -> String {
     let s_bytes = s.as_bytes();
     while i < s_bytes.len() {
         if s_bytes[i] == b'%' && i + 2 < s_bytes.len() {
-            let parsed_byte = u8::from_str_radix(&s[i + 1..i + 3], 16);
-            if let Ok(b) = parsed_byte {
-                bytes.push(b);
-                i += 3;
-                continue;
+            if let Ok(hex_str) = std::str::from_utf8(&s_bytes[i + 1..i + 3]) {
+                if let Ok(b) = u8::from_str_radix(hex_str, 16) {
+                    bytes.push(b);
+                    i += 3;
+                    continue;
+                }
             }
         }
         if s_bytes[i] == b'+' {
