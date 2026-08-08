@@ -123,9 +123,20 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
         .border_style(Style::default().fg(theme::BEIGE))
         .title(Title::from(" search wikipedia ").alignment(Alignment::Left));
 
+    let visible_width = (area.width as usize).saturating_sub(6);
+    let char_count = app.search_input.chars().count();
+    let display_input: String = if char_count > visible_width && visible_width > 0 {
+        app.search_input
+            .chars()
+            .skip(char_count - visible_width)
+            .collect()
+    } else {
+        app.search_input.clone()
+    };
+
     let input_text = Line::from(vec![
         Span::styled(" > ", Style::default().fg(theme::BEIGE).bold()),
-        Span::styled(&app.search_input, Style::default().fg(theme::FG).bold()),
+        Span::styled(display_input, Style::default().fg(theme::FG).bold()),
         Span::styled("_", Style::default().fg(theme::BEIGE).bold()),
     ]);
 
