@@ -11,10 +11,10 @@ use std::{
 };
 use tokio::sync::{Mutex, mpsc};
 
-use wiki_tui::api::{self, NetworkCommand, NetworkEvent};
-use wiki_tui::app::App;
-use wiki_tui::keybinds;
-use wiki_tui::ui;
+use wikid::api::{self, NetworkCommand, NetworkEvent};
+use wikid::app::App;
+use wikid::keybinds;
+use wikid::ui;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // terminal setup

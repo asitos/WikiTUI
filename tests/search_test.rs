@@ -1,6 +1,6 @@
 use tokio::sync::mpsc;
-use wiki_tui::api::SearchResultItem;
-use wiki_tui::app::{App, PaneContent};
+use wikid::api::SearchResultItem;
+use wikid::app::{App, PaneContent};
 
 fn result(title: &str, snippet: &str) -> SearchResultItem {
     SearchResultItem {
@@ -54,7 +54,7 @@ fn search_selection_scrolls_by_rendered_lines() {
 
 #[test]
 fn test_url_decode_norse_and_special_chars() {
-    use wiki_tui::parser::url_decode;
+    use wikid::parser::url_decode;
     assert_eq!(url_decode("%C3%9Eingvellir"), "Þingvellir");
     assert_eq!(url_decode("Hello%20World"), "Hello World");
 }

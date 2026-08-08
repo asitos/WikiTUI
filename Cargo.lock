@@ -1798,10 +1798,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "wiki-tui"
-version = "0.1.0"
+name = "wikid"
+version = "1.0.0"
 dependencies = [
  "crossterm",
+ "rand",
  "ratatui",
  "reqwest",
  "scraper",

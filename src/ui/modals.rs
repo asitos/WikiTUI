@@ -79,7 +79,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
         )]),
         Line::from("   z              toggle zen mode"),
         Line::from("   ?              toggle this help popup"),
-        Line::from("   q              quit wiki-tui"),
+        Line::from("   q              quit wikid"),
     ];
 
     let help_block = Block::bordered()
