@@ -46,6 +46,7 @@ pub fn parse_wikipedia_html(html: &str, max_width: usize) -> ParsedDocument {
         &mut current_block_tokens,
         &mut doc,
         effective_width,
+        None,
     );
 
     if !current_block_tokens.is_empty() {
@@ -62,6 +63,7 @@ fn process_element(
     current_tokens: &mut Vec<StyledToken>,
     doc: &mut ParsedDocument,
     max_width: usize,
+    list_item_idx: Option<usize>,
 ) {
     let tag_name = element.value().name();
 
@@ -164,8 +166,13 @@ fn process_element(
         }
         // lists
         "li" => {
+            let prefix = if let Some(idx) = list_item_idx {
+                format!("{}. ", idx)
+            } else {
+                "• ".to_string()
+            };
             current_tokens.push(StyledToken {
-                text: "• ".to_string(),
+                text: prefix,
                 style: Style::default().fg(theme::GREY),
                 link_target: None,
             });
@@ -210,6 +217,9 @@ fn process_element(
         _ => {}
     }
 
+    let is_ordered_list = tag_name == "ol";
+    let mut item_counter = 1;
+
     for child in element.children() {
         match child.value() {
             Node::Text(text) => {
@@ -224,6 +234,15 @@ fn process_element(
             }
             Node::Element(_) => {
                 if let Some(child_ref) = ElementRef::wrap(child) {
+                    let child_tag = child_ref.value().name();
+                    let child_list_idx = if is_ordered_list && child_tag == "li" {
+                        let idx = item_counter;
+                        item_counter += 1;
+                        Some(idx)
+                    } else {
+                        None
+                    };
+
                     process_element(
                         child_ref,
                         current_style,
@@ -231,6 +250,7 @@ fn process_element(
                         current_tokens,
                         doc,
                         max_width,
+                        child_list_idx,
                     );
                 }
             }
