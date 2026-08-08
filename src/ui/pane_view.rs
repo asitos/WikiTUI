@@ -190,7 +190,16 @@ fn render_pane_at(
                     let mut new_spans = Vec::new();
                     for (span_idx, span) in line.spans.iter().enumerate() {
                         let text = &span.content;
-                        let text_lower = text.to_lowercase();
+                        let mut byte_map = Vec::new();
+                        let mut text_lower = String::new();
+                        for (byte_idx, c) in text.char_indices() {
+                            let c_lower = c.to_lowercase().to_string();
+                            for _ in 0..c_lower.len() {
+                                byte_map.push(byte_idx);
+                            }
+                            text_lower.push_str(&c_lower);
+                        }
+                        byte_map.push(text.len());
 
                         if text_lower.contains(&query) {
                             let is_active_span = active_match
@@ -202,28 +211,43 @@ fn render_pane_at(
                             };
 
                             let mut start = 0;
+                            let mut text_start = 0;
                             while let Some(rel_pos) = text_lower[start..].find(&query) {
                                 let match_start = start + rel_pos;
                                 let match_end = match_start + query.len();
 
-                                if match_start > start {
+                                let mapped_start = byte_map[match_start];
+                                let mut mapped_end = byte_map[match_end];
+
+                                if mapped_start == mapped_end && mapped_end < text.len() {
+                                    if let Some(next_idx) = byte_map[match_end..].iter().find(|&&x| x > mapped_end) {
+                                        mapped_end = *next_idx;
+                                    } else {
+                                        mapped_end = text.len();
+                                    }
+                                }
+
+                                if mapped_start > text_start {
                                     new_spans.push(Span::styled(
-                                        text[start..match_start].to_string(),
+                                        text[text_start..mapped_start].to_string(),
                                         span.style,
                                     ));
                                 }
 
-                                let matched_text = text[match_start..match_end].to_string();
-                                new_spans.push(Span::styled(
-                                    matched_text,
-                                    Style::default().bg(bg_color).fg(theme::BG).bold(),
-                                ));
+                                let actual_start = mapped_start.max(text_start);
+                                if mapped_end > actual_start {
+                                    new_spans.push(Span::styled(
+                                        text[actual_start..mapped_end].to_string(),
+                                        Style::default().bg(bg_color).fg(theme::BG).bold(),
+                                    ));
+                                }
 
                                 start = match_end;
+                                text_start = mapped_end;
                             }
 
-                            if start < text.len() {
-                                new_spans.push(Span::styled(text[start..].to_string(), span.style));
+                            if text_start < text.len() {
+                                new_spans.push(Span::styled(text[text_start..].to_string(), span.style));
                             }
                         } else {
                             new_spans.push(span.clone());
