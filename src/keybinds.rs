@@ -42,7 +42,47 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
             _ => {}
         },
         InputMode::Normal => {
-            if app.active_pane().toc_focused {
+            if app.feed.active {
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('F') | KeyCode::Char('q') => {
+                        app.feed.active = false;
+                    }
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        app.feed.next_post();
+                        app.maybe_fetch_feed_batch();
+                    }
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        app.feed.prev_post();
+                    }
+                    KeyCode::Char('l') => {
+                        app.feed.toggle_like();
+                    }
+                    KeyCode::Enter => {
+                        if let Some(item) = app.feed.current_item().cloned() {
+                            app.feed.active = false;
+                            let pane_id = app.active_pane().id;
+                            app.active_pane_mut().is_loading = true;
+                            let _ = app.cmd_tx.send(crate::api::NetworkCommand::FetchArticle {
+                                pane_id,
+                                title: item.title,
+                            });
+                        }
+                    }
+                    KeyCode::Char('t') => {
+                        if let Some(item) = app.feed.current_item().cloned() {
+                            app.feed.active = false;
+                            app.new_tab();
+                            let pane_id = app.active_pane().id;
+                            app.active_pane_mut().is_loading = true;
+                            let _ = app.cmd_tx.send(crate::api::NetworkCommand::FetchArticle {
+                                pane_id,
+                                title: item.title,
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            } else if app.active_pane().toc_focused {
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('o') => {
                         app.toggle_toc();
@@ -76,6 +116,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     }
                     KeyCode::Char('z') => {
                         app.toggle_zen_mode();
+                    }
+                    KeyCode::Char('F') => {
+                        app.toggle_feed_mode();
                     }
                     KeyCode::Char('r') => {
                         app.fetch_random_article();
@@ -158,10 +201,10 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::BackTab => {
                         app.focus_prev_link();
                     }
-                    KeyCode::Char('j') => {
+                    KeyCode::Char('j') | KeyCode::Down => {
                         app.select_next_item(term_height);
                     }
-                    KeyCode::Char('k') => {
+                    KeyCode::Char('k') | KeyCode::Up => {
                         app.select_prev_item(term_height);
                     }
                     KeyCode::Char('t') => {

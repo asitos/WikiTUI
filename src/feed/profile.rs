@@ -1,0 +1,113 @@
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::PathBuf;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FeedProfile {
+    pub version: u32,
+    pub total_likes: u32,
+    pub total_seen: u32,
+    pub category_scores: HashMap<String, i32>,
+    pub liked_articles: HashSet<String>,
+    pub seen_articles: HashSet<String>,
+}
+
+impl Default for FeedProfile {
+    fn default() -> Self {
+        let mut category_scores = HashMap::new();
+        category_scores.insert("given names".to_string(), -1000);
+        category_scores.insert("surnames".to_string(), -1000);
+        category_scores.insert("disambiguation pages".to_string(), -1000);
+
+        Self {
+            version: 1,
+            total_likes: 0,
+            total_seen: 0,
+            category_scores,
+            liked_articles: HashSet::new(),
+            seen_articles: HashSet::new(),
+        }
+    }
+}
+
+impl FeedProfile {
+    pub fn profile_path() -> PathBuf {
+        if let Ok(home) = std::env::var("HOME") {
+            let mut dir = PathBuf::from(home);
+            dir.push(".config");
+            dir.push("wikid");
+            let _ = fs::create_dir_all(&dir);
+            dir.push("feed_profile.json");
+            dir
+        } else {
+            PathBuf::from("feed_profile.json")
+        }
+    }
+
+    pub fn load() -> Self {
+        let path = Self::profile_path();
+        let loaded = fs::read_to_string(&path)
+            .ok()
+            .and_then(|content| serde_json::from_str::<FeedProfile>(&content).ok());
+
+        if let Some(profile) = loaded {
+            return profile;
+        }
+        let profile = Self::default();
+        profile.save();
+        profile
+    }
+
+    pub fn save(&self) {
+        let path = Self::profile_path();
+        if let Ok(pretty_json) = serde_json::to_string_pretty(self) {
+            let _ = fs::write(path, pretty_json);
+        }
+    }
+
+    pub fn record_engagement(&mut self, categories: &[String], points: i32) {
+        for cat in categories {
+            let cat_lower = cat.to_lowercase();
+            let current = self.category_scores.entry(cat_lower).or_insert(0);
+            *current += points;
+        }
+    }
+
+    pub fn mark_liked(&mut self, title: &str, categories: &[String]) -> bool {
+        let is_liked = if self.liked_articles.contains(title) {
+            self.liked_articles.remove(title);
+            self.record_engagement(categories, -50);
+            if self.total_likes > 0 {
+                self.total_likes -= 1;
+            }
+            false
+        } else {
+            self.liked_articles.insert(title.to_string());
+            self.record_engagement(categories, 50);
+            self.total_likes += 1;
+            true
+        };
+        self.save();
+        is_liked
+    }
+
+    pub fn mark_seen(&mut self, title: &str, categories: &[String]) {
+        if !self.seen_articles.contains(title) {
+            self.seen_articles.insert(title.to_string());
+            self.total_seen += 1;
+            self.record_engagement(categories, -5);
+            self.save();
+        }
+    }
+
+    pub fn score_for_categories(&self, categories: &[String]) -> i32 {
+        let mut score = 0;
+        for cat in categories {
+            if let Some(&cat_score) = self.category_scores.get(&cat.to_lowercase()) {
+                score += cat_score;
+            }
+        }
+        score
+    }
+}

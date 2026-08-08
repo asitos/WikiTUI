@@ -1,3 +1,4 @@
+use crate::feed::algorithm::FeedItem;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
@@ -12,6 +13,7 @@ pub enum NetworkCommand {
     Search { pane_id: usize, query: String },
     FetchArticle { pane_id: usize, title: String },
     FetchRandomArticle { pane_id: usize },
+    FetchFeedBatch,
 }
 
 pub enum NetworkEvent {
@@ -24,6 +26,9 @@ pub enum NetworkEvent {
         pane_id: usize,
         title: String,
         content: String,
+    },
+    FeedBatchLoaded {
+        items: Vec<FeedItem>,
     },
     Error {
         pane_id: usize,
@@ -111,6 +116,14 @@ pub async fn run_worker(
                                 message: err,
                             });
                         }
+                    }
+                }
+                NetworkCommand::FetchFeedBatch => {
+                    if let Ok(items) = fetch_feed_batch(&client_ref).await {
+                        let _ = ev_tx_ref
+                            .lock()
+                            .await
+                            .send(NetworkEvent::FeedBatchLoaded { items });
                     }
                 }
             }
@@ -256,4 +269,100 @@ async fn fetch_random_article(client: &reqwest::Client) -> Result<(String, Strin
 
     let content = fetch_article_wikipedia(client, &title).await?;
     Ok((title, content))
+}
+
+#[derive(Deserialize)]
+struct WikiCategoryItem {
+    title: String,
+}
+
+#[derive(Deserialize)]
+struct WikiPageProp {
+    title: Option<String>,
+    extract: Option<String>,
+    categories: Option<Vec<WikiCategoryItem>>,
+}
+
+#[derive(Deserialize)]
+struct WikiFeedQuery {
+    pages: Option<std::collections::HashMap<String, WikiPageProp>>,
+}
+
+#[derive(Deserialize)]
+struct WikiFeedResponse {
+    query: Option<WikiFeedQuery>,
+}
+
+async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>, String> {
+    let url = "https://en.wikipedia.org/w/api.php";
+    let res = client
+        .get(url)
+        .query(&[
+            ("action", "query"),
+            ("generator", "random"),
+            ("grnnamespace", "0"),
+            ("grnlimit", "5"),
+            ("prop", "extracts|categories"),
+            ("exintro", "1"),
+            ("explaintext", "1"),
+            ("clshow", "!hidden"),
+            ("cllimit", "15"),
+            ("format", "json"),
+        ])
+        .send()
+        .await
+        .map_err(|e| format!("network error: {}", e))?;
+
+    let feed_resp: WikiFeedResponse = res
+        .json()
+        .await
+        .map_err(|e| format!("parse error: {}", e))?;
+
+    let mut items = Vec::new();
+    if let Some(query) = feed_resp.query {
+        if let Some(pages) = query.pages {
+            for (_, page) in pages {
+                if let Some(title) = page.title {
+                    let snippet = page.extract.unwrap_or_default().trim().to_string();
+                    let mut categories: Vec<String> = page
+                        .categories
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|c| {
+                            if let Some(stripped) = c.title.strip_prefix("Category:") {
+                                stripped.to_string()
+                            } else {
+                                c.title
+                            }
+                        })
+                        .filter(|cat| {
+                            let lower = cat.to_lowercase();
+                            !lower.starts_with("all ")
+                                && !lower.starts_with("articles ")
+                                && !lower.starts_with("cs1 ")
+                                && !lower.contains("stubs")
+                                && !lower.contains("tracking")
+                        })
+                        .collect();
+
+                    if categories.is_empty() {
+                        categories = title
+                            .split(|c: char| !c.is_alphanumeric())
+                            .filter(|w| w.len() > 3)
+                            .map(|w| w.to_lowercase())
+                            .take(3)
+                            .collect();
+                    }
+
+                    items.push(FeedItem {
+                        title,
+                        snippet,
+                        categories,
+                        is_liked: false,
+                    });
+                }
+            }
+        }
+    }
+    Ok(items)
 }

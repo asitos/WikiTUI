@@ -40,6 +40,7 @@ pub struct App {
     pub search_opens_new_tab: bool,
     pub waiting_for_split_cmd: bool,
     pub zen_mode: bool,
+    pub feed: crate::feed::FeedState,
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: mpsc::UnboundedSender<NetworkCommand>,
 }
@@ -55,6 +56,7 @@ impl App {
             search_opens_new_tab: true,
             waiting_for_split_cmd: false,
             zen_mode: false,
+            feed: crate::feed::FeedState::new(),
             next_pane_id: 1,
             cmd_tx,
         };
@@ -68,6 +70,20 @@ impl App {
 
     pub fn toggle_zen_mode(&mut self) {
         self.zen_mode = !self.zen_mode;
+    }
+
+    pub fn maybe_fetch_feed_batch(&mut self) {
+        if !self.feed.is_fetching && self.feed.active_idx + 3 >= self.feed.items.len() {
+            self.feed.is_fetching = true;
+            let _ = self.cmd_tx.send(NetworkCommand::FetchFeedBatch);
+        }
+    }
+
+    pub fn toggle_feed_mode(&mut self) {
+        let is_active = self.feed.toggle_active();
+        if is_active && self.feed.items.is_empty() {
+            self.maybe_fetch_feed_batch();
+        }
     }
 
     pub fn active_tab(&self) -> &Tab {
@@ -143,6 +159,12 @@ impl App {
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     pane.is_loading = false;
                     pane.content = PaneContent::Error(message);
+                }
+            }
+            NetworkEvent::FeedBatchLoaded { items } => {
+                self.feed.is_fetching = false;
+                for item in items {
+                    self.feed.add_item(item);
                 }
             }
         }

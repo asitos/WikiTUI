@@ -4,24 +4,45 @@ pub mod status_bar;
 pub mod tab_bar;
 
 use crate::app::{App, InputMode};
+use crate::theme;
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout},
+    style::Style,
+    widgets::Paragraph,
 };
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let size = f.size();
 
-    if app.zen_mode {
+    if app.feed.active {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Length(1),
+            ])
+            .split(size);
+
+        let feed_area = chunks[0];
+        let status_area = chunks[1];
+
+        crate::feed::ui::render_feed_view(f, &app.feed, feed_area);
+
+        let status_p = Paragraph::new(" j/k: navigate | l: like | enter: read | esc: exit ")
+            .style(Style::default().fg(theme::GREY))
+            .alignment(Alignment::Center);
+        f.render_widget(status_p, status_area);
+    } else if app.zen_mode {
         let zen_area = modals::centered_rect(80, 90, size);
         pane_view::render_single_active_pane(f, app, zen_area);
     } else {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(1), // top tab bar
-                Constraint::Min(0),    // main workspace
-                Constraint::Length(1), // bottom status bar
+                Constraint::Length(1),
+                Constraint::Min(0),
+                Constraint::Length(1),
             ])
             .split(size);
 

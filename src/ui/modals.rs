@@ -78,6 +78,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
             Style::default().fg(theme::VIOLET).bold(),
         )]),
         Line::from("   z              toggle zen mode"),
+        Line::from("   F              toggle wikipedia feed mode"),
         Line::from("   ?              toggle this help popup"),
         Line::from("   q              quit wikid"),
     ];
