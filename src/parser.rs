@@ -14,8 +14,7 @@ pub struct Heading {
 pub struct Link {
     pub title: String,
     pub text: String,
-    pub line_idx: usize,
-    pub span_indices: Vec<usize>,
+    pub span_indices: Vec<(usize, usize)>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -306,20 +305,6 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
             let word_len = word.chars().count();
 
             if current_line_len + word_len > max_width && current_line_len > 0 {
-                if let Some(target) = token
-                    .link_target
-                    .as_ref()
-                    .filter(|_| !link_span_indices.is_empty())
-                {
-                    doc.links.push(Link {
-                        title: target.clone(),
-                        text: token.text.trim().to_string(),
-                        line_idx: current_link_line_idx,
-                        span_indices: link_span_indices.clone(),
-                    });
-                    link_span_indices.clear();
-                }
-
                 doc.lines.push(Line::from(current_line_spans.clone()));
                 current_line_spans.clear();
                 current_line_len = 0;
@@ -327,7 +312,7 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
             }
 
             if token.link_target.is_some() {
-                link_span_indices.push(current_line_spans.len());
+                link_span_indices.push((current_link_line_idx, current_line_spans.len()));
             }
 
             let trimmed_word = word.to_string();
@@ -343,7 +328,6 @@ fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_w
             doc.links.push(Link {
                 title: target.clone(),
                 text: token.text.trim().to_string(),
-                line_idx: current_link_line_idx,
                 span_indices: link_span_indices,
             });
         }

@@ -30,7 +30,7 @@ impl App {
 
         let is_visible = pane.selected_link_idx.is_some_and(|idx| {
             if let Some(link) = parsed_doc.links.get(idx) {
-                link.line_idx >= view_start && link.line_idx < view_end
+                link.span_indices.iter().any(|(l, _)| *l >= view_start && *l < view_end)
             } else {
                 false
             }
@@ -40,7 +40,7 @@ impl App {
             let first_in_view = parsed_doc
                 .links
                 .iter()
-                .position(|link| link.line_idx >= view_start && link.line_idx < view_end);
+                .position(|link| link.span_indices.iter().any(|(l, _)| *l >= view_start && *l < view_end));
 
             if let Some(idx) = first_in_view {
                 pane.selected_link_idx = Some(idx);
@@ -48,7 +48,7 @@ impl App {
                 let closest = parsed_doc
                     .links
                     .iter()
-                    .position(|link| link.line_idx >= view_start)
+                    .position(|link| link.span_indices.iter().any(|(l, _)| *l >= view_start))
                     .unwrap_or(parsed_doc.links.len() - 1);
                 pane.selected_link_idx = Some(closest);
             }
@@ -197,7 +197,7 @@ impl App {
             };
             pane.selected_link_idx = Some(next_idx);
 
-            let link_line = parsed_doc.links[next_idx].line_idx;
+            let link_line = parsed_doc.links[next_idx].span_indices.first().map_or(0, |(l, _)| *l);
             if link_line < pane.scroll_offset {
                 pane.scroll_offset = link_line;
             } else if link_line >= pane.scroll_offset + 10 {
@@ -225,7 +225,7 @@ impl App {
             };
             pane.selected_link_idx = Some(prev_idx);
 
-            let link_line = parsed_doc.links[prev_idx].line_idx;
+            let link_line = parsed_doc.links[prev_idx].span_indices.first().map_or(0, |(l, _)| *l);
             if link_line < pane.scroll_offset {
                 pane.scroll_offset = link_line;
             } else if link_line >= pane.scroll_offset + 10 {

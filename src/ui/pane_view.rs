@@ -160,21 +160,18 @@ fn render_pane_at(
         PaneContent::ArticleText { parsed_doc, .. } => {
             let mut rendered_lines = parsed_doc.lines.clone();
 
-            if let Some((link, line)) = pane
+            if let Some(link) = pane
                 .selected_link_idx
                 .and_then(|idx| parsed_doc.links.get(idx))
-                .and_then(|link| {
-                    rendered_lines
-                        .get_mut(link.line_idx)
-                        .map(|line| (link, line))
-                })
             {
-                for &span_idx in &link.span_indices {
-                    if let Some(span) = line.spans.get_mut(span_idx) {
-                        span.style = Style::default()
-                            .fg(theme::VIOLET)
-                            .bold()
-                            .add_modifier(Modifier::UNDERLINED);
+                for &(line_idx, span_idx) in &link.span_indices {
+                    if let Some(line) = rendered_lines.get_mut(line_idx) {
+                        if let Some(span) = line.spans.get_mut(span_idx) {
+                            span.style = Style::default()
+                                .fg(theme::VIOLET)
+                                .bold()
+                                .add_modifier(Modifier::UNDERLINED);
+                        }
                     }
                 }
             }
