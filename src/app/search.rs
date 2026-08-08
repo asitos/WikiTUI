@@ -29,6 +29,10 @@ impl App {
     }
 
     pub fn fetch_random_article(&mut self) {
+        if self.active_pane().is_loading {
+            return;
+        }
+
         let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
         let pane_id = if is_empty {
             self.active_pane().id
