@@ -16,7 +16,7 @@ impl App {
     }
 
     pub fn new_tab(&mut self) {
-        let name = format!("tab {}", self.tabs.len() + 1);
+        let name = "new tab".to_string();
         self.tabs.push(Tab::new(name, self.next_pane_id));
         self.next_pane_id += 1;
         self.active_tab_idx = self.tabs.len() - 1;
