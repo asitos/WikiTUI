@@ -62,4 +62,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.input_mode == InputMode::Search {
         modals::render_search_modal(f, app, size);
     }
+
+    if app.input_mode == InputMode::CategoryOnboarding {
+        modals::render_category_onboarding_modal(f, app, size);
+    }
 }

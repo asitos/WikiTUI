@@ -17,6 +17,7 @@ pub enum InputMode {
     Search,
     LocalSearch,
     Help,
+    CategoryOnboarding,
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -41,6 +42,8 @@ pub struct App {
     pub waiting_for_split_cmd: bool,
     pub zen_mode: bool,
     pub feed: crate::feed::FeedState,
+    pub onboarding_cursor_idx: usize,
+    pub onboarding_selected: Vec<bool>,
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: mpsc::UnboundedSender<NetworkCommand>,
 }
@@ -57,6 +60,8 @@ impl App {
             waiting_for_split_cmd: false,
             zen_mode: false,
             feed: crate::feed::FeedState::new(),
+            onboarding_cursor_idx: 0,
+            onboarding_selected: vec![false, false, false, false, true, false, false, true, true, false, false, true],
             next_pane_id: 1,
             cmd_tx,
         };
@@ -81,7 +86,26 @@ impl App {
 
     pub fn toggle_feed_mode(&mut self) {
         let is_active = self.feed.toggle_active();
-        if is_active && self.feed.items.is_empty() {
+        if is_active {
+            if !self.feed.profile.has_onboarded {
+                self.input_mode = InputMode::CategoryOnboarding;
+            } else if self.feed.items.is_empty() {
+                self.maybe_fetch_feed_batch();
+            }
+        }
+    }
+
+    pub fn submit_category_onboarding(&mut self) {
+        let chosen_indices: Vec<usize> = self
+            .onboarding_selected
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, &sel)| if sel { Some(idx) } else { None })
+            .collect();
+
+        self.feed.profile.complete_onboarding(&chosen_indices);
+        self.input_mode = InputMode::Normal;
+        if self.feed.items.is_empty() {
             self.maybe_fetch_feed_batch();
         }
     }

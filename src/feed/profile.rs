@@ -3,9 +3,15 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
+pub use crate::feed::categories::POPULAR_CATEGORIES;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeedProfile {
     pub version: u32,
+    #[serde(default)]
+    pub has_onboarded: bool,
+    #[serde(default)]
+    pub selected_categories: Vec<String>,
     pub total_likes: u32,
     pub total_seen: u32,
     pub category_scores: HashMap<String, i32>,
@@ -22,6 +28,8 @@ impl Default for FeedProfile {
 
         Self {
             version: 1,
+            has_onboarded: false,
+            selected_categories: Vec::new(),
             total_likes: 0,
             total_seen: 0,
             category_scores,
@@ -109,5 +117,41 @@ impl FeedProfile {
             }
         }
         score
+    }
+
+    pub fn complete_onboarding(&mut self, chosen_indices: &[usize]) {
+        self.selected_categories.clear();
+        for &idx in chosen_indices {
+            if let Some((_, label, subcats)) = POPULAR_CATEGORIES.get(idx) {
+                self.selected_categories.push(label.to_string());
+                for subcat in *subcats {
+                    let current = self.category_scores.entry(subcat.to_string()).or_insert(0);
+                    *current += 200;
+                }
+            }
+        }
+        self.has_onboarded = true;
+        self.save();
+    }
+
+    pub fn get_active_subcategories(&self) -> Vec<String> {
+        let mut subcats = Vec::new();
+        for (display_name, label, subcat_list) in POPULAR_CATEGORIES {
+            if self.selected_categories.contains(&label.to_string())
+                || self.selected_categories.contains(&display_name.to_string())
+            {
+                for s in *subcat_list {
+                    subcats.push(s.to_string());
+                }
+            }
+        }
+        if subcats.is_empty() {
+            for (_, _, subcat_list) in POPULAR_CATEGORIES {
+                for s in *subcat_list {
+                    subcats.push(s.to_string());
+                }
+            }
+        }
+        subcats
     }
 }

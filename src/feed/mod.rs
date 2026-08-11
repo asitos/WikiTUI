@@ -1,4 +1,5 @@
 pub mod algorithm;
+pub mod categories;
 pub mod profile;
 pub mod ui;
 

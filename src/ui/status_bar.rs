@@ -26,6 +26,9 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 active_pane.local_search_query, matches_info
             )
         }
+        InputMode::CategoryOnboarding => {
+            "j/k: navigate | space: toggle | enter: start feed".to_string()
+        }
         InputMode::Help => "".to_string(),
         InputMode::Normal => {
             if app.active_pane().toc_focused {
@@ -39,6 +42,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let status_style = match app.input_mode {
         InputMode::Search => Style::default().fg(theme::BEIGE).bold(),
         InputMode::LocalSearch => Style::default().fg(theme::YELLOW).bold(),
+        InputMode::CategoryOnboarding => Style::default().fg(theme::VIOLET).bold(),
         InputMode::Help => Style::default().fg(theme::GREY).bold(),
         InputMode::Normal => Style::default().fg(theme::GREY),
     };
