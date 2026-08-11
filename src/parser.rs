@@ -75,6 +75,100 @@ fn process_element(
         return;
     }
 
+    // check if element is a Wikipedia ambox maintenance banner
+    if let Some(class_attr) = element.value().attr("class") {
+        if let Some(banner_type) = crate::banners::classify_ambox_class(class_attr) {
+            let raw_text = element.text().collect::<Vec<_>>().join(" ");
+            let mut clean_text = raw_text.split_whitespace().collect::<Vec<_>>().join(" ");
+
+            clean_text = clean_text
+                .replace(" .", ".")
+                .replace(" ,", ",")
+                .replace(" :", ":")
+                .replace(" ;", ";")
+                .replace(" !", "!")
+                .replace(" ?", "?");
+
+            if let Some(idx) = clean_text.find("( Learn how") {
+                clean_text.truncate(idx);
+            }
+            if let Some(idx) = clean_text.find("(Learn how") {
+                clean_text.truncate(idx);
+            }
+            if let Some(open_paren) = clean_text.rfind('(') {
+                let trailing = &clean_text[open_paren..];
+                if trailing.contains("202")
+                    || trailing.contains("201")
+                    || trailing.contains("200")
+                {
+                    clean_text.truncate(open_paren);
+                }
+            }
+
+            let final_message = clean_text.trim().to_string();
+            if !final_message.is_empty() {
+                if !current_tokens.is_empty() {
+                    wrap_and_append_block(current_tokens, doc, max_width);
+                    current_tokens.clear();
+                }
+
+                let color = banner_type.color();
+                let label = banner_type.label();
+
+                let box_width = max_width.saturating_sub(2).max(20);
+                let header_str = format!("─ ⚠️ {} ", label);
+                let header_chars = header_str.chars().count();
+                let fill_top = box_width.saturating_sub(2 + header_chars);
+
+                doc.lines.push(Line::from(vec![
+                    Span::styled("┌", Style::default().fg(color)),
+                    Span::styled(header_str, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+                    Span::styled("─".repeat(fill_top), Style::default().fg(color)),
+                    Span::styled("┐", Style::default().fg(color)),
+                ]));
+
+                let inner_width = box_width.saturating_sub(4).max(10);
+                let mut current_line = String::new();
+                for word in final_message.split_whitespace() {
+                    if current_line.is_empty() {
+                        current_line.push_str(word);
+                    } else if current_line.chars().count() + 1 + word.chars().count() <= inner_width {
+                        current_line.push(' ');
+                        current_line.push_str(word);
+                    } else {
+                        let msg_len = current_line.chars().count();
+                        let padding = inner_width.saturating_sub(msg_len);
+                        doc.lines.push(Line::from(vec![
+                            Span::styled("│ ", Style::default().fg(color)),
+                            Span::styled(current_line, Style::default().fg(theme::FG).add_modifier(Modifier::ITALIC)),
+                            Span::styled(" ".repeat(padding), Style::default().fg(theme::FG)),
+                            Span::styled(" │", Style::default().fg(color)),
+                        ]));
+                        current_line = word.to_string();
+                    }
+                }
+                if !current_line.is_empty() {
+                    let msg_len = current_line.chars().count();
+                    let padding = inner_width.saturating_sub(msg_len);
+                    doc.lines.push(Line::from(vec![
+                        Span::styled("│ ", Style::default().fg(color)),
+                        Span::styled(current_line, Style::default().fg(theme::FG).add_modifier(Modifier::ITALIC)),
+                        Span::styled(" ".repeat(padding), Style::default().fg(theme::FG)),
+                        Span::styled(" │", Style::default().fg(color)),
+                    ]));
+                }
+
+                doc.lines.push(Line::from(vec![
+                    Span::styled("└", Style::default().fg(color)),
+                    Span::styled("─".repeat(box_width.saturating_sub(2)), Style::default().fg(color)),
+                    Span::styled("┘", Style::default().fg(color)),
+                ]));
+                doc.lines.push(Line::from(""));
+            }
+            return;
+        }
+    }
+
     // skip wikipedia hidden elements
     if element.value().attr("class").is_some_and(|class_attr| {
         class_attr.split_whitespace().any(|cls| {
