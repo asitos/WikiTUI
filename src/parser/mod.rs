@@ -1,35 +1,19 @@
+pub mod banners;
+pub mod blocks;
+pub mod types;
+pub mod utils;
+
+pub use banners::{ArticleBanner, BannerType};
+pub use types::{Heading, Link, ParsedDocument};
+pub use utils::url_decode;
+
 use crate::theme;
+use blocks::wrap_and_append_block;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use scraper::{ElementRef, Html, Node};
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Heading {
-    pub title: String,
-    pub level: u8,
-    pub line_idx: usize,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Link {
-    pub title: String,
-    pub text: String,
-    pub span_indices: Vec<(usize, usize)>,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ParsedDocument {
-    pub lines: Vec<Line<'static>>,
-    pub links: Vec<Link>,
-    pub headings: Vec<Heading>,
-}
-
-#[derive(Debug, Clone)]
-struct StyledToken {
-    text: String,
-    style: Style,
-    link_target: Option<String>,
-}
+use types::StyledToken;
+use utils::extract_title_from_href;
 
 pub fn parse_wikipedia_html(html: &str, max_width: usize) -> ParsedDocument {
     let fragment = Html::parse_fragment(html);
@@ -77,7 +61,7 @@ fn process_element(
 
     // check if element is a Wikipedia ambox maintenance banner
     if let Some(class_attr) = element.value().attr("class") {
-        if let Some(banner_type) = crate::banners::classify_ambox_class(class_attr) {
+        if let Some(banner_type) = banners::classify_ambox_class(class_attr) {
             let raw_text = element.text().collect::<Vec<_>>().join(" ");
             let mut clean_text = raw_text.split_whitespace().collect::<Vec<_>>().join(" ");
 
@@ -122,7 +106,10 @@ fn process_element(
 
                 doc.lines.push(Line::from(vec![
                     Span::styled("┌", Style::default().fg(color)),
-                    Span::styled(header_str, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        header_str,
+                        Style::default().fg(color).add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("─".repeat(fill_top), Style::default().fg(color)),
                     Span::styled("┐", Style::default().fg(color)),
                 ]));
@@ -132,7 +119,8 @@ fn process_element(
                 for word in final_message.split_whitespace() {
                     if current_line.is_empty() {
                         current_line.push_str(word);
-                    } else if current_line.chars().count() + 1 + word.chars().count() <= inner_width {
+                    } else if current_line.chars().count() + 1 + word.chars().count() <= inner_width
+                    {
                         current_line.push(' ');
                         current_line.push_str(word);
                     } else {
@@ -140,7 +128,10 @@ fn process_element(
                         let padding = inner_width.saturating_sub(msg_len);
                         doc.lines.push(Line::from(vec![
                             Span::styled("│ ", Style::default().fg(color)),
-                            Span::styled(current_line, Style::default().fg(theme::FG).add_modifier(Modifier::ITALIC)),
+                            Span::styled(
+                                current_line,
+                                Style::default().fg(theme::FG).add_modifier(Modifier::ITALIC),
+                            ),
                             Span::styled(" ".repeat(padding), Style::default().fg(theme::FG)),
                             Span::styled(" │", Style::default().fg(color)),
                         ]));
@@ -152,7 +143,10 @@ fn process_element(
                     let padding = inner_width.saturating_sub(msg_len);
                     doc.lines.push(Line::from(vec![
                         Span::styled("│ ", Style::default().fg(color)),
-                        Span::styled(current_line, Style::default().fg(theme::FG).add_modifier(Modifier::ITALIC)),
+                        Span::styled(
+                            current_line,
+                            Style::default().fg(theme::FG).add_modifier(Modifier::ITALIC),
+                        ),
                         Span::styled(" ".repeat(padding), Style::default().fg(theme::FG)),
                         Span::styled(" │", Style::default().fg(color)),
                     ]));
@@ -160,7 +154,10 @@ fn process_element(
 
                 doc.lines.push(Line::from(vec![
                     Span::styled("└", Style::default().fg(color)),
-                    Span::styled("─".repeat(box_width.saturating_sub(2)), Style::default().fg(color)),
+                    Span::styled(
+                        "─".repeat(box_width.saturating_sub(2)),
+                        Style::default().fg(color),
+                    ),
                     Span::styled("┘", Style::default().fg(color)),
                 ]));
                 doc.lines.push(Line::from(""));
@@ -355,100 +352,5 @@ fn process_element(
     if is_block_element && !current_tokens.is_empty() {
         wrap_and_append_block(current_tokens, doc, max_width);
         current_tokens.clear();
-    }
-}
-
-pub fn url_decode(s: &str) -> String {
-    let mut bytes = Vec::with_capacity(s.len());
-    let mut i = 0;
-    let s_bytes = s.as_bytes();
-    while i < s_bytes.len() {
-        if s_bytes[i] == b'%' && i + 2 < s_bytes.len() {
-            if let Ok(hex_str) = std::str::from_utf8(&s_bytes[i + 1..i + 3]) {
-                if let Ok(b) = u8::from_str_radix(hex_str, 16) {
-                    bytes.push(b);
-                    i += 3;
-                    continue;
-                }
-            }
-        }
-        if s_bytes[i] == b'+' {
-            bytes.push(b' ');
-        } else {
-            bytes.push(s_bytes[i]);
-        }
-        i += 1;
-    }
-    String::from_utf8_lossy(&bytes).to_string()
-}
-
-// extract title from wiki links
-fn extract_title_from_href(href: &str) -> Option<String> {
-    if let Some(path) = href.strip_prefix("/wiki/") {
-        if let Some(colon_idx) = path.find(':') {
-            let prefix = &path[..colon_idx];
-            if matches!(
-                prefix,
-                "Special" | "File" | "Category" | "Help" | "Wikipedia" | "Template" | "User" | "Talk" | "Portal" | "Draft" | "MediaWiki" | "Media"
-            ) || prefix.ends_with("_talk") {
-                return None;
-            }
-        }
-        let raw_title = path.split('#').next().unwrap_or(path);
-        let decoded = url_decode(raw_title).replace('_', " ");
-        Some(decoded)
-    } else {
-        None
-    }
-}
-
-fn wrap_and_append_block(tokens: &[StyledToken], doc: &mut ParsedDocument, max_width: usize) {
-    let mut current_line_spans: Vec<Span<'static>> = Vec::new();
-    let mut current_line_len = 0;
-
-    for token in tokens {
-        let words = token.text.split_inclusive(|c: char| c.is_whitespace());
-        let mut link_span_indices = Vec::new();
-        let mut current_link_line_idx = doc.lines.len();
-
-        for word in words {
-            if word.is_empty() {
-                continue;
-            }
-
-            let word_len = unicode_width::UnicodeWidthStr::width(word);
-
-            if current_line_len + word_len > max_width && current_line_len > 0 {
-                doc.lines.push(Line::from(current_line_spans.clone()));
-                current_line_spans.clear();
-                current_line_len = 0;
-                current_link_line_idx = doc.lines.len();
-            }
-
-            if token.link_target.is_some() {
-                link_span_indices.push((current_link_line_idx, current_line_spans.len()));
-            }
-
-            let trimmed_word = word.to_string();
-            current_line_spans.push(Span::styled(trimmed_word, token.style));
-            current_line_len += word_len;
-        }
-
-        if let Some(target) = token
-            .link_target
-            .as_ref()
-            .filter(|_| !link_span_indices.is_empty())
-        {
-            doc.links.push(Link {
-                title: target.clone(),
-                text: token.text.trim().to_string(),
-                span_indices: link_span_indices,
-            });
-        }
-    }
-
-    if !current_line_spans.is_empty() {
-        doc.lines.push(Line::from(current_line_spans));
-        doc.lines.push(Line::from(""));
     }
 }

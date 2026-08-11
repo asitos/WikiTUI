@@ -44,6 +44,7 @@ impl BannerType {
 pub fn classify_ambox_class(class_attr: &str) -> Option<BannerType> {
     let lower = class_attr.to_lowercase();
 
+    // Must be a real ambox (Article Message Box)
     let is_ambox = class_attr
         .split_whitespace()
         .any(|cls| cls == "ambox" || cls.starts_with("ambox-"));
