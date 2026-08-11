@@ -99,12 +99,20 @@ fn process_element(
                 let color = banner_type.color();
                 let label = banner_type.label();
 
-                let box_width = max_width.saturating_sub(2).max(20);
+                let side_margin = if max_width > 60 {
+                    (max_width * 10 / 100).clamp(4, 20)
+                } else {
+                    2
+                };
+                let left_padding = " ".repeat(side_margin);
+
+                let box_width = max_width.saturating_sub(side_margin * 2).max(20);
                 let header_str = format!("─ ⚠️ {} ", label);
                 let header_chars = header_str.chars().count();
                 let fill_top = box_width.saturating_sub(2 + header_chars);
 
                 doc.lines.push(Line::from(vec![
+                    Span::raw(left_padding.clone()),
                     Span::styled("┌", Style::default().fg(color)),
                     Span::styled(
                         header_str,
@@ -127,6 +135,7 @@ fn process_element(
                         let msg_len = current_line.chars().count();
                         let padding = inner_width.saturating_sub(msg_len);
                         doc.lines.push(Line::from(vec![
+                            Span::raw(left_padding.clone()),
                             Span::styled("│ ", Style::default().fg(color)),
                             Span::styled(
                                 current_line,
@@ -142,6 +151,7 @@ fn process_element(
                     let msg_len = current_line.chars().count();
                     let padding = inner_width.saturating_sub(msg_len);
                     doc.lines.push(Line::from(vec![
+                        Span::raw(left_padding.clone()),
                         Span::styled("│ ", Style::default().fg(color)),
                         Span::styled(
                             current_line,
@@ -153,6 +163,7 @@ fn process_element(
                 }
 
                 doc.lines.push(Line::from(vec![
+                    Span::raw(left_padding),
                     Span::styled("└", Style::default().fg(color)),
                     Span::styled(
                         "─".repeat(box_width.saturating_sub(2)),
