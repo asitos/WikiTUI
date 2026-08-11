@@ -167,7 +167,7 @@ impl App {
             .take(selected_idx)
             .map(|item| 2 + usize::from(!item.snippet.is_empty()))
             .sum();
-        
+
         let end = if let Some(item) = items.get(selected_idx) {
             start + 2 + usize::from(!item.snippet.is_empty())
         } else {
@@ -242,17 +242,30 @@ impl App {
         pane.local_matches.clear();
         pane.selected_match_idx = None;
 
-        let query = pane.local_search_query.trim().to_lowercase();
-        if query.is_empty() {
+        let query = pane.local_search_query.to_lowercase();
+        if query.trim().is_empty() {
             return;
         }
 
         if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
             for (line_idx, line) in parsed_doc.lines.iter().enumerate() {
-                for (span_idx, span) in line.spans.iter().enumerate() {
-                    if span.content.to_lowercase().contains(&query) {
-                        pane.local_matches.push(LocalMatch { line_idx, span_idx });
+                let full_text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+                let full_lower = full_text.to_lowercase();
+                if let Some(match_pos) = full_lower.find(&query) {
+                    let mut current_offset = 0;
+                    let mut start_span_idx = 0;
+                    for (idx, span) in line.spans.iter().enumerate() {
+                        let span_len = span.content.len();
+                        if current_offset + span_len > match_pos {
+                            start_span_idx = idx;
+                            break;
+                        }
+                        current_offset += span_len;
                     }
+                    pane.local_matches.push(LocalMatch {
+                        line_idx,
+                        span_idx: start_span_idx,
+                    });
                 }
             }
             if !pane.local_matches.is_empty() {
