@@ -3,5 +3,6 @@ pub mod app;
 pub mod keybinds;
 pub mod layout;
 pub mod parser;
+pub mod saved_lists;
 pub mod theme;
 pub mod ui;

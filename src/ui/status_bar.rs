@@ -27,11 +27,23 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             )
         }
         InputMode::Help => "".to_string(),
+        InputMode::SaveToList => {
+            "j/k: navigate | space: toggle | c: new list | esc: done".to_string()
+        }
+        InputMode::CreateNewList => {
+            "enter: confirm | esc: cancel".to_string()
+        }
+        InputMode::SavedListsViewer => {
+            "h/l: switch pane | j/k: navigate | enter: open | d: delete".to_string()
+        }
+        InputMode::ConfirmDelete => {
+            "".to_string()
+        }
         InputMode::Normal => {
             if app.active_pane().toc_focused {
                 "j/k: navigate contents | enter: jump | o: close".to_string()
             } else {
-                "ctrl-s: search | r: random | ?: help | q: quit".to_string()
+                "ctrl-s: search | r: random | ?: help".to_string()
             }
         }
     };
@@ -39,6 +51,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let status_style = match app.input_mode {
         InputMode::Search => Style::default().fg(theme::BEIGE).bold(),
         InputMode::LocalSearch => Style::default().fg(theme::YELLOW).bold(),
+        InputMode::SaveToList
+        | InputMode::CreateNewList
+        | InputMode::SavedListsViewer
+        | InputMode::ConfirmDelete => Style::default().fg(theme::VIOLET).bold(),
         InputMode::Help => Style::default().fg(theme::GREY).bold(),
         InputMode::Normal => Style::default().fg(theme::GREY),
     };

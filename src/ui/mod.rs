@@ -41,4 +41,20 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.input_mode == InputMode::Search {
         modals::render_search_modal(f, app, size);
     }
+
+    if app.input_mode == InputMode::SaveToList {
+        modals::render_save_to_list_modal(f, app, size);
+    }
+
+    if app.input_mode == InputMode::CreateNewList {
+        modals::render_create_new_list_modal(f, app, size);
+    }
+
+    if app.input_mode == InputMode::SavedListsViewer {
+        modals::render_saved_lists_viewer_modal(f, app, size);
+    }
+
+    if app.input_mode == InputMode::ConfirmDelete {
+        modals::render_confirm_delete_modal(f, app, size);
+    }
 }
