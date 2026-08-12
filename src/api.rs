@@ -57,7 +57,7 @@ pub async fn run_worker(
     ev_tx: Arc<Mutex<mpsc::UnboundedSender<NetworkEvent>>>,
 ) {
     let client = reqwest::Client::builder()
-        .user_agent("wikid/1.0.0 (https://github.com/sharkthakftw/wikid)")
+        .user_agent("wikid/1.2.0 (https://github.com/sharkthakftw/wikid)")
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
 

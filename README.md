@@ -9,10 +9,12 @@ a feature-rich terminal wikipedia client.
 
 - **tabs and splits**: work with multiple articles side-by-side or in tabs.
 - **vim-like navigation**: intuitive keybindings for fast scrolling, jumping, and pane movement.
-- **zen mode (`z`)**: distraction-free reading canvas with no borders, tab bars, or status indicators.
 - **table of contents (`o`)**: pop-up article outline modal with instant heading jumping (`enter`).
+- **zen mode (`z`)**: distraction-free reading canvas with no borders, tab bars, or status indicators.
+- **personalized recommendation feed**: personalized article discovery feed based on reading preferences. inspired by [xikipedia](https://github.com/rebane2001/xikipedia)
 - **random article discovery (`r`)**: instantly discover and load random wikipedia articles in new tabs.
 - **in-page substring search (`/`)**: exact match highlighting and jumping through matches (`n` / `N`).
+- **custom saved lists (`m` / `M`)**: save articles into custom reading lists stored in `~/.config/wikid/saved_articles.json`.
 
 ## installation
 
@@ -41,6 +43,8 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **scroll down / up** | `j` / `k` | scroll line down / up |
 | **page down / up** | `f` / `b` | scroll full page down / up |
 | **jump to top / bottom** | `g` / `G` | jump directly to article top / bottom |
+| **save to list** | `m` | save active article or item into custom list |
+| **view saved lists** | `M` | open custom lists & articles viewer |
 | **search wikipedia** | `ctrl-s` | open search modal (opens in new tab) |
 | **edit search** | `i` | edit current search query in active tab |
 | **in-page search** | `/` | in-page text search with match highlighting |
@@ -49,6 +53,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **zen mode** | `z` | toggle minimalist borderless reading view |
 | **random article** | `r` | fetch & open random wikipedia article in new tab |
 | **heading jump** | `]` / `[` | jump to next / previous section heading |
+| **toggle feed** | `F` | toggle recommendation feed mode |
 | **link navigation** | `tab` / `shift-tab` | focus next / previous article link |
 | **open link** | `enter` | open link in active pane |
 | **open link in new tab** | `t` or `alt-enter` | open link in a new tab |
