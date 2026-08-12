@@ -96,7 +96,7 @@ impl App {
     }
 
     pub fn activate_selected(&mut self) {
-        let (pane_id, selected_title) = {
+        let (_pane_id, selected_title) = {
             let pane = self.active_pane();
             match &pane.content {
                 PaneContent::SearchResults { items, .. } => {
@@ -122,13 +122,19 @@ impl App {
         };
 
         if let Some(title) = selected_title.filter(|t| is_article_link(t)) {
-            let active_pane = self.active_pane_mut();
-            active_pane.is_loading = true;
-            active_pane.selected_link_idx = None;
-            let _ = self
-                .cmd_tx
-                .send(NetworkCommand::FetchArticle { pane_id, title });
+            self.open_article(&title);
         }
+    }
+
+    pub fn open_article(&mut self, title: &str) {
+        let pane_id = self.active_pane().id;
+        let active_pane = self.active_pane_mut();
+        active_pane.is_loading = true;
+        active_pane.selected_link_idx = None;
+        let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
+            pane_id,
+            title: title.to_string(),
+        });
     }
 
     pub fn activate_selected_in_new_tab(&mut self) {

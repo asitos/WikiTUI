@@ -177,80 +177,78 @@ fn render_pane_at(
             }
 
             // highlight local search matches
-            let query = pane.local_search_query.trim().to_lowercase();
-            if !query.is_empty() {
+            let query = pane.local_search_query.to_lowercase();
+            if !query.trim().is_empty() {
                 let active_match = pane
                     .selected_match_idx
                     .and_then(|idx| pane.local_matches.get(idx));
 
                 for (line_idx, line) in rendered_lines.iter_mut().enumerate() {
-                    let mut new_spans = Vec::new();
-                    for (span_idx, span) in line.spans.iter().enumerate() {
-                        let text = &span.content;
-                        let mut byte_map = Vec::new();
-                        let mut text_lower = String::new();
-                        for (byte_idx, c) in text.char_indices() {
-                            let c_lower = c.to_lowercase().to_string();
-                            for _ in 0..c_lower.len() {
-                                byte_map.push(byte_idx);
-                            }
-                            text_lower.push_str(&c_lower);
+                    let full_line_text: String =
+                        line.spans.iter().map(|s| s.content.as_ref()).collect();
+                    let full_lower = full_line_text.to_lowercase();
+
+                    if full_lower.contains(&query) {
+                        let is_active_line = active_match.is_some_and(|m| m.line_idx == line_idx);
+                        let bg_color = if is_active_line {
+                            theme::YELLOW
+                        } else {
+                            theme::BEIGE
+                        };
+
+                        let mut match_ranges = Vec::new();
+                        let mut start = 0;
+                        while let Some(pos) = full_lower[start..].find(&query) {
+                            let match_start = start + pos;
+                            let match_end = match_start + query.len();
+                            match_ranges.push((match_start, match_end));
+                            start = match_end.max(start + 1);
                         }
-                        byte_map.push(text.len());
 
-                        if text_lower.contains(&query) {
-                            let is_active_span = active_match
-                                .is_some_and(|m| m.line_idx == line_idx && m.span_idx == span_idx);
-                            let bg_color = if is_active_span {
-                                theme::YELLOW
-                            } else {
-                                theme::BEIGE
-                            };
+                        let mut new_spans = Vec::new();
+                        let mut current_global_offset = 0;
 
-                            let mut start = 0;
-                            let mut text_start = 0;
-                            while let Some(rel_pos) = text_lower[start..].find(&query) {
-                                let match_start = start + rel_pos;
-                                let match_end = match_start + query.len();
+                        for span in &line.spans {
+                            let text = &span.content;
+                            let span_len = text.len();
+                            let span_start = current_global_offset;
+                            let span_end = span_start + span_len;
 
-                                let mapped_start = byte_map[match_start];
-                                let mut mapped_end = byte_map[match_end];
+                            let mut text_cursor = 0;
+                            while text_cursor < span_len {
+                                let global_pos = span_start + text_cursor;
+                                let active_range = match_ranges
+                                    .iter()
+                                    .find(|&&(r_start, r_end)| global_pos >= r_start && global_pos < r_end);
 
-                                if mapped_start == mapped_end && mapped_end < text.len() {
-                                    if let Some(next_idx) = byte_map[match_end..].iter().find(|&&x| x > mapped_end) {
-                                        mapped_end = *next_idx;
-                                    } else {
-                                        mapped_end = text.len();
-                                    }
-                                }
-
-                                if mapped_start > text_start {
+                                if let Some(&(_, r_end)) = active_range {
+                                    let match_end_in_span = (r_end - span_start).min(span_len);
+                                    let slice = &text[text_cursor..match_end_in_span];
                                     new_spans.push(Span::styled(
-                                        text[text_start..mapped_start].to_string(),
-                                        span.style,
-                                    ));
-                                }
-
-                                let actual_start = mapped_start.max(text_start);
-                                if mapped_end > actual_start {
-                                    new_spans.push(Span::styled(
-                                        text[actual_start..mapped_end].to_string(),
+                                        slice.to_string(),
                                         Style::default().bg(bg_color).fg(theme::BG).bold(),
                                     ));
+                                    text_cursor = match_end_in_span;
+                                } else {
+                                    let next_match_start = match_ranges
+                                        .iter()
+                                        .map(|&(r_start, _)| r_start)
+                                        .filter(|&r_start| r_start > global_pos && r_start < span_end)
+                                        .min()
+                                        .unwrap_or(span_end);
+
+                                    let unmatch_end_in_span = next_match_start - span_start;
+                                    let slice = &text[text_cursor..unmatch_end_in_span];
+                                    new_spans.push(Span::styled(slice.to_string(), span.style));
+                                    text_cursor = unmatch_end_in_span;
                                 }
-
-                                start = match_end;
-                                text_start = mapped_end;
                             }
 
-                            if text_start < text.len() {
-                                new_spans.push(Span::styled(text[text_start..].to_string(), span.style));
-                            }
-                        } else {
-                            new_spans.push(span.clone());
+                            current_global_offset = span_end;
                         }
+
+                        line.spans = new_spans;
                     }
-                    line.spans = new_spans;
                 }
             }
 

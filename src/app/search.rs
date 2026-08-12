@@ -7,6 +7,7 @@ impl App {
         self.input_mode = crate::app::InputMode::Search;
         self.search_opens_new_tab = true;
         self.search_input.clear();
+        self.search_cursor_pos = 0;
     }
 
     pub fn edit_search_mode(&mut self) {
@@ -21,14 +22,20 @@ impl App {
         } else {
             self.search_input.clear();
         }
+        self.search_cursor_pos = self.search_input.chars().count();
     }
 
     pub fn exit_search_mode(&mut self) {
         self.input_mode = crate::app::InputMode::Normal;
         self.search_input.clear();
+        self.search_cursor_pos = 0;
     }
 
     pub fn fetch_random_article(&mut self) {
+        if self.active_pane().is_loading {
+            return;
+        }
+
         let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
         let pane_id = if is_empty {
             self.active_pane().id
@@ -52,13 +59,80 @@ impl App {
 
     pub fn type_search_char(&mut self, c: char) {
         if self.input_mode == crate::app::InputMode::Search {
-            self.search_input.push(c);
+            let char_count = self.search_input.chars().count();
+            if self.search_cursor_pos >= char_count {
+                self.search_input.push(c);
+            } else {
+                let mut chars: Vec<char> = self.search_input.chars().collect();
+                chars.insert(self.search_cursor_pos, c);
+                self.search_input = chars.into_iter().collect();
+            }
+            self.search_cursor_pos += 1;
         }
     }
 
     pub fn backspace_search_char(&mut self) {
+        if self.input_mode == crate::app::InputMode::Search && self.search_cursor_pos > 0 {
+            let mut chars: Vec<char> = self.search_input.chars().collect();
+            chars.remove(self.search_cursor_pos - 1);
+            self.search_input = chars.into_iter().collect();
+            self.search_cursor_pos -= 1;
+        }
+    }
+
+    pub fn delete_word_left(&mut self) {
+        if self.input_mode == crate::app::InputMode::Search && self.search_cursor_pos > 0 {
+            let mut chars: Vec<char> = self.search_input.chars().collect();
+            let mut end_idx = self.search_cursor_pos;
+
+            while end_idx > 0 && chars[end_idx - 1].is_whitespace() {
+                end_idx -= 1;
+            }
+            while end_idx > 0 && !chars[end_idx - 1].is_whitespace() {
+                end_idx -= 1;
+            }
+
+            chars.drain(end_idx..self.search_cursor_pos);
+            self.search_input = chars.into_iter().collect();
+            self.search_cursor_pos = end_idx;
+        }
+    }
+
+    pub fn delete_search_char(&mut self) {
         if self.input_mode == crate::app::InputMode::Search {
-            self.search_input.pop();
+            let char_count = self.search_input.chars().count();
+            if self.search_cursor_pos < char_count {
+                let mut chars: Vec<char> = self.search_input.chars().collect();
+                chars.remove(self.search_cursor_pos);
+                self.search_input = chars.into_iter().collect();
+            }
+        }
+    }
+
+    pub fn move_search_cursor_left(&mut self) {
+        if self.input_mode == crate::app::InputMode::Search {
+            self.search_cursor_pos = self.search_cursor_pos.saturating_sub(1);
+        }
+    }
+
+    pub fn move_search_cursor_right(&mut self) {
+        if self.input_mode == crate::app::InputMode::Search {
+            let char_count = self.search_input.chars().count();
+            if self.search_cursor_pos < char_count {
+                self.search_cursor_pos += 1;
+            }
+        }
+    }
+
+    pub fn move_search_cursor_home(&mut self) {
+        if self.input_mode == crate::app::InputMode::Search {
+            self.search_cursor_pos = 0;
+        }
+    }
+
+    pub fn move_search_cursor_end(&mut self) {
+        if self.input_mode == crate::app::InputMode::Search {
+            self.search_cursor_pos = self.search_input.chars().count();
         }
     }
 
@@ -93,7 +167,7 @@ impl App {
             .take(selected_idx)
             .map(|item| 2 + usize::from(!item.snippet.is_empty()))
             .sum();
-        
+
         let end = if let Some(item) = items.get(selected_idx) {
             start + 2 + usize::from(!item.snippet.is_empty())
         } else {
@@ -168,17 +242,30 @@ impl App {
         pane.local_matches.clear();
         pane.selected_match_idx = None;
 
-        let query = pane.local_search_query.trim().to_lowercase();
-        if query.is_empty() {
+        let query = pane.local_search_query.to_lowercase();
+        if query.trim().is_empty() {
             return;
         }
 
         if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
             for (line_idx, line) in parsed_doc.lines.iter().enumerate() {
-                for (span_idx, span) in line.spans.iter().enumerate() {
-                    if span.content.to_lowercase().contains(&query) {
-                        pane.local_matches.push(LocalMatch { line_idx, span_idx });
+                let full_text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+                let full_lower = full_text.to_lowercase();
+                if let Some(match_pos) = full_lower.find(&query) {
+                    let mut current_offset = 0;
+                    let mut start_span_idx = 0;
+                    for (idx, span) in line.spans.iter().enumerate() {
+                        let span_len = span.content.len();
+                        if current_offset + span_len > match_pos {
+                            start_span_idx = idx;
+                            break;
+                        }
+                        current_offset += span_len;
                     }
+                    pane.local_matches.push(LocalMatch {
+                        line_idx,
+                        span_idx: start_span_idx,
+                    });
                 }
             }
             if !pane.local_matches.is_empty() {

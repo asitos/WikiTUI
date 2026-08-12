@@ -74,6 +74,13 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
         Line::from("   n/N            jump to next / prev search match"),
         Line::from(""),
         Line::from(vec![Span::styled(
+            " custom lists",
+            Style::default().fg(theme::VIOLET).bold(),
+        )]),
+        Line::from("   m              save active article to custom list"),
+        Line::from("   M              open saved custom lists & articles viewer"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
             " general",
             Style::default().fg(theme::VIOLET).bold(),
         )]),
@@ -104,7 +111,7 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Percentage(33),
-            Constraint::Length(3), // 1 character tall
+            Constraint::Length(3),
             Constraint::Min(0),
         ])
         .split(size);
@@ -124,12 +131,42 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
         .border_style(Style::default().fg(theme::BEIGE))
         .title(Title::from(" search wikipedia ").alignment(Alignment::Left));
 
-    let input_text = Line::from(vec![
-        Span::styled(" > ", Style::default().fg(theme::BEIGE).bold()),
-        Span::styled(&app.search_input, Style::default().fg(theme::FG).bold()),
-        Span::styled("_", Style::default().fg(theme::BEIGE).bold()),
-    ]);
+    let visible_width = (area.width as usize).saturating_sub(6);
+    let chars: Vec<char> = app.search_input.chars().collect();
+    let total_len = chars.len();
+    let cursor_pos = app.search_cursor_pos.min(total_len);
 
+    let mut scroll_offset = 0;
+    if cursor_pos >= visible_width && visible_width > 0 {
+        scroll_offset = cursor_pos + 1 - visible_width;
+    }
+
+    let end_idx = (scroll_offset + visible_width).min(total_len);
+    let visible_chars = &chars[scroll_offset..end_idx];
+    let rel_cursor_pos = cursor_pos.saturating_sub(scroll_offset);
+
+    let mut spans = Vec::new();
+    spans.push(Span::styled(" > ", Style::default().fg(theme::BEIGE).bold()));
+
+    for (i, &ch) in visible_chars.iter().enumerate() {
+        if i == rel_cursor_pos {
+            spans.push(Span::styled(
+                ch.to_string(),
+                Style::default().bg(theme::BEIGE).fg(theme::BG).bold(),
+            ));
+        } else {
+            spans.push(Span::styled(
+                ch.to_string(),
+                Style::default().fg(theme::FG).bold(),
+            ));
+        }
+    }
+
+    if rel_cursor_pos >= visible_chars.len() {
+        spans.push(Span::styled("_", Style::default().fg(theme::BEIGE).bold()));
+    }
+
+    let input_text = Line::from(spans);
     let search_paragraph = Paragraph::new(input_text).block(search_block);
     f.render_widget(search_paragraph, area);
 }
@@ -256,5 +293,260 @@ pub fn render_category_onboarding_modal(f: &mut Frame, app: &App, size: Rect) {
     )]));
 
     let p = Paragraph::new(lines).block(block);
+    f.render_widget(p, area);
+}
+
+pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
+    let area = centered_rect(55, 60, size);
+    f.render_widget(Clear, area);
+
+    let block = Block::bordered()
+        .title(Title::from(" save article to custom list ").alignment(Alignment::Center))
+        .border_style(Style::default().fg(theme::VIOLET))
+        .style(Style::default().bg(theme::BG));
+
+    let mut lines = vec![
+        Line::from(vec![
+            Span::styled(" article: ", Style::default().fg(theme::GREY)),
+            Span::styled(&app.save_modal_target_title, Style::default().fg(theme::YELLOW).bold()),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(
+            " select custom lists to save this article into:",
+            Style::default().fg(theme::FG).italic(),
+        )),
+        Line::from(""),
+    ];
+
+    let list_count = app.saved_lists.lists.len();
+    for (idx, list) in app.saved_lists.lists.iter().enumerate() {
+        let is_focused = idx == app.save_modal_cursor_idx;
+        let is_in_list = app
+            .saved_lists
+            .is_article_in_list(&list.id, &app.save_modal_target_title);
+
+        let cursor_str = if is_focused { " ▶ " } else { "   " };
+        let check_str = if is_in_list { "[x] " } else { "[ ] " };
+
+        let item_style = if is_focused {
+            Style::default().fg(theme::YELLOW).bold()
+        } else if is_in_list {
+            Style::default().fg(theme::LIME)
+        } else {
+            Style::default().fg(theme::FG)
+        };
+
+        lines.push(Line::from(vec![
+            Span::styled(cursor_str, Style::default().fg(theme::VIOLET).bold()),
+            Span::styled(
+                check_str,
+                if is_in_list {
+                    Style::default().fg(theme::LIME).bold()
+                } else {
+                    Style::default().fg(theme::GREY)
+                },
+            ),
+            Span::styled(&list.name, item_style),
+            Span::styled(
+                format!(" ({} articles)", list.articles.len()),
+                Style::default().fg(theme::GREY),
+            ),
+        ]));
+    }
+
+    let is_create_focused = app.save_modal_cursor_idx == list_count;
+    let create_cursor = if is_create_focused { " ▶ " } else { "   " };
+    let create_style = if is_create_focused {
+        Style::default().fg(theme::YELLOW).bold()
+    } else {
+        Style::default().fg(theme::BLUE)
+    };
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![
+        Span::styled(create_cursor, Style::default().fg(theme::VIOLET).bold()),
+        Span::styled("[+] create new list...", create_style),
+    ]));
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![Span::styled(
+        " j/k: navigate | space: toggle list | n: new list | esc: done ",
+        Style::default().fg(theme::GREY).italic(),
+    )]));
+
+    let p = Paragraph::new(lines).block(block);
+    f.render_widget(p, area);
+}
+
+pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
+    let area = centered_rect(45, 25, size);
+    f.render_widget(Clear, area);
+
+    let block = Block::bordered()
+        .title(Title::from(" create new custom list ").alignment(Alignment::Center))
+        .border_style(Style::default().fg(theme::VIOLET))
+        .style(Style::default().bg(theme::BG));
+
+    let lines = vec![
+        Line::from(" enter name for your new list:"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(" > ", Style::default().fg(theme::VIOLET).bold()),
+            Span::styled(&app.create_list_input, Style::default().fg(theme::YELLOW).bold()),
+            Span::styled("█", Style::default().fg(theme::VIOLET)),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(
+            " enter: confirm | esc: cancel ",
+            Style::default().fg(theme::GREY).italic(),
+        )),
+    ];
+
+    let p = Paragraph::new(lines).block(block);
+    f.render_widget(p, area);
+}
+
+pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
+    let area = centered_rect(80, 80, size);
+    f.render_widget(Clear, area);
+
+    let outer_block = Block::bordered()
+        .title(Title::from(" saved lists & articles ").alignment(Alignment::Center))
+        .border_style(Style::default().fg(theme::VIOLET))
+        .style(Style::default().bg(theme::BG));
+
+    let inner_area = outer_block.inner(area);
+    f.render_widget(outer_block, area);
+
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
+        .split(inner_area);
+
+    let left_area = chunks[0];
+    let right_area = chunks[1];
+
+    // left lists pane
+    let left_border_color = if !app.viewer_focus_right {
+        theme::VIOLET
+    } else {
+        theme::GREY
+    };
+    let left_block = Block::bordered()
+        .title(" custom lists ")
+        .border_style(Style::default().fg(left_border_color));
+
+    let mut list_lines = Vec::new();
+    if app.saved_lists.lists.is_empty() {
+        list_lines.push(Line::from(Span::styled(
+            " no lists created yet",
+            Style::default().fg(theme::GREY),
+        )));
+    } else {
+        for (idx, list) in app.saved_lists.lists.iter().enumerate() {
+            let is_selected = idx == app.viewer_list_idx;
+            let prefix = if is_selected { " ▶ " } else { "   " };
+            let style = if is_selected && !app.viewer_focus_right {
+                Style::default().fg(theme::YELLOW).bold()
+            } else if is_selected {
+                Style::default().fg(theme::VIOLET).bold()
+            } else {
+                Style::default().fg(theme::FG)
+            };
+
+            list_lines.push(Line::from(vec![
+                Span::styled(prefix, Style::default().fg(theme::VIOLET)),
+                Span::styled(&list.name, style),
+                Span::styled(
+                    format!(" ({})", list.articles.len()),
+                    Style::default().fg(theme::GREY),
+                ),
+            ]));
+        }
+    }
+
+    let left_p = Paragraph::new(list_lines).block(left_block);
+    f.render_widget(left_p, left_area);
+
+    // right articles pane
+    let right_border_color = if app.viewer_focus_right {
+        theme::VIOLET
+    } else {
+        theme::GREY
+    };
+
+    let selected_list = app.saved_lists.lists.get(app.viewer_list_idx);
+    let right_title = selected_list
+        .map(|l| format!(" articles in '{}' ", l.name))
+        .unwrap_or_else(|| " Articles ".to_string());
+
+    let right_block = Block::bordered()
+        .title(right_title)
+        .border_style(Style::default().fg(right_border_color));
+
+    let mut article_lines = Vec::new();
+    if let Some(list) = selected_list {
+        if list.articles.is_empty() {
+            article_lines.push(Line::from(Span::styled(
+                " no articles saved in this list.",
+                Style::default().fg(theme::GREY).italic(),
+            )));
+        } else {
+            for (idx, article) in list.articles.iter().enumerate() {
+                let is_selected = idx == app.viewer_article_idx;
+                let prefix = if is_selected { " ▶ " } else { "   " };
+                let style = if is_selected && app.viewer_focus_right {
+                    Style::default().fg(theme::YELLOW).bold()
+                } else if is_selected {
+                    Style::default().fg(theme::VIOLET).bold()
+                } else {
+                    Style::default().fg(theme::FG)
+                };
+
+                article_lines.push(Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(theme::VIOLET)),
+                    Span::styled(&article.title, style),
+                ]));
+            }
+        }
+    }
+
+    let right_p = Paragraph::new(article_lines).block(right_block);
+    f.render_widget(right_p, right_area);
+}
+
+pub fn render_confirm_delete_modal(f: &mut Frame, app: &App, size: Rect) {
+    let area = centered_rect(50, 30, size);
+    f.render_widget(Clear, area);
+
+    let block = Block::bordered()
+        .title(Title::from(" confirm deletion ").alignment(Alignment::Center))
+        .border_style(Style::default().fg(theme::VIOLET))
+        .style(Style::default().bg(theme::BG));
+
+    let item_type = if app.pending_delete_is_list {
+        "custom list"
+    } else {
+        "article"
+    };
+
+    let lines = vec![
+        Line::from("are you sure you want to delete:"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(format!("{}: ", item_type), Style::default().fg(theme::GREY)),
+            Span::styled(&app.pending_delete_title, Style::default().fg(theme::YELLOW).bold()),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
+            Span::styled("delete   ", Style::default().fg(theme::FG)),
+            Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
+            Span::styled("cancel", Style::default().fg(theme::FG)),
+        ]),
+    ];
+
+    let p = Paragraph::new(lines)
+        .alignment(Alignment::Center)
+        .block(block);
     f.render_widget(p, area);
 }

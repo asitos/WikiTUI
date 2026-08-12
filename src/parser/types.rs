@@ -1,0 +1,30 @@
+use ratatui::style::Style;
+use ratatui::text::Line;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Heading {
+    pub title: String,
+    pub level: u8,
+    pub line_idx: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Link {
+    pub title: String,
+    pub text: String,
+    pub span_indices: Vec<(usize, usize)>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ParsedDocument {
+    pub lines: Vec<Line<'static>>,
+    pub links: Vec<Link>,
+    pub headings: Vec<Heading>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct StyledToken {
+    pub text: String,
+    pub style: Style,
+    pub link_target: Option<String>,
+}

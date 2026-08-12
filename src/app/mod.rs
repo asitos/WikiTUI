@@ -18,6 +18,10 @@ pub enum InputMode {
     LocalSearch,
     Help,
     CategoryOnboarding,
+    SaveToList,
+    CreateNewList,
+    SavedListsViewer,
+    ConfirmDelete,
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -38,12 +42,29 @@ pub struct App {
     pub active_tab_idx: usize,
     pub input_mode: InputMode,
     pub search_input: String,
+    pub search_cursor_pos: usize,
     pub search_opens_new_tab: bool,
     pub waiting_for_split_cmd: bool,
     pub zen_mode: bool,
+
     pub feed: crate::feed::FeedState,
     pub onboarding_cursor_idx: usize,
     pub onboarding_selected: Vec<bool>,
+
+    pub saved_lists: crate::saved_lists::SavedListsStore,
+    pub save_modal_target_title: String,
+    pub save_modal_target_snippet: Option<String>,
+    pub save_modal_cursor_idx: usize,
+    pub create_list_input: String,
+    pub create_list_return_mode: InputMode,
+    pub viewer_list_idx: usize,
+    pub viewer_article_idx: usize,
+    pub viewer_focus_right: bool,
+
+    pub pending_delete_is_list: bool,
+    pub pending_delete_title: String,
+    pub pending_delete_list_id: String,
+
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: mpsc::UnboundedSender<NetworkCommand>,
 }
@@ -56,12 +77,28 @@ impl App {
             active_tab_idx: 0,
             input_mode: InputMode::Normal,
             search_input: String::new(),
+            search_cursor_pos: 0,
             search_opens_new_tab: true,
             waiting_for_split_cmd: false,
             zen_mode: false,
+
             feed: crate::feed::FeedState::new(),
             onboarding_cursor_idx: 0,
             onboarding_selected: vec![false, false, false, false, true, false, false, true, true, false, false, true],
+
+            saved_lists: crate::saved_lists::SavedListsStore::load(),
+            save_modal_target_title: String::new(),
+            save_modal_target_snippet: None,
+            save_modal_cursor_idx: 0,
+            create_list_input: String::new(),
+            create_list_return_mode: InputMode::SaveToList,
+            viewer_list_idx: 0,
+            viewer_article_idx: 0,
+            viewer_focus_right: false,
+            pending_delete_is_list: false,
+            pending_delete_title: String::new(),
+            pending_delete_list_id: String::new(),
+
             next_pane_id: 1,
             cmd_tx,
         };
@@ -71,6 +108,55 @@ impl App {
 
     pub fn quit(&mut self) {
         self.running = false;
+    }
+
+    pub fn open_save_to_list_modal(&mut self) {
+        let pane = self.active_pane();
+        let (title, snippet) = match &pane.content {
+            PaneContent::ArticleText { title, .. } => (title.clone(), None),
+            PaneContent::SearchResults { items, .. } => {
+                if let Some(item) = items.get(pane.selected_idx) {
+                    (item.title.clone(), Some(item.snippet.clone()))
+                } else {
+                    return;
+                }
+            }
+            _ => return,
+        };
+
+        if title.trim().is_empty() {
+            return;
+        }
+
+        self.saved_lists = crate::saved_lists::SavedListsStore::load();
+        self.save_modal_target_title = title;
+        self.save_modal_target_snippet = snippet;
+        self.save_modal_cursor_idx = 0;
+        self.input_mode = InputMode::SaveToList;
+    }
+
+    pub fn open_saved_lists_viewer(&mut self) {
+        self.saved_lists = crate::saved_lists::SavedListsStore::load();
+        self.viewer_list_idx = 0;
+        self.viewer_article_idx = 0;
+        self.viewer_focus_right = false;
+        self.input_mode = InputMode::SavedListsViewer;
+    }
+
+    pub fn submit_create_new_list(&mut self) {
+        let name = self.create_list_input.trim().to_string();
+        if !name.is_empty() {
+            let list_id = self.saved_lists.create_list(&name, "");
+            if !self.save_modal_target_title.is_empty() {
+                self.saved_lists.toggle_article_in_list(
+                    &list_id,
+                    &self.save_modal_target_title,
+                    self.save_modal_target_snippet.as_deref(),
+                );
+            }
+        }
+        self.create_list_input.clear();
+        self.input_mode = self.create_list_return_mode.clone();
     }
 
     pub fn toggle_zen_mode(&mut self) {
