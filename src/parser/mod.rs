@@ -81,9 +81,7 @@ fn process_element(
             }
             if let Some(open_paren) = clean_text.rfind('(') {
                 let trailing = &clean_text[open_paren..];
-                if trailing.contains("202")
-                    || trailing.contains("201")
-                    || trailing.contains("200")
+                if trailing.contains("202") || trailing.contains("201") || trailing.contains("200")
                 {
                     clean_text.truncate(open_paren);
                 }
@@ -139,7 +137,9 @@ fn process_element(
                             Span::styled("│ ", Style::default().fg(color)),
                             Span::styled(
                                 current_line,
-                                Style::default().fg(theme::FG).add_modifier(Modifier::ITALIC),
+                                Style::default()
+                                    .fg(theme::FG)
+                                    .add_modifier(Modifier::ITALIC),
                             ),
                             Span::styled(" ".repeat(padding), Style::default().fg(theme::FG)),
                             Span::styled(" │", Style::default().fg(color)),
@@ -155,7 +155,9 @@ fn process_element(
                         Span::styled("│ ", Style::default().fg(color)),
                         Span::styled(
                             current_line,
-                            Style::default().fg(theme::FG).add_modifier(Modifier::ITALIC),
+                            Style::default()
+                                .fg(theme::FG)
+                                .add_modifier(Modifier::ITALIC),
                         ),
                         Span::styled(" ".repeat(padding), Style::default().fg(theme::FG)),
                         Span::styled(" │", Style::default().fg(color)),

@@ -1,11 +1,11 @@
 use crate::app::{App, PaneContent};
 use crate::theme;
 use ratatui::{
-    Frame,
     layout::Rect,
     style::{Style, Stylize},
     text::{Line, Span},
     widgets::Paragraph,
+    Frame,
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {

@@ -1,7 +1,7 @@
 use crate::feed::algorithm::FeedItem;
 use serde::Deserialize;
 use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{mpsc, Mutex};
 
 #[derive(Debug, Clone)]
 pub struct SearchResultItem {

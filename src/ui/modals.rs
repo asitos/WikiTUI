@@ -2,11 +2,11 @@ use crate::app::{App, Pane};
 use crate::parser::ParsedDocument;
 use crate::theme;
 use ratatui::{
-    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Clear, Paragraph, block::Title},
+    widgets::{block::Title, Block, Clear, Paragraph},
+    Frame,
 };
 
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -146,7 +146,10 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
     let rel_cursor_pos = cursor_pos.saturating_sub(scroll_offset);
 
     let mut spans = Vec::new();
-    spans.push(Span::styled(" > ", Style::default().fg(theme::BEIGE).bold()));
+    spans.push(Span::styled(
+        " > ",
+        Style::default().fg(theme::BEIGE).bold(),
+    ));
 
     for (i, &ch) in visible_chars.iter().enumerate() {
         if i == rel_cursor_pos {
@@ -308,7 +311,10 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let mut lines = vec![
         Line::from(vec![
             Span::styled(" article: ", Style::default().fg(theme::GREY)),
-            Span::styled(&app.save_modal_target_title, Style::default().fg(theme::YELLOW).bold()),
+            Span::styled(
+                &app.save_modal_target_title,
+                Style::default().fg(theme::YELLOW).bold(),
+            ),
         ]),
         Line::from(""),
         Line::from(Span::styled(
@@ -391,7 +397,10 @@ pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
         Line::from(""),
         Line::from(vec![
             Span::styled(" > ", Style::default().fg(theme::VIOLET).bold()),
-            Span::styled(&app.create_list_input, Style::default().fg(theme::YELLOW).bold()),
+            Span::styled(
+                &app.create_list_input,
+                Style::default().fg(theme::YELLOW).bold(),
+            ),
             Span::styled("█", Style::default().fg(theme::VIOLET)),
         ]),
         Line::from(""),
@@ -534,7 +543,10 @@ pub fn render_confirm_delete_modal(f: &mut Frame, app: &App, size: Rect) {
         Line::from(""),
         Line::from(vec![
             Span::styled(format!("{}: ", item_type), Style::default().fg(theme::GREY)),
-            Span::styled(&app.pending_delete_title, Style::default().fg(theme::YELLOW).bold()),
+            Span::styled(
+                &app.pending_delete_title,
+                Style::default().fg(theme::YELLOW).bold(),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![

@@ -1,6 +1,6 @@
 use crate::api::{NetworkCommand, SearchResultItem};
-use crate::app::App;
 use crate::app::pane::{LocalMatch, PaneContent};
+use crate::app::App;
 
 impl App {
     pub fn enter_search_mode(&mut self) {
@@ -210,10 +210,7 @@ impl App {
         pane.selected_match_idx = None;
     }
 
-    pub(crate) fn keep_local_match_visible(
-        pane: &mut crate::app::pane::Pane,
-        term_height: u16,
-    ) {
+    pub(crate) fn keep_local_match_visible(pane: &mut crate::app::pane::Pane, term_height: u16) {
         let target_line = match (pane.selected_match_idx, &pane.local_matches) {
             (Some(idx), matches) if !matches.is_empty() => matches[idx].line_idx,
             _ => return,

@@ -183,7 +183,8 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                 } else {
                     let list_id = app.pending_delete_list_id.clone();
                     let title = app.pending_delete_title.clone();
-                    app.saved_lists.toggle_article_in_list(&list_id, &title, None);
+                    app.saved_lists
+                        .toggle_article_in_list(&list_id, &title, None);
                     if app.viewer_article_idx > 0 {
                         app.viewer_article_idx -= 1;
                     }
@@ -257,7 +258,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                 }
                 _ => {}
             }
-        },
+        }
         InputMode::Normal => {
             if app.feed.active {
                 match key.code {

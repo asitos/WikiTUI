@@ -1,11 +1,11 @@
 use crate::feed::FeedState;
 use crate::theme;
 use ratatui::{
-    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
     widgets::{block::Title, Block, Clear, Paragraph, Wrap},
+    Frame,
 };
 
 pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect) {

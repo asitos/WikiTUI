@@ -2,11 +2,11 @@ use crate::app::{App, PaneContent};
 use crate::theme;
 use crate::ui::modals::render_toc_modal;
 use ratatui::{
-    Frame,
     layout::{Alignment, Rect},
     style::{Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Padding, Paragraph},
+    Frame,
 };
 
 pub fn render_single_active_pane(f: &mut Frame, app: &mut App, area: Rect) {
@@ -217,9 +217,10 @@ fn render_pane_at(
                             let mut text_cursor = 0;
                             while text_cursor < span_len {
                                 let global_pos = span_start + text_cursor;
-                                let active_range = match_ranges
-                                    .iter()
-                                    .find(|&&(r_start, r_end)| global_pos >= r_start && global_pos < r_end);
+                                let active_range =
+                                    match_ranges.iter().find(|&&(r_start, r_end)| {
+                                        global_pos >= r_start && global_pos < r_end
+                                    });
 
                                 if let Some(&(_, r_end)) = active_range {
                                     let match_end_in_span = (r_end - span_start).min(span_len);
@@ -233,7 +234,9 @@ fn render_pane_at(
                                     let next_match_start = match_ranges
                                         .iter()
                                         .map(|&(r_start, _)| r_start)
-                                        .filter(|&r_start| r_start > global_pos && r_start < span_end)
+                                        .filter(|&r_start| {
+                                            r_start > global_pos && r_start < span_end
+                                        })
                                         .min()
                                         .unwrap_or(span_end);
 

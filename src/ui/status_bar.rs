@@ -1,10 +1,10 @@
 use crate::app::{App, InputMode};
 use crate::theme;
 use ratatui::{
-    Frame,
     layout::{Alignment, Rect},
     style::{Style, Stylize},
     widgets::Paragraph,
+    Frame,
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
@@ -33,15 +33,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         InputMode::SaveToList => {
             "j/k: navigate | space: toggle | c: new list | esc: done".to_string()
         }
-        InputMode::CreateNewList => {
-            "enter: confirm | esc: cancel".to_string()
-        }
+        InputMode::CreateNewList => "enter: confirm | esc: cancel".to_string(),
         InputMode::SavedListsViewer => {
             "h/l: switch pane | j/k: navigate | enter: open | d: delete".to_string()
         }
-        InputMode::ConfirmDelete => {
-            "".to_string()
-        }
+        InputMode::ConfirmDelete => "".to_string(),
         InputMode::Normal => {
             if app.active_pane().toc_focused {
                 "j/k: navigate contents | enter: jump | o: close".to_string()

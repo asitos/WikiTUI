@@ -6,10 +6,10 @@ pub mod tab_bar;
 use crate::app::{App, InputMode};
 use crate::theme;
 use ratatui::{
-    Frame,
     layout::{Alignment, Constraint, Direction, Layout},
     style::Style,
     widgets::Paragraph,
+    Frame,
 };
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -18,10 +18,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.feed.active {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(0),
-                Constraint::Length(1),
-            ])
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
             .split(size);
 
         let feed_area = chunks[0];

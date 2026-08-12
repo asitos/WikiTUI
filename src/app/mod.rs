@@ -84,7 +84,9 @@ impl App {
 
             feed: crate::feed::FeedState::new(),
             onboarding_cursor_idx: 0,
-            onboarding_selected: vec![false, false, false, false, true, false, false, true, true, false, false, true],
+            onboarding_selected: vec![
+                false, false, false, false, true, false, false, true, true, false, false, true,
+            ],
 
             saved_lists: crate::saved_lists::SavedListsStore::load(),
             save_modal_target_title: String::new(),

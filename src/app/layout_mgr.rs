@@ -1,6 +1,6 @@
-use crate::app::App;
 use crate::app::pane::Pane;
 use crate::app::tab::Tab;
+use crate::app::App;
 use crate::layout::SplitDirection;
 
 impl App {
