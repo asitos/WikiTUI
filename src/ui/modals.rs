@@ -449,19 +449,6 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
                     Span::styled(prefix, Style::default().fg(theme::VIOLET)),
                     Span::styled(&article.title, style),
                 ]));
-                if let Some(snip) = &article.snippet {
-                    if !snip.is_empty() {
-                        let truncated = if snip.chars().count() > 60 {
-                            format!("{}...", &snip[..60])
-                        } else {
-                            snip.clone()
-                        };
-                        article_lines.push(Line::from(vec![
-                            Span::raw("     "),
-                            Span::styled(truncated, Style::default().fg(theme::GREY).italic()),
-                        ]));
-                    }
-                }
             }
         }
     }
