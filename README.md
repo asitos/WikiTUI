@@ -67,6 +67,10 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **quit** | `q` | exit wikid |
 
 
+## acknowledgements
+
+- special thanks to [xikipedia](https://github.com/rebane2001/xikipedia) for inspiring the recommendation feed feature!
+
 ## license
 
 distributed under the [MIT license](LICENSE).
