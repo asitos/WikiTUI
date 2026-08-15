@@ -29,66 +29,81 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
+#[rustfmt::skip]
 pub fn render_help_modal(f: &mut Frame, size: Rect) {
-    let area = centered_rect(70, 85, size);
+    let area = centered_rect(72, 85, size);
     f.render_widget(Clear, area);
 
-    let help_text = vec![
+    let is_macos = cfg!(target_os = "macos");
+
+    let mut help_text = vec![
         Line::from(vec![Span::styled(
             " navigation",
             Style::default().fg(theme::VIOLET).bold(),
         )]),
-        Line::from("   j/k            scroll down / up"),
-        Line::from("   f/b            scroll page down / up"),
-        Line::from("   g/G            jump to top / bottom"),
-        Line::from("   ]/[            jump to next / prev section heading"),
-        Line::from("   o              toggle table of contents"),
+        Line::from("   j/k                 scroll down / up"),
+        Line::from("   f/b                 scroll page down / up"),
+        Line::from("   g/G                 jump to top / bottom"),
+        Line::from("   ]/[                 jump to next / prev section heading"),
+        Line::from("   o                   toggle table of contents"),
         Line::from(""),
         Line::from(vec![Span::styled(
             " links & selection",
             Style::default().fg(theme::VIOLET).bold(),
         )]),
-        Line::from("   tab/backtab    focus next / prev link"),
-        Line::from("   enter          open link in current pane"),
-        Line::from("   t              open link in new tab"),
-        Line::from("   s/v            open link in horizontal / vertical split"),
+        Line::from("   tab/backtab         focus next / prev link"),
+        Line::from("   enter               open link in current pane"),
+        Line::from("   t                   open link in new tab"),
+        Line::from("   s/v                 open link in horizontal / vertical split"),
         Line::from(""),
         Line::from(vec![Span::styled(
             " panes & tabs",
             Style::default().fg(theme::VIOLET).bold(),
         )]),
-        Line::from("   ctrl-w s/v     split active pane horizontally / vertically"),
-        Line::from("   ctrl-h/j/k/l   navigate focus between split panes"),
-        Line::from("   alt-c          close active pane"),
-        Line::from("   alt-t          create new tab"),
-        Line::from("   alt-h/l        switch to prev / next tab"),
-        Line::from(""),
-        Line::from(vec![Span::styled(
-            " search",
-            Style::default().fg(theme::VIOLET).bold(),
-        )]),
-        Line::from("   ctrl-s         search wikipedia (opens new tab)"),
-        Line::from("   i              edit search query in current tab"),
-        Line::from("   r              open random wikipedia article"),
-        Line::from("   /              in-page text search"),
-        Line::from("   n/N            jump to next / prev search match"),
-        Line::from(""),
-        Line::from(vec![Span::styled(
-            " custom lists",
-            Style::default().fg(theme::VIOLET).bold(),
-        )]),
-        Line::from("   m              save active article to custom list"),
-        Line::from("   M              open saved custom lists & articles viewer"),
-        Line::from(""),
-        Line::from(vec![Span::styled(
-            " general",
-            Style::default().fg(theme::VIOLET).bold(),
-        )]),
-        Line::from("   z              toggle zen mode"),
-        Line::from("   F              toggle wikipedia feed mode"),
-        Line::from("   ?              toggle this help popup"),
-        Line::from("   q              quit wikid"),
     ];
+
+    if is_macos {
+        help_text.push(Line::from("   ctrl-w s/v          split active pane horizontally / vertically"));
+        help_text.push(Line::from("   ctrl-h/j/k/l        navigate focus between split panes"));
+        help_text.push(Line::from("   opt-c               close active pane"));
+        help_text.push(Line::from("   opt-t               create new tab"));
+        help_text.push(Line::from("   opt-h/l             switch to prev / next tab"));
+    } else {
+        help_text.push(Line::from("   ctrl-w s/v          split active pane horizontally / vertically"));
+        help_text.push(Line::from("   ctrl-h/j/k/l        navigate focus between split panes"));
+        help_text.push(Line::from("   alt-c               close active pane"));
+        help_text.push(Line::from("   alt-t               create new tab"));
+        help_text.push(Line::from("   alt-h/l             switch to prev / next tab"));
+    }
+
+    help_text.push(Line::from(""));
+    help_text.push(Line::from(vec![Span::styled(
+        " search",
+        Style::default().fg(theme::VIOLET).bold(),
+    )]));
+
+    help_text.push(Line::from("   ctrl-s              search wikipedia (opens new tab)"));
+
+    help_text.push(Line::from("   i                   edit search query in current tab"));
+    help_text.push(Line::from("   r                   open random wikipedia article"));
+    help_text.push(Line::from("   /                   in-page text search"));
+    help_text.push(Line::from("   n/N                 jump to next / prev search match"));
+    help_text.push(Line::from(""));
+    help_text.push(Line::from(vec![Span::styled(
+        " custom lists",
+        Style::default().fg(theme::VIOLET).bold(),
+    )]));
+    help_text.push(Line::from("   m                   save active article to custom list"));
+    help_text.push(Line::from("   M                   open saved custom lists & articles viewer"));
+    help_text.push(Line::from(""));
+    help_text.push(Line::from(vec![Span::styled(
+        " general",
+        Style::default().fg(theme::VIOLET).bold(),
+    )]));
+    help_text.push(Line::from("   z                   toggle zen mode"));
+    help_text.push(Line::from("   F                   toggle wikipedia feed mode"));
+    help_text.push(Line::from("   ?                   toggle this help popup"));
+    help_text.push(Line::from("   q                   quit wikid"));
 
     let help_block = Block::bordered()
         .border_style(Style::default().fg(theme::PINK))
