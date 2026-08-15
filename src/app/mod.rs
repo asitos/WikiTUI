@@ -281,4 +281,16 @@ impl App {
             }
         }
     }
+
+    pub fn toggle_feed_like(&mut self) {
+        if let Some((title, snippet, is_liked)) = self.feed.toggle_like() {
+            self.saved_lists.set_article_in_list(
+                "liked",
+                "Liked",
+                &title,
+                snippet.as_deref(),
+                is_liked,
+            );
+        }
+    }
 }

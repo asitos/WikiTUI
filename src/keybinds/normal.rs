@@ -16,7 +16,7 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                 app.feed.prev_post();
             }
             KeyCode::Char('l') => {
-                app.feed.toggle_like();
+                app.toggle_feed_like();
             }
             KeyCode::Enter => {
                 if let Some(item) = app.feed.current_item().cloned() {

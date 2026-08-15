@@ -30,9 +30,9 @@ impl Default for SavedListsStore {
         Self {
             version: 1,
             lists: vec![SavedList {
-                id: "read_later".to_string(),
-                name: "Read Later".to_string(),
-                description: "Default saved articles".to_string(),
+                id: "liked".to_string(),
+                name: "Liked".to_string(),
+                description: "Liked articles from Feed".to_string(),
                 created_at: now,
                 articles: Vec::new(),
             }],
@@ -97,6 +97,9 @@ impl SavedListsStore {
     }
 
     pub fn delete_list(&mut self, list_id: &str) {
+        if list_id == "liked" {
+            return;
+        }
         self.lists.retain(|l| l.id != list_id);
         self.save();
     }
@@ -137,6 +140,53 @@ impl SavedListsStore {
             list.articles.iter().any(|a| a.title == title_trimmed)
         } else {
             false
+        }
+    }
+
+    pub fn ensure_list(&mut self, id: &str, name: &str, description: &str) {
+        if let Some(list) = self.lists.iter_mut().find(|l| l.id == id) {
+            if list.name != name {
+                list.name = name.to_string();
+                self.save();
+            }
+        } else {
+            let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
+            self.lists.push(SavedList {
+                id: id.to_string(),
+                name: name.to_string(),
+                description: description.to_string(),
+                created_at: now,
+                articles: Vec::new(),
+            });
+            self.save();
+        }
+    }
+
+    pub fn set_article_in_list(
+        &mut self,
+        list_id: &str,
+        list_name: &str,
+        title: &str,
+        snippet: Option<&str>,
+        in_list: bool,
+    ) {
+        self.ensure_list(list_id, list_name, "Liked articles from Feed");
+        if let Some(list) = self.lists.iter_mut().find(|l| l.id == list_id) {
+            let title_trimmed = title.trim();
+            if in_list {
+                if !list.articles.iter().any(|a| a.title == title_trimmed) {
+                    let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
+                    list.articles.push(SavedArticle {
+                        title: title_trimmed.to_string(),
+                        snippet: snippet.map(|s| s.trim().to_string()),
+                        saved_at: now,
+                    });
+                    self.save();
+                }
+            } else if let Some(idx) = list.articles.iter().position(|a| a.title == title_trimmed) {
+                list.articles.remove(idx);
+                self.save();
+            }
         }
     }
 }

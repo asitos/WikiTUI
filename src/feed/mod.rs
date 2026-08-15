@@ -58,12 +58,14 @@ impl FeedState {
         }
     }
 
-    pub fn toggle_like(&mut self) {
+    pub fn toggle_like(&mut self) -> Option<(String, Option<String>, bool)> {
         if self.items.is_empty() {
-            return;
+            return None;
         }
         let item = &mut self.items[self.active_idx];
-        item.is_liked = self.profile.mark_liked(&item.title, &item.categories);
+        let is_liked = self.profile.mark_liked(&item.title, &item.categories);
+        item.is_liked = is_liked;
+        Some((item.title.clone(), item.short_description.clone(), is_liked))
     }
 
     pub fn current_item(&self) -> Option<&FeedItem> {

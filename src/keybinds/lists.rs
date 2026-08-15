@@ -131,10 +131,12 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
                     }
                 }
             } else if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {
-                app.pending_delete_is_list = true;
-                app.pending_delete_title = list.name.clone();
-                app.pending_delete_list_id = list.id.clone();
-                app.input_mode = InputMode::ConfirmDelete;
+                if list.id != "liked" {
+                    app.pending_delete_is_list = true;
+                    app.pending_delete_title = list.name.clone();
+                    app.pending_delete_list_id = list.id.clone();
+                    app.input_mode = InputMode::ConfirmDelete;
+                }
             }
         }
         KeyCode::Char('n') => {
