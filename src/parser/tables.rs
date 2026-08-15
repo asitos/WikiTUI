@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use super::types::{Link, ParsedDocument, StyledToken};
 use super::utils::extract_title_from_href;
 use crate::theme;
@@ -9,38 +11,39 @@ use unicode_width::UnicodeWidthStr;
 type CellLinkInfo = (String, String, Vec<(usize, usize)>);
 
 #[derive(Debug, Clone)]
-struct TableCell {
-    tokens: Vec<StyledToken>,
-    colspan: usize,
+enum CellEntry {
+    Origin {
+        tokens: Vec<StyledToken>,
+        colspan: usize,
+        rowspan: usize,
+        is_header: bool,
+    },
+    Covered {
+        origin_r: usize,
+        origin_c: usize,
+    },
 }
 
-#[derive(Debug, Clone)]
-struct TableRow {
-    cells: Vec<TableCell>,
-    is_header: bool,
+struct TableGrid {
+    num_rows: usize,
+    num_cols: usize,
+    cells: Vec<Vec<CellEntry>>,
+    caption: Option<String>,
 }
 
 pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: usize) {
-    let (caption, rows) = extract_table_rows(table_el);
-    if rows.is_empty() {
-        return;
-    }
+    let grid = match parse_table_into_grid(table_el) {
+        Some(g) if g.num_rows > 0 && g.num_cols > 0 => g,
+        _ => return,
+    };
 
-    let num_cols = rows
-        .iter()
-        .map(|r| r.cells.iter().map(|c| c.colspan).sum::<usize>())
-        .max()
-        .unwrap_or(0);
+    let (num_rows, num_cols) = (grid.num_rows, grid.num_cols);
 
-    if num_cols == 0 {
-        return;
-    }
-
-    if let Some(cap) = caption {
+    if let Some(cap) = &grid.caption {
         doc.lines.push(Line::from(vec![
             Span::styled(" 📋 ", Style::default().fg(theme::VIOLET)),
             Span::styled(
-                cap,
+                cap.clone(),
                 Style::default().fg(theme::BEIGE).add_modifier(Modifier::BOLD),
             ),
         ]));
@@ -49,58 +52,51 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
     let mut min_widths = vec![3usize; num_cols];
     let mut max_widths = vec![3usize; num_cols];
 
-    for row in &rows {
-        let mut col_idx = 0;
-        for cell in &row.cells {
-            let full_text: String = cell.tokens.iter().map(|t| t.text.as_str()).collect();
-            let mut longest_word = 0;
-            for word in full_text.split_whitespace() {
-                longest_word = longest_word.max(UnicodeWidthStr::width(word));
-            }
-            let total_width = UnicodeWidthStr::width(full_text.trim());
+    for r in 0..num_rows {
+        for c in 0..num_cols {
+            if let CellEntry::Origin { tokens, colspan, .. } = &grid.cells[r][c] {
+                let full_text: String = tokens.iter().map(|t| t.text.as_str()).collect();
+                let longest_word = full_text
+                    .split_whitespace()
+                    .map(UnicodeWidthStr::width)
+                    .max()
+                    .unwrap_or(0);
+                let total_width = UnicodeWidthStr::width(full_text.trim());
 
-            if cell.colspan == 1 {
-                if col_idx < num_cols {
-                    min_widths[col_idx] = min_widths[col_idx].max(longest_word.max(3));
-                    max_widths[col_idx] = max_widths[col_idx].max(total_width.max(3));
-                }
-            } else {
-                let share_min = (longest_word / cell.colspan).max(3);
-                let share_max = (total_width / cell.colspan).max(3);
-                for c in 0..cell.colspan {
-                    if col_idx + c < num_cols {
-                        min_widths[col_idx + c] = min_widths[col_idx + c].max(share_min);
-                        max_widths[col_idx + c] = max_widths[col_idx + c].max(share_max);
+                if *colspan == 1 {
+                    min_widths[c] = min_widths[c].max(longest_word.max(3));
+                    max_widths[c] = max_widths[c].max(total_width.max(3));
+                } else {
+                    let share_min = (longest_word / *colspan).max(3);
+                    let share_max = (total_width / *colspan).max(3);
+                    for dc in 0..*colspan {
+                        if c + dc < num_cols {
+                            min_widths[c + dc] = min_widths[c + dc].max(share_min);
+                            max_widths[c + dc] = max_widths[c + dc].max(share_max);
+                        }
                     }
                 }
             }
-            col_idx += cell.colspan;
         }
     }
 
     let overhead = 3 * num_cols + 1;
-    let available_content_width = max_width.saturating_sub(overhead).max(num_cols * 3);
-
+    let available_width = max_width.saturating_sub(overhead).max(num_cols * 3);
     let total_max: usize = max_widths.iter().sum();
     let mut col_widths = vec![3usize; num_cols];
 
-    if total_max <= available_content_width {
+    if total_max <= available_width {
         for (i, w) in max_widths.iter().enumerate() {
             col_widths[i] = (*w).max(3);
         }
     } else {
-        let mut remaining = available_content_width;
         for i in 0..num_cols {
-            let prop = (max_widths[i] as f64 / total_max as f64 * available_content_width as f64)
-                .round() as usize;
-            let allocated = prop.max(min_widths[i].min(15)).max(3);
-            col_widths[i] = allocated;
-            remaining = remaining.saturating_sub(allocated);
+            let prop = (max_widths[i] as f64 / total_max as f64 * available_width as f64).round() as usize;
+            col_widths[i] = prop.max(min_widths[i].min(15)).max(3);
         }
-
-        let total_allocated: usize = col_widths.iter().sum();
-        if total_allocated > available_content_width {
-            let mut diff = total_allocated - available_content_width;
+        let total_alloc: usize = col_widths.iter().sum();
+        if total_alloc > available_width {
+            let mut diff = total_alloc - available_width;
             for i in (0..num_cols).rev() {
                 if col_widths[i] > 3 {
                     let shrink = (col_widths[i] - 3).min(diff);
@@ -114,86 +110,152 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
         }
     }
 
+    let mut origin_lines = vec![vec![Vec::new(); num_cols]; num_rows];
+    let mut origin_links = vec![vec![Vec::new(); num_cols]; num_rows];
+
+    for r in 0..num_rows {
+        for c in 0..num_cols {
+            if let CellEntry::Origin { tokens, colspan, .. } = &grid.cells[r][c] {
+                let mut span_w = (0..*colspan).filter_map(|dc| col_widths.get(c + dc)).sum::<usize>();
+                span_w += (*colspan - 1) * 3;
+                let (lines, links) = wrap_cell_tokens(tokens, span_w);
+                origin_lines[r][c] = lines;
+                origin_links[r][c] = links;
+            }
+        }
+    }
+
+    let mut row_heights = vec![1usize; num_rows];
+    for r in 0..num_rows {
+        let mut max_h = 1;
+        for c in 0..num_cols {
+            if let CellEntry::Origin { rowspan, .. } = &grid.cells[r][c] {
+                if *rowspan == 1 {
+                    max_h = max_h.max(origin_lines[r][c].len());
+                }
+            }
+        }
+        row_heights[r] = max_h;
+    }
+
+    for r in 0..num_rows {
+        for c in 0..num_cols {
+            if let CellEntry::Origin { rowspan, .. } = &grid.cells[r][c] {
+                if *rowspan > 1 {
+                    let needed = origin_lines[r][c].len();
+                    let current_total: usize = (0..*rowspan).filter_map(|dr| row_heights.get(r + dr)).sum();
+                    if needed > current_total {
+                        let end_row = (r + *rowspan - 1).min(num_rows - 1);
+                        row_heights[end_row] += needed - current_total;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut cell_rendered_lines = vec![vec![Vec::new(); num_cols]; num_rows];
+    let mut cell_rendered_links = vec![vec![Vec::new(); num_cols]; num_rows];
+
+    for r in 0..num_rows {
+        for c in 0..num_cols {
+            if let CellEntry::Origin { rowspan, .. } = &grid.cells[r][c] {
+                let all_lines = &origin_lines[r][c];
+                let all_links = &origin_links[r][c];
+
+                if *rowspan == 1 {
+                    cell_rendered_lines[r][c] = all_lines.clone();
+                    cell_rendered_links[r][c] = all_links.clone();
+                } else {
+                    let total_slots: usize = (0..*rowspan).filter_map(|dr| row_heights.get(r + dr)).sum();
+                    let top_pad = total_slots.saturating_sub(all_lines.len()) / 2;
+                    let mut cursor = 0;
+                    let mut slot = 0;
+
+                    for dr in 0..*rowspan {
+                        let curr_r = r + dr;
+                        if curr_r >= num_rows {
+                            break;
+                        }
+                        let mut chunk = Vec::new();
+                        let mut chunk_links = Vec::new();
+
+                        for local_line in 0..row_heights[curr_r] {
+                            if slot >= top_pad && cursor < all_lines.len() {
+                                chunk.push(all_lines[cursor].clone());
+                                for (target, text, coords) in all_links {
+                                    let matched: Vec<_> = coords
+                                        .iter()
+                                        .filter(|(src_l, _)| *src_l == cursor)
+                                        .map(|(_, src_s)| (local_line, *src_s))
+                                        .collect();
+                                    if !matched.is_empty() {
+                                        chunk_links.push((target.clone(), text.clone(), matched));
+                                    }
+                                }
+                                cursor += 1;
+                            } else {
+                                chunk.push(Vec::new());
+                            }
+                            slot += 1;
+                        }
+                        cell_rendered_lines[curr_r][c] = chunk;
+                        cell_rendered_links[curr_r][c] = chunk_links;
+                    }
+                }
+            }
+        }
+    }
+
     let border_style = Style::default().fg(theme::DARK_GREY);
 
-    let mut top_spans = Vec::new();
-    top_spans.push(Span::styled("┌", border_style));
-    for (i, w) in col_widths.iter().enumerate() {
-        top_spans.push(Span::styled("─".repeat(*w + 2), border_style));
-        if i + 1 < num_cols {
+    let mut top_spans = vec![Span::styled("┌", border_style)];
+    let mut c = 0;
+    while c < num_cols {
+        let colspan = match &grid.cells[0][c] {
+            CellEntry::Origin { colspan, .. } => *colspan,
+            _ => 1,
+        };
+        let mut span_w = (0..colspan).filter_map(|dc| col_widths.get(c + dc)).sum::<usize>();
+        span_w += (colspan - 1) * 3;
+        top_spans.push(Span::styled("─".repeat(span_w + 2), border_style));
+        c += colspan;
+        if c < num_cols {
             top_spans.push(Span::styled("┬", border_style));
         }
     }
     top_spans.push(Span::styled("┐", border_style));
     doc.lines.push(Line::from(top_spans));
 
-    let rows_len = rows.len();
-    for (row_idx, row) in rows.iter().enumerate() {
-        let mut wrapped_cells: Vec<Vec<Vec<Span<'static>>>> = Vec::new();
-        let mut cell_links_info: Vec<Vec<CellLinkInfo>> = Vec::new();
-        let mut col_idx = 0;
+    for r in 0..num_rows {
+        let start_idx = doc.lines.len();
 
-        for cell in &row.cells {
-            let span_width = if cell.colspan == 1 {
-                if col_idx < num_cols {
-                    col_widths[col_idx]
-                } else {
-                    3
-                }
-            } else {
-                let mut w = 0;
-                for c in 0..cell.colspan {
-                    if col_idx + c < num_cols {
-                        w += col_widths[col_idx + c];
+        for line_in_row in 0..row_heights[r] {
+            let mut line_spans = vec![Span::styled("│ ", border_style)];
+            let mut c = 0;
+            while c < num_cols {
+                let (orig_c, colspan) = match &grid.cells[r][c] {
+                    CellEntry::Origin { colspan, .. } => (c, *colspan),
+                    CellEntry::Covered { origin_c, .. } => {
+                        let span = match &grid.cells[r][*origin_c] {
+                            CellEntry::Origin { colspan, .. } => *colspan,
+                            _ => 1,
+                        };
+                        (*origin_c, span)
                     }
-                }
-                w + (cell.colspan - 1) * 3
-            };
-
-            let (cell_lines, links) = wrap_cell_tokens(&cell.tokens, span_width);
-            wrapped_cells.push(cell_lines);
-            cell_links_info.push(links);
-
-            col_idx += cell.colspan;
-        }
-
-        let max_cell_lines = wrapped_cells.iter().map(|lines| lines.len()).max().unwrap_or(1);
-        let start_line_idx = doc.lines.len();
-
-        for line_in_row in 0..max_cell_lines {
-            let mut line_spans = Vec::new();
-            line_spans.push(Span::styled("│ ", border_style));
-
-            let mut cur_col = 0;
-            for (c_idx, cell) in row.cells.iter().enumerate() {
-                let span_width = if cell.colspan == 1 {
-                    if cur_col < num_cols {
-                        col_widths[cur_col]
-                    } else {
-                        3
-                    }
-                } else {
-                    let mut w = 0;
-                    for c in 0..cell.colspan {
-                        if cur_col + c < num_cols {
-                            w += col_widths[cur_col + c];
-                        }
-                    }
-                    w + (cell.colspan - 1) * 3
                 };
 
-                let empty_vec = Vec::new();
-                let cell_spans = wrapped_cells
-                    .get(c_idx)
+                let mut span_w = (0..colspan).filter_map(|dc| col_widths.get(c + dc)).sum::<usize>();
+                span_w += (colspan - 1) * 3;
+
+                let empty = Vec::new();
+                let cell_spans = cell_rendered_lines
+                    .get(r)
+                    .and_then(|row| row.get(orig_c))
                     .and_then(|lines| lines.get(line_in_row))
-                    .unwrap_or(&empty_vec);
+                    .unwrap_or(&empty);
 
-                let content_len: usize = cell_spans
-                    .iter()
-                    .map(|s| UnicodeWidthStr::width(s.content.as_ref()))
-                    .sum();
-
-                let padding = span_width.saturating_sub(content_len);
+                let content_len: usize = cell_spans.iter().map(|s| UnicodeWidthStr::width(s.content.as_ref())).sum();
+                let padding = span_w.saturating_sub(content_len);
 
                 for span in cell_spans {
                     line_spans.push(span.clone());
@@ -202,55 +264,94 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
                     line_spans.push(Span::raw(" ".repeat(padding)));
                 }
 
-                if c_idx + 1 < row.cells.len() {
+                c += colspan;
+                if c < num_cols {
                     line_spans.push(Span::styled(" │ ", border_style));
                 } else {
                     line_spans.push(Span::styled(" │", border_style));
                 }
-
-                cur_col += cell.colspan;
             }
-
             doc.lines.push(Line::from(line_spans));
         }
 
-        for (c_idx, links) in cell_links_info.iter().enumerate() {
-            for (target, text, span_coords) in links {
-                let mut span_indices = Vec::new();
-                for (local_line_idx, local_span_idx) in span_coords {
-                    let absolute_line_idx = start_line_idx + local_line_idx;
-                    let mut offset = 1;
-                    for prev_c in 0..c_idx {
-                        let prev_spans = wrapped_cells
-                            .get(prev_c)
-                            .and_then(|lines| lines.get(*local_line_idx))
-                            .map(|s| s.len())
-                            .unwrap_or(0);
-                        let has_padding = 1;
-                        let border = 1;
-                        offset += prev_spans + has_padding + border;
+        for col_i in 0..num_cols {
+            if let Some(links) = cell_rendered_links.get(r).and_then(|row| row.get(col_i)) {
+                for (target, text, coords) in links {
+                    let mut span_indices = Vec::new();
+                    for (local_l, local_s) in coords {
+                        let abs_l = start_idx + local_l;
+                        let mut offset = 1;
+                        let mut prev_c = 0;
+                        while prev_c < col_i {
+                            let (orig_c, prev_span) = match &grid.cells[r][prev_c] {
+                                CellEntry::Origin { colspan, .. } => (prev_c, *colspan),
+                                CellEntry::Covered { origin_c, .. } => (*origin_c, 1),
+                            };
+                            let spans_len = cell_rendered_lines
+                                .get(r)
+                                .and_then(|row| row.get(orig_c))
+                                .and_then(|lines| lines.get(*local_l))
+                                .map(|s| s.len())
+                                .unwrap_or(0);
+                            offset += spans_len + 2;
+                            prev_c += prev_span;
+                        }
+                        span_indices.push((abs_l, offset + local_s));
                     }
-                    span_indices.push((absolute_line_idx, offset + local_span_idx));
-                }
-
-                if !span_indices.is_empty() {
-                    doc.links.push(Link {
-                        title: target.clone(),
-                        text: text.clone(),
-                        span_indices,
-                    });
+                    if !span_indices.is_empty() {
+                        doc.links.push(Link {
+                            title: target.clone(),
+                            text: text.clone(),
+                            span_indices,
+                        });
+                    }
                 }
             }
         }
 
-        if row_idx + 1 < rows_len {
-            let sep_char = if row.is_header { "═" } else { "─" };
-            let mut sep_spans = Vec::new();
-            sep_spans.push(Span::styled("├", border_style));
-            for (i, w) in col_widths.iter().enumerate() {
-                sep_spans.push(Span::styled(sep_char.repeat(*w + 2), border_style));
-                if i + 1 < num_cols {
-                    sep_spans.push(Span::styled("┼", border_style));
+        if r + 1 < num_rows {
+            let is_header_sep = grid.cells[r].iter().any(|cell| match cell {
+                CellEntry::Origin { is_header, .. } => *is_header,
+                _ => false,
+            });
+            let sep_char = if is_header_sep { "═" } else { "─" };
+            let mut sep_spans = vec![Span::styled("├", border_style)];
+
+            let mut col = 0;
+            while col < num_cols {
+                let is_vert_cont = match &grid.cells[r + 1][col] {
+                    CellEntry::Covered { origin_r, .. } => *origin_r <= r,
+                    _ => false,
+                };
+                let colspan = match &grid.cells[r][col] {
+                    CellEntry::Origin { colspan, .. } => *colspan,
+                    CellEntry::Covered { origin_c, .. } => match &grid.cells[r][*origin_c] {
+                        CellEntry::Origin { colspan, .. } => *colspan,
+                        _ => 1,
+                    },
+                };
+                let mut span_w = (0..colspan).filter_map(|dc| col_widths.get(col + dc)).sum::<usize>();
+                span_w += (colspan - 1) * 3;
+
+                if is_vert_cont {
+                    sep_spans.push(Span::raw(" ".repeat(span_w + 2)));
+                } else {
+                    sep_spans.push(Span::styled(sep_char.repeat(span_w + 2), border_style));
+                }
+
+                col += colspan;
+                if col < num_cols {
+                    let next_is_vert = match &grid.cells[r + 1][col] {
+                        CellEntry::Covered { origin_r, .. } => *origin_r <= r,
+                        _ => false,
+                    };
+                    let sep_joint = match (is_vert_cont, next_is_vert) {
+                        (true, true) => "│",
+                        (true, false) => "┤",
+                        (false, true) => "├",
+                        (false, false) => "┼",
+                    };
+                    sep_spans.push(Span::styled(sep_joint, border_style));
                 }
             }
             sep_spans.push(Span::styled("┤", border_style));
@@ -258,11 +359,18 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
         }
     }
 
-    let mut bot_spans = Vec::new();
-    bot_spans.push(Span::styled("└", border_style));
-    for (i, w) in col_widths.iter().enumerate() {
-        bot_spans.push(Span::styled("─".repeat(*w + 2), border_style));
-        if i + 1 < num_cols {
+    let mut bot_spans = vec![Span::styled("└", border_style)];
+    let mut c = 0;
+    while c < num_cols {
+        let colspan = match &grid.cells[num_rows - 1][c] {
+            CellEntry::Origin { colspan, .. } => *colspan,
+            _ => 1,
+        };
+        let mut span_w = (0..colspan).filter_map(|dc| col_widths.get(c + dc)).sum::<usize>();
+        span_w += (colspan - 1) * 3;
+        bot_spans.push(Span::styled("─".repeat(span_w + 2), border_style));
+        c += colspan;
+        if c < num_cols {
             bot_spans.push(Span::styled("┴", border_style));
         }
     }
@@ -275,8 +383,8 @@ fn wrap_cell_tokens(
     tokens: &[StyledToken],
     max_width: usize,
 ) -> (Vec<Vec<Span<'static>>>, Vec<CellLinkInfo>) {
-    let mut lines: Vec<Vec<Span<'static>>> = Vec::new();
-    let mut current_line: Vec<Span<'static>> = Vec::new();
+    let mut lines = Vec::new();
+    let mut current_line = Vec::new();
     let mut current_line_len = 0;
     let mut links = Vec::new();
 
@@ -288,33 +396,27 @@ fn wrap_cell_tokens(
             continue;
         }
 
-        let words = token.text.split_inclusive(|c: char| c.is_whitespace());
-        let mut link_span_coords = Vec::new();
-
-        for word in words {
+        let mut link_coords = Vec::new();
+        for word in token.text.split_inclusive(|c: char| c.is_whitespace()) {
             if word.is_empty() {
                 continue;
             }
-
             let word_len = UnicodeWidthStr::width(word);
-
             if current_line_len + word_len > max_width && current_line_len > 0 {
                 lines.push(current_line);
                 current_line = Vec::new();
                 current_line_len = 0;
             }
-
             if token.link_target.is_some() {
-                link_span_coords.push((lines.len(), current_line.len()));
+                link_coords.push((lines.len(), current_line.len()));
             }
-
             current_line.push(Span::styled(word.to_string(), token.style));
             current_line_len += word_len;
         }
 
         if let Some(target) = &token.link_target {
-            if !link_span_coords.is_empty() {
-                links.push((target.clone(), token.text.trim().to_string(), link_span_coords));
+            if !link_coords.is_empty() {
+                links.push((target.clone(), token.text.trim().to_string(), link_coords));
             }
         }
     }
@@ -326,59 +428,50 @@ fn wrap_cell_tokens(
     (lines, links)
 }
 
-fn extract_table_rows(table_el: ElementRef) -> (Option<String>, Vec<TableRow>) {
+fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
     let mut caption = None;
-    let mut rows = Vec::new();
+    let mut raw_tr_elements = Vec::new();
 
     for child in table_el.children() {
         if let Some(child_ref) = ElementRef::wrap(child) {
-            let name = child_ref.value().name();
-            if name == "caption" {
-                let text = child_ref.text().collect::<Vec<_>>().join(" ");
-                let clean = text.split_whitespace().collect::<Vec<_>>().join(" ");
-                if !clean.is_empty() {
-                    caption = Some(clean);
+            match child_ref.value().name() {
+                "caption" => {
+                    let clean = child_ref.text().collect::<Vec<_>>().join(" ").split_whitespace().collect::<Vec<_>>().join(" ");
+                    if !clean.is_empty() {
+                        caption = Some(clean);
+                    }
                 }
-            } else if name == "tr" {
-                if let Some(row) = extract_row(child_ref) {
-                    rows.push(row);
-                }
-            } else if matches!(name, "thead" | "tbody" | "tfoot") {
-                for subchild in child_ref.children() {
-                    if let Some(subchild_ref) = ElementRef::wrap(subchild) {
-                        if subchild_ref.value().name() == "tr" {
-                            if let Some(row) = extract_row(subchild_ref) {
-                                rows.push(row);
-                            }
+                "tr" => raw_tr_elements.push(child_ref),
+                "thead" | "tbody" | "tfoot" => {
+                    for sub in child_ref.children().filter_map(ElementRef::wrap) {
+                        if sub.value().name() == "tr" {
+                            raw_tr_elements.push(sub);
                         }
                     }
                 }
+                _ => {}
             }
         }
     }
 
-    (caption, rows)
-}
+    if raw_tr_elements.is_empty() {
+        return None;
+    }
 
-fn extract_row(tr_el: ElementRef) -> Option<TableRow> {
-    let mut cells = Vec::new();
-    let mut all_headers = true;
+    let mut grid: Vec<Vec<Option<CellEntry>>> = Vec::new();
 
-    for child in tr_el.children() {
-        if let Some(child_ref) = ElementRef::wrap(child) {
-            let name = child_ref.value().name();
+    for (r, tr_el) in raw_tr_elements.iter().enumerate() {
+        if grid.len() <= r {
+            grid.resize(r + 1, Vec::new());
+        }
+        let mut c = 0;
+
+        for cell_child in tr_el.children().filter_map(ElementRef::wrap) {
+            let name = cell_child.value().name();
             if name == "th" || name == "td" {
                 let is_header = name == "th";
-                if !is_header {
-                    all_headers = false;
-                }
-
-                let colspan = child_ref
-                    .value()
-                    .attr("colspan")
-                    .and_then(|v| v.parse::<usize>().ok())
-                    .unwrap_or(1)
-                    .max(1);
+                let colspan = cell_child.value().attr("colspan").and_then(|v| v.parse().ok()).unwrap_or(1).max(1);
+                let rowspan = cell_child.value().attr("rowspan").and_then(|v| v.parse().ok()).unwrap_or(1).max(1);
 
                 let default_style = if is_header {
                     Style::default().fg(theme::BEIGE).add_modifier(Modifier::BOLD)
@@ -387,24 +480,61 @@ fn extract_row(tr_el: ElementRef) -> Option<TableRow> {
                 };
 
                 let mut tokens = Vec::new();
-                collect_cell_tokens(child_ref, default_style, None, &mut tokens);
+                collect_cell_tokens(cell_child, default_style, None, &mut tokens);
 
-                cells.push(TableCell {
-                    tokens,
-                    colspan,
-                });
+                while c < grid[r].len() && grid[r][c].is_some() {
+                    c += 1;
+                }
+
+                if grid.len() < r + rowspan {
+                    grid.resize(r + rowspan, Vec::new());
+                }
+                for row_idx in r..(r + rowspan) {
+                    if grid[row_idx].len() < c + colspan {
+                        grid[row_idx].resize(c + colspan, None);
+                    }
+                }
+
+                grid[r][c] = Some(CellEntry::Origin { tokens, colspan, rowspan, is_header });
+
+                for dr in 0..rowspan {
+                    for dc in 0..colspan {
+                        if dr == 0 && dc == 0 {
+                            continue;
+                        }
+                        grid[r + dr][c + dc] = Some(CellEntry::Covered { origin_r: r, origin_c: c });
+                    }
+                }
+                c += colspan;
             }
         }
     }
 
-    if cells.is_empty() {
-        None
-    } else {
-        Some(TableRow {
-            is_header: all_headers,
-            cells,
-        })
+    let num_rows = grid.len();
+    if num_rows == 0 {
+        return None;
     }
+    let num_cols = grid.iter().map(|row| row.len()).max().unwrap_or(0);
+    if num_cols == 0 {
+        return None;
+    }
+
+    let clean_grid: Vec<Vec<CellEntry>> = grid
+        .into_iter()
+        .map(|mut row| {
+            row.resize(num_cols, None);
+            row.into_iter()
+                .map(|opt| opt.unwrap_or_else(|| CellEntry::Origin {
+                    tokens: Vec::new(),
+                    colspan: 1,
+                    rowspan: 1,
+                    is_header: false,
+                }))
+                .collect()
+        })
+        .collect();
+
+    Some(TableGrid { num_rows, num_cols, cells: clean_grid, caption })
 }
 
 fn collect_cell_tokens(
@@ -417,7 +547,6 @@ fn collect_cell_tokens(
     if matches!(tag, "style" | "script" | "noscript") {
         return;
     }
-
     if let Some(cls) = element.value().attr("class") {
         if cls.contains("reference") {
             return;
@@ -428,12 +557,8 @@ fn collect_cell_tokens(
     let mut current_link = link;
 
     match tag {
-        "b" | "strong" | "th" => {
-            current_style = current_style.add_modifier(Modifier::BOLD);
-        }
-        "i" | "em" => {
-            current_style = current_style.add_modifier(Modifier::ITALIC);
-        }
+        "b" | "strong" | "th" => current_style = current_style.add_modifier(Modifier::BOLD),
+        "i" | "em" => current_style = current_style.add_modifier(Modifier::ITALIC),
         "a" => {
             current_style = current_style.fg(theme::BLUE);
             if let Some(href) = element.value().attr("href") {
@@ -444,16 +569,12 @@ fn collect_cell_tokens(
                 current_link = Some(title_attr.to_string());
             }
         }
-        "code" => {
-            current_style = current_style.fg(theme::TEAL);
-        }
-        "br" => {
-            tokens.push(StyledToken {
-                text: "\n".to_string(),
-                style: current_style,
-                link_target: None,
-            });
-        }
+        "code" => current_style = current_style.fg(theme::TEAL),
+        "br" => tokens.push(StyledToken {
+            text: "\n".to_string(),
+            style: current_style,
+            link_target: None,
+        }),
         _ => {}
     }
 
