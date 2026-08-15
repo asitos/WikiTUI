@@ -1,5 +1,6 @@
 pub mod banners;
 pub mod blocks;
+pub mod tables;
 pub mod types;
 pub mod utils;
 
@@ -197,6 +198,16 @@ fn process_element(
             )
         })
     }) {
+        return;
+    }
+
+    // render tables
+    if tag_name == "table" {
+        if !current_tokens.is_empty() {
+            wrap_and_append_block(current_tokens, doc, max_width);
+            current_tokens.clear();
+        }
+        tables::render_table(element, doc, max_width);
         return;
     }
 
