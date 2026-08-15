@@ -51,6 +51,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **scroll down / up** | `j` / `k` | scroll line down / up |
 | **page down / up** | `f` / `b` | scroll full page down / up |
 | **jump to top / bottom** | `g` / `G` | jump directly to article top / bottom |
+| **history back / forward** | `H` / `L` | navigate backward / forward in article history |
 | **save to list** | `m` | save active article or item into custom list |
 | **view saved lists** | `M` | open custom lists & articles viewer |
 | **search wikipedia** | `ctrl-s` | open search modal (opens in new tab) |
@@ -68,7 +69,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **open link in split** | `s` / `v` | open link in horizontal (`s`) or vertical (`v`) split |
 | **split pane** | `ctrl-w` `s`/`v` | split active pane horizontally (`s`) or vertically (`v`) |
 | **navigate panes** | `ctrl-h/j/k/l` | switch focus between split panes |
-| **close pane** | `alt-c` | close active pane |
+| **close pane** | `x / alt-c` | close active pane |
 | **new tab** | `alt-t` | create a new empty tab |
 | **switch tabs** | `alt-h` / `alt-l` | switch to previous / next tab |
 | **help popup** | `?` | toggle keybindings cheat sheet |
