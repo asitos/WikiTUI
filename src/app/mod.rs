@@ -22,6 +22,7 @@ pub enum InputMode {
     CreateNewList,
     SavedListsViewer,
     ConfirmDelete,
+    RestoreSessionPrompt(crate::session::SessionState),
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -60,7 +61,6 @@ pub struct App {
     pub viewer_list_idx: usize,
     pub viewer_article_idx: usize,
     pub viewer_focus_right: bool,
-
     pub pending_delete_is_list: bool,
     pub pending_delete_title: String,
     pub pending_delete_list_id: String,
@@ -105,10 +105,24 @@ impl App {
             cmd_tx,
         };
         app.tabs.push(Tab::new("home".to_string(), 0));
+        app.check_session_on_startup();
         app
     }
 
+    pub fn check_session_on_startup(&mut self) {
+        crate::session::SessionState::check_startup(self);
+    }
+
+    pub fn save_session(&self) {
+        crate::session::SessionState::save_app_session(self);
+    }
+
+    pub fn restore_session(&mut self, state: crate::session::SessionState) {
+        state.restore_to_app(self);
+    }
+
     pub fn quit(&mut self) {
+        self.save_session();
         self.running = false;
     }
 

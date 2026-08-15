@@ -5,5 +5,6 @@ pub mod keybinds;
 pub mod layout;
 pub mod parser;
 pub mod saved_lists;
+pub mod session;
 pub mod theme;
 pub mod ui;
