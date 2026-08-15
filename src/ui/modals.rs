@@ -65,13 +65,13 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
     if is_macos {
         help_text.push(Line::from("   ctrl-w s/v          split active pane horizontally / vertically"));
         help_text.push(Line::from("   ctrl-h/j/k/l        navigate focus between split panes"));
-        help_text.push(Line::from("   opt-c               close active pane"));
+        help_text.push(Line::from("   x / opt-c           close active pane"));
         help_text.push(Line::from("   opt-t               create new tab"));
         help_text.push(Line::from("   opt-h/l             switch to prev / next tab"));
     } else {
         help_text.push(Line::from("   ctrl-w s/v          split active pane horizontally / vertically"));
         help_text.push(Line::from("   ctrl-h/j/k/l        navigate focus between split panes"));
-        help_text.push(Line::from("   alt-c               close active pane"));
+        help_text.push(Line::from("   x / alt-c           close active pane"));
         help_text.push(Line::from("   alt-t               create new tab"));
         help_text.push(Line::from("   alt-h/l             switch to prev / next tab"));
     }

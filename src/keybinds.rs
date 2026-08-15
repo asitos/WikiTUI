@@ -325,6 +325,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('s') => {
                         app.split_active_pane(SplitDirection::Horizontal);
                     }
+                    KeyCode::Char('c') | KeyCode::Char('x') => {
+                        app.close_active_pane();
+                    }
                     _ => {}
                 }
             } else {
@@ -392,19 +395,22 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
                     KeyCode::Char('v') => {
                         app.activate_selected_in_split(SplitDirection::Vertical);
                     }
-                    KeyCode::Char('t') if key.modifiers.contains(KeyModifiers::ALT) => {
+                    KeyCode::Char('t') if key.modifiers.intersects(KeyModifiers::ALT | KeyModifiers::META) => {
                         app.new_tab();
                     }
                     KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         app.waiting_for_split_cmd = true;
                     }
-                    KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::ALT) => {
+                    KeyCode::Char('h') if key.modifiers.intersects(KeyModifiers::ALT | KeyModifiers::META) => {
                         app.prev_tab();
                     }
-                    KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::ALT) => {
+                    KeyCode::Char('l') if key.modifiers.intersects(KeyModifiers::ALT | KeyModifiers::META) => {
                         app.next_tab();
                     }
-                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::ALT) => {
+                    KeyCode::Char('c') if key.modifiers.intersects(KeyModifiers::ALT | KeyModifiers::META) => {
+                        app.close_active_pane();
+                    }
+                    KeyCode::Char('x') => {
                         app.close_active_pane();
                     }
                     KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
