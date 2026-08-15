@@ -26,6 +26,14 @@ requires [rust + cargo](https://www.rust-lang.org/tools/install) to be installed
 cargo install wikid
 ```
 
+### arch linux (via PKGBUILD)
+
+```bash
+git clone https://github.com/sharkthakftw/wikid.git
+cd wikid
+makepkg -si
+```
+
 ### build from source
 ```bash
 git clone https://github.com/sharkthakftw/wikid.git
