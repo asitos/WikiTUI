@@ -1,7 +1,6 @@
 pub mod algorithm;
 pub mod categories;
 pub mod profile;
-pub mod ui;
 
 use crate::feed::algorithm::FeedItem;
 use crate::feed::profile::FeedProfile;

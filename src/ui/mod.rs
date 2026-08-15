@@ -1,3 +1,4 @@
+pub mod feed;
 pub mod modals;
 pub mod pane_view;
 pub mod status_bar;
@@ -24,7 +25,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         let feed_area = chunks[0];
         let status_area = chunks[1];
 
-        crate::feed::ui::render_feed_view(f, &app.feed, feed_area);
+        feed::render_feed_view(f, &app.feed, feed_area);
 
         let status_p = Paragraph::new(" j/k: navigate | l: like | enter: read | esc: exit ")
             .style(Style::default().fg(theme::GREY))

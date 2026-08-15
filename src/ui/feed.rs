@@ -1,7 +1,8 @@
 use crate::feed::FeedState;
 use crate::theme;
+use crate::ui::modals::centered_rect;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
     widgets::{block::Title, Block, Clear, Paragraph, Wrap},
@@ -108,24 +109,4 @@ pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect) {
         .block(card_block)
         .wrap(Wrap { trim: true });
     f.render_widget(card_p, card_area);
-}
-
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
 }
