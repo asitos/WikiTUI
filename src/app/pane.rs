@@ -38,6 +38,9 @@ pub struct Pane {
     pub show_toc: bool,
     pub selected_toc_idx: Option<usize>,
     pub toc_focused: bool,
+
+    pub history_back: Vec<String>,
+    pub history_forward: Vec<String>,
 }
 
 impl Pane {
@@ -56,6 +59,9 @@ impl Pane {
             show_toc: false,
             selected_toc_idx: None,
             toc_focused: false,
+
+            history_back: Vec::new(),
+            history_forward: Vec::new(),
         }
     }
 
@@ -72,6 +78,13 @@ impl Pane {
             }
             *parsed_doc = parse_wikipedia_html(raw_html, width);
             *last_width = width;
+        }
+    }
+
+    pub fn title(&self) -> Option<String> {
+        match &self.content {
+            PaneContent::ArticleText { title, .. } => Some(title.clone()),
+            _ => None,
         }
     }
 }

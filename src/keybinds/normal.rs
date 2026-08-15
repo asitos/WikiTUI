@@ -148,15 +148,18 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.waiting_for_split_cmd = true;
             }
+            KeyCode::Char('H') => {
+                app.history_back();
+            }
+            KeyCode::Char('L') => {
+                app.history_forward();
+            }
             KeyCode::Char('h')
                 if key
                     .modifiers
                     .intersects(KeyModifiers::ALT | KeyModifiers::META) =>
             {
                 app.prev_tab();
-            }
-            KeyCode::Char('L') => {
-                app.next_tab();
             }
             KeyCode::Char('l')
                 if key

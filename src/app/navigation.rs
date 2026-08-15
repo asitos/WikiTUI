@@ -130,14 +130,55 @@ impl App {
     }
 
     pub fn open_article(&mut self, title: &str) {
+        let current_title = self.active_pane().title();
         let pane_id = self.active_pane().id;
         let active_pane = self.active_pane_mut();
+        if let Some(old_title) = current_title {
+            if old_title != title {
+                active_pane.history_back.push(old_title);
+                active_pane.history_forward.clear();
+            }
+        }
         active_pane.is_loading = true;
         active_pane.selected_link_idx = None;
         let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
             pane_id,
             title: title.to_string(),
         });
+    }
+
+    pub fn history_back(&mut self) {
+        let current_title = self.active_pane().title();
+        let active_pane = self.active_pane_mut();
+        if let Some(target_title) = active_pane.history_back.pop() {
+            if let Some(cur) = current_title {
+                active_pane.history_forward.push(cur);
+            }
+            let pane_id = active_pane.id;
+            active_pane.is_loading = true;
+            active_pane.selected_link_idx = None;
+            let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
+                pane_id,
+                title: target_title,
+            });
+        }
+    }
+
+    pub fn history_forward(&mut self) {
+        let current_title = self.active_pane().title();
+        let active_pane = self.active_pane_mut();
+        if let Some(target_title) = active_pane.history_forward.pop() {
+            if let Some(cur) = current_title {
+                active_pane.history_back.push(cur);
+            }
+            let pane_id = active_pane.id;
+            active_pane.is_loading = true;
+            active_pane.selected_link_idx = None;
+            let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
+                pane_id,
+                title: target_title,
+            });
+        }
     }
 
     pub fn activate_selected_in_new_tab(&mut self) {
