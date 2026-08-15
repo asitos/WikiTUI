@@ -75,6 +75,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
     )]));
     help_text.push(Line::from("   z                   toggle zen mode"));
     help_text.push(Line::from("   F                   toggle wikipedia feed mode"));
+    help_text.push(Line::from("   S                   restore previous session"));
     help_text.push(Line::from("   ?                   toggle this help popup"));
     help_text.push(Line::from("   q                   quit wikid"));
 

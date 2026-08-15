@@ -1,5 +1,5 @@
 use crate::api::NetworkCommand;
-use crate::app::{App, InputMode, Pane, Tab};
+use crate::app::{App, Pane, Tab};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -133,13 +133,5 @@ impl SessionState {
             app.active_tab_idx = self.active_tab_idx.min(app.tabs.len() - 1);
         }
         Self::delete_file();
-    }
-
-    pub fn check_startup(app: &mut App) {
-        if let Some(session) = Self::load() {
-            if session.tabs.iter().any(|t| t.panes.iter().any(|p| p.title.is_some())) {
-                app.input_mode = InputMode::RestoreSessionPrompt(session);
-            }
-        }
     }
 }

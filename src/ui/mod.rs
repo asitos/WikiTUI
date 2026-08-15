@@ -80,8 +80,4 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.input_mode == InputMode::ConfirmDelete {
         modals::render_confirm_delete_modal(f, app, size);
     }
-
-    if let InputMode::RestoreSessionPrompt(state) = &app.input_mode {
-        modals::render_restore_session_modal(f, app, state, size);
-    }
 }

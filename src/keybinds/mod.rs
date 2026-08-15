@@ -19,18 +19,6 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
             }
             _ => {}
         },
-        InputMode::RestoreSessionPrompt(state) => match key.code {
-            KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
-                let session = state.clone();
-                app.restore_session(session);
-                app.input_mode = InputMode::Normal;
-            }
-            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
-                crate::session::SessionState::delete_file();
-                app.input_mode = InputMode::Normal;
-            }
-            _ => {}
-        },
         InputMode::LocalSearch => search::handle_local_search_mode(app, key, term_height),
         InputMode::Search => search::handle_search_mode(app, key),
         InputMode::Normal => normal::handle_normal_mode(app, key, term_width, term_height),

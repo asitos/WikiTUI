@@ -2,7 +2,6 @@ pub mod help;
 pub mod lists;
 pub mod onboarding;
 pub mod search;
-pub mod session;
 pub mod toc;
 pub mod utils;
 
@@ -13,6 +12,5 @@ pub use lists::{
 };
 pub use onboarding::render_category_onboarding_modal;
 pub use search::render_search_modal;
-pub use session::render_restore_session_modal;
 pub use toc::render_toc_modal;
 pub use utils::centered_rect;

@@ -38,7 +38,6 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             "h/l: switch pane | j/k: navigate | enter: open | d: delete".to_string()
         }
         InputMode::ConfirmDelete => "".to_string(),
-        InputMode::RestoreSessionPrompt(_) => "y: restore session | n: start fresh".to_string(),
         InputMode::Normal => {
             if app.active_pane().toc_focused {
                 "j/k: navigate contents | enter: jump | o: close".to_string()
@@ -55,8 +54,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         InputMode::SaveToList
         | InputMode::CreateNewList
         | InputMode::SavedListsViewer
-        | InputMode::ConfirmDelete
-        | InputMode::RestoreSessionPrompt(_) => Style::default().fg(theme::VIOLET).bold(),
+        | InputMode::ConfirmDelete => Style::default().fg(theme::VIOLET).bold(),
         InputMode::Help => Style::default().fg(theme::GREY).bold(),
         InputMode::Normal => Style::default().fg(theme::GREY),
     };

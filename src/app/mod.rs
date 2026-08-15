@@ -22,7 +22,6 @@ pub enum InputMode {
     CreateNewList,
     SavedListsViewer,
     ConfirmDelete,
-    RestoreSessionPrompt(crate::session::SessionState),
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -105,12 +104,7 @@ impl App {
             cmd_tx,
         };
         app.tabs.push(Tab::new("home".to_string(), 0));
-        app.check_session_on_startup();
         app
-    }
-
-    pub fn check_session_on_startup(&mut self) {
-        crate::session::SessionState::check_startup(self);
     }
 
     pub fn save_session(&self) {

@@ -72,6 +72,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **close pane** | `x / alt-c` | close active pane |
 | **new tab** | `alt-t` | create a new empty tab |
 | **switch tabs** | `alt-h` / `alt-l` | switch to previous / next tab |
+| **restore session** | `S` | restore previous session (from home tab) |
 | **help popup** | `?` | toggle keybindings cheat sheet |
 | **quit** | `q` | exit wikid |
 
