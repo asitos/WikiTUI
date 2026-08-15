@@ -223,7 +223,7 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
 
                 article_lines.push(Line::from(vec![
                     Span::styled(prefix, Style::default().fg(theme::VIOLET)),
-                    Span::styled(&article.title, style),
+                    Span::styled(article, style),
                 ]));
             }
         }

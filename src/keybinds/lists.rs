@@ -20,11 +20,9 @@ pub fn handle_save_to_list_mode(app: &mut App, key: KeyEvent) {
             if app.save_modal_cursor_idx < list_count {
                 let list_id = app.saved_lists.lists[app.save_modal_cursor_idx].id.clone();
                 let target_title = app.save_modal_target_title.clone();
-                let target_snippet = app.save_modal_target_snippet.clone();
                 app.saved_lists.toggle_article_in_list(
                     &list_id,
                     &target_title,
-                    target_snippet.as_deref(),
                 );
             } else {
                 app.create_list_input.clear();
@@ -112,7 +110,7 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
                     .lists
                     .get(app.viewer_list_idx)
                     .and_then(|list| list.articles.get(app.viewer_article_idx))
-                    .map(|art| art.title.clone());
+                    .cloned();
 
                 if let Some(title) = target_article {
                     app.input_mode = InputMode::Normal;
@@ -125,7 +123,7 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
                 if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {
                     if let Some(art) = list.articles.get(app.viewer_article_idx) {
                         app.pending_delete_is_list = false;
-                        app.pending_delete_title = art.title.clone();
+                        app.pending_delete_title = art.clone();
                         app.pending_delete_list_id = list.id.clone();
                         app.input_mode = InputMode::ConfirmDelete;
                     }
@@ -166,7 +164,7 @@ pub fn handle_confirm_delete_mode(app: &mut App, key: KeyEvent) {
                 let list_id = app.pending_delete_list_id.clone();
                 let title = app.pending_delete_title.clone();
                 app.saved_lists
-                    .toggle_article_in_list(&list_id, &title, None);
+                    .toggle_article_in_list(&list_id, &title);
                 if app.viewer_article_idx > 0 {
                     app.viewer_article_idx -= 1;
                 }

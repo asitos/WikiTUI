@@ -3,19 +3,10 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct SavedArticle {
-    pub title: String,
-    pub snippet: Option<String>,
-    pub saved_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SavedList {
     pub id: String,
     pub name: String,
-    pub description: String,
-    pub created_at: String,
-    pub articles: Vec<SavedArticle>,
+    pub articles: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,14 +17,11 @@ pub struct SavedListsStore {
 
 impl Default for SavedListsStore {
     fn default() -> Self {
-        let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
         Self {
             version: 1,
             lists: vec![SavedList {
                 id: "liked".to_string(),
                 name: "Liked".to_string(),
-                description: "Liked articles from Feed".to_string(),
-                created_at: now,
                 articles: Vec::new(),
             }],
         }
@@ -75,7 +63,7 @@ impl SavedListsStore {
         }
     }
 
-    pub fn create_list(&mut self, name: &str, description: &str) -> String {
+    pub fn create_list(&mut self, name: &str) -> String {
         let clean_name = name.trim();
         if clean_name.is_empty() {
             return String::new();
@@ -83,12 +71,9 @@ impl SavedListsStore {
         let id = clean_name.to_lowercase().replace(' ', "_");
 
         if !self.lists.iter().any(|l| l.id == id) {
-            let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
             self.lists.push(SavedList {
                 id: id.clone(),
                 name: clean_name.to_string(),
-                description: description.trim().to_string(),
-                created_at: now,
                 articles: Vec::new(),
             });
             self.save();
@@ -104,29 +89,19 @@ impl SavedListsStore {
         self.save();
     }
 
-    pub fn toggle_article_in_list(
-        &mut self,
-        list_id: &str,
-        title: &str,
-        snippet: Option<&str>,
-    ) -> bool {
+    pub fn toggle_article_in_list(&mut self, list_id: &str, title: &str) -> bool {
         let title_trimmed = title.trim();
         if title_trimmed.is_empty() {
             return false;
         }
 
         if let Some(list) = self.lists.iter_mut().find(|l| l.id == list_id) {
-            if let Some(idx) = list.articles.iter().position(|a| a.title == title_trimmed) {
+            if let Some(idx) = list.articles.iter().position(|a| a == title_trimmed) {
                 list.articles.remove(idx);
                 self.save();
                 return false;
             } else {
-                let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
-                list.articles.push(SavedArticle {
-                    title: title_trimmed.to_string(),
-                    snippet: snippet.map(|s| s.trim().to_string()),
-                    saved_at: now,
-                });
+                list.articles.push(title_trimmed.to_string());
                 self.save();
                 return true;
             }
@@ -137,25 +112,22 @@ impl SavedListsStore {
     pub fn is_article_in_list(&self, list_id: &str, title: &str) -> bool {
         let title_trimmed = title.trim();
         if let Some(list) = self.lists.iter().find(|l| l.id == list_id) {
-            list.articles.iter().any(|a| a.title == title_trimmed)
+            list.articles.iter().any(|a| a == title_trimmed)
         } else {
             false
         }
     }
 
-    pub fn ensure_list(&mut self, id: &str, name: &str, description: &str) {
+    pub fn ensure_list(&mut self, id: &str, name: &str) {
         if let Some(list) = self.lists.iter_mut().find(|l| l.id == id) {
             if list.name != name {
                 list.name = name.to_string();
                 self.save();
             }
         } else {
-            let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
             self.lists.push(SavedList {
                 id: id.to_string(),
                 name: name.to_string(),
-                description: description.to_string(),
-                created_at: now,
                 articles: Vec::new(),
             });
             self.save();
@@ -167,23 +139,17 @@ impl SavedListsStore {
         list_id: &str,
         list_name: &str,
         title: &str,
-        snippet: Option<&str>,
         in_list: bool,
     ) {
-        self.ensure_list(list_id, list_name, "Liked articles from Feed");
+        self.ensure_list(list_id, list_name);
         if let Some(list) = self.lists.iter_mut().find(|l| l.id == list_id) {
             let title_trimmed = title.trim();
             if in_list {
-                if !list.articles.iter().any(|a| a.title == title_trimmed) {
-                    let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
-                    list.articles.push(SavedArticle {
-                        title: title_trimmed.to_string(),
-                        snippet: snippet.map(|s| s.trim().to_string()),
-                        saved_at: now,
-                    });
+                if !list.articles.iter().any(|a| a == title_trimmed) {
+                    list.articles.push(title_trimmed.to_string());
                     self.save();
                 }
-            } else if let Some(idx) = list.articles.iter().position(|a| a.title == title_trimmed) {
+            } else if let Some(idx) = list.articles.iter().position(|a| a == title_trimmed) {
                 list.articles.remove(idx);
                 self.save();
             }
