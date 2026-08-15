@@ -70,6 +70,16 @@ pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect) {
     let mut card_lines = Vec::new();
     card_lines.push(Line::from(""));
 
+    if let Some(short_desc) = &item.short_description {
+        if !short_desc.is_empty() {
+            card_lines.push(Line::from(vec![
+                Span::raw("   "),
+                Span::styled(short_desc, Style::default().fg(theme::GREY).italic()),
+            ]));
+            card_lines.push(Line::from(""));
+        }
+    }
+
     if !item.snippet.is_empty() {
         card_lines.push(Line::from(vec![
             Span::styled("   ", Style::default()),

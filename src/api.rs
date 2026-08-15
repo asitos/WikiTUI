@@ -37,19 +37,20 @@ pub enum NetworkEvent {
 }
 
 #[derive(Deserialize)]
-struct WikiSearchQuery {
-    search: Vec<WikiSearchResult>,
-}
-
-#[derive(Deserialize)]
-struct WikiSearchResult {
+struct WikiPageDescription {
     title: String,
-    snippet: String,
+    description: Option<String>,
+    index: Option<i32>,
 }
 
 #[derive(Deserialize)]
-struct WikiSearchResponse {
-    query: Option<WikiSearchQuery>,
+struct WikiGenSearchQuery {
+    pages: Option<std::collections::HashMap<String, WikiPageDescription>>,
+}
+
+#[derive(Deserialize)]
+struct WikiGenSearchResponse {
+    query: Option<WikiGenSearchQuery>,
 }
 
 pub async fn run_worker(
@@ -140,34 +141,37 @@ async fn search_wikipedia(
         .get(url)
         .query(&[
             ("action", "query"),
-            ("list", "search"),
-            ("srsearch", query),
-            ("utf8", "1"),
+            ("generator", "search"),
+            ("gsrsearch", query),
+            ("gsrlimit", "30"),
+            ("prop", "description"),
             ("format", "json"),
-            ("srlimit", "50"),
         ])
         .send()
         .await
         .map_err(|e| format!("network error: {}", e))?;
 
-    let search_resp: WikiSearchResponse = res
+    let search_resp: WikiGenSearchResponse = res
         .json()
         .await
         .map_err(|e| format!("parse error: {}", e))?;
 
     let mut items = Vec::new();
     if let Some(q) = search_resp.query {
-        for item in q.search {
-            let clean_snippet = item
-                .snippet
-                .replace("<span class=\"searchmatch\">", "")
-                .replace("</span>", "")
-                .replace("&quot;", "\"")
-                .replace("&amp;", "&");
-            items.push(SearchResultItem {
-                title: item.title,
-                snippet: clean_snippet,
-            });
+        if let Some(pages) = q.pages {
+            let mut page_list: Vec<_> = pages.into_values().collect();
+            page_list.sort_by_key(|p| p.index.unwrap_or(9999));
+            for item in page_list {
+                let desc = item
+                    .description
+                    .filter(|d| !d.trim().is_empty())
+                    .unwrap_or_default();
+
+                items.push(SearchResultItem {
+                    title: item.title,
+                    snippet: desc,
+                });
+            }
         }
     }
 
@@ -279,6 +283,7 @@ struct WikiCategoryItem {
 #[derive(Deserialize)]
 struct WikiPageProp {
     title: Option<String>,
+    description: Option<String>,
     extract: Option<String>,
     categories: Option<Vec<WikiCategoryItem>>,
 }
@@ -319,7 +324,7 @@ async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>, Str
                 ("gcmtitle", &category_title),
                 ("gcmtype", "page"),
                 ("gcmlimit", "10"),
-                ("prop", "extracts|categories"),
+                ("prop", "description|extracts|categories"),
                 ("exintro", "1"),
                 ("explaintext", "1"),
                 ("clshow", "!hidden"),
@@ -336,7 +341,7 @@ async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>, Str
                 ("generator", "random"),
                 ("grnnamespace", "0"),
                 ("grnlimit", "5"),
-                ("prop", "extracts|categories"),
+                ("prop", "description|extracts|categories"),
                 ("exintro", "1"),
                 ("explaintext", "1"),
                 ("clshow", "!hidden"),
@@ -359,6 +364,7 @@ async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>, Str
         if let Some(pages) = query.pages {
             for (_, page) in pages {
                 if let Some(title) = page.title {
+                    let short_description = page.description.filter(|d| !d.trim().is_empty());
                     let snippet = page.extract.unwrap_or_default().trim().to_string();
                     let mut categories: Vec<String> = page
                         .categories
@@ -392,6 +398,7 @@ async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>, Str
 
                     items.push(FeedItem {
                         title,
+                        short_description,
                         snippet,
                         categories,
                         is_liked: false,

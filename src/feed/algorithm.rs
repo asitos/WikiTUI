@@ -4,6 +4,7 @@ use rand::Rng;
 #[derive(Debug, Clone)]
 pub struct FeedItem {
     pub title: String,
+    pub short_description: Option<String>,
     pub snippet: String,
     pub categories: Vec<String>,
     pub is_liked: bool,
