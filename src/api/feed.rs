@@ -1,5 +1,4 @@
 use crate::feed::algorithm::FeedItem;
-use rand::seq::SliceRandom;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -189,8 +188,7 @@ pub async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>,
     let mut chosen_cats = Vec::new();
     if !active_subcats.is_empty() {
         let mut available = active_subcats.clone();
-        let mut rng = rand::thread_rng();
-        available.shuffle(&mut rng);
+        fastrand::shuffle(&mut available);
         chosen_cats = available.into_iter().take(3).collect();
     }
 
@@ -215,7 +213,6 @@ pub async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>,
         }
     }
 
-    let mut rng = rand::thread_rng();
-    items.shuffle(&mut rng);
+    fastrand::shuffle(&mut items);
     Ok(items)
 }

@@ -13,14 +13,13 @@ categories = ["command-line-utilities"]
 [dependencies]
 ratatui = "0.26.1"
 crossterm = "0.27.0"
-tokio = { version = "1.35", features = ["full"] }
-reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1.35", default-features = false, features = ["rt", "sync", "time", "macros"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "default-tls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 scraper = "0.18.1"
-rand = "0.8"
-unicode-width = "0.2.2"
-chrono = "0.4"
+fastrand = "2.0"
+unicode-width = "0.1"
 
 [profile.release]
 opt-level = 3
