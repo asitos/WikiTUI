@@ -9,10 +9,26 @@ pub(crate) fn wrap_and_append_block(
     let mut current_line_spans: Vec<Span<'static>> = Vec::new();
     let mut current_line_len = 0;
 
+    let mut active_link_target: Option<String> = None;
+    let mut active_link_text = String::new();
+    let mut active_link_spans: Vec<(usize, usize)> = Vec::new();
+
     for token in tokens {
+        if token.link_target != active_link_target {
+            if let Some(target) = active_link_target.take() {
+                if !active_link_spans.is_empty() {
+                    doc.links.push(Link {
+                        title: target,
+                        text: active_link_text.trim().to_string(),
+                        span_indices: std::mem::take(&mut active_link_spans),
+                    });
+                }
+                active_link_text.clear();
+            }
+            active_link_target = token.link_target.clone();
+        }
+
         let words = token.text.split_inclusive(|c: char| c.is_whitespace());
-        let mut link_span_indices = Vec::new();
-        let mut current_link_line_idx = doc.lines.len();
 
         for word in words {
             if word.is_empty() {
@@ -25,27 +41,26 @@ pub(crate) fn wrap_and_append_block(
                 doc.lines.push(Line::from(current_line_spans.clone()));
                 current_line_spans.clear();
                 current_line_len = 0;
-                current_link_line_idx = doc.lines.len();
             }
 
+            let current_line_idx = doc.lines.len();
             if token.link_target.is_some() {
-                link_span_indices.push((current_link_line_idx, current_line_spans.len()));
+                active_link_spans.push((current_line_idx, current_line_spans.len()));
+                active_link_text.push_str(word);
             }
 
             let trimmed_word = word.to_string();
             current_line_spans.push(Span::styled(trimmed_word, token.style));
             current_line_len += word_len;
         }
+    }
 
-        if let Some(target) = token
-            .link_target
-            .as_ref()
-            .filter(|_| !link_span_indices.is_empty())
-        {
+    if let Some(target) = active_link_target {
+        if !active_link_spans.is_empty() {
             doc.links.push(Link {
-                title: target.clone(),
-                text: token.text.trim().to_string(),
-                span_indices: link_span_indices,
+                title: target,
+                text: active_link_text.trim().to_string(),
+                span_indices: active_link_spans,
             });
         }
     }

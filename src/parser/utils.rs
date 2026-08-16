@@ -22,11 +22,32 @@ pub fn url_decode(s: &str) -> String {
     String::from_utf8_lossy(&bytes).to_string()
 }
 
-// extract title from wiki links
 pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
-    if let Some(path) = href.strip_prefix("/wiki/") {
-        if let Some(colon_idx) = path.find(':') {
-            let prefix = &path[..colon_idx];
+    let trimmed = href.trim();
+    if trimmed.is_empty() || trimmed.starts_with('#') {
+        return None;
+    }
+
+    let wiki_path = if let Some(p) = trimmed.strip_prefix("/wiki/") {
+        Some(p)
+    } else if let Some(p) = trimmed.strip_prefix("./") {
+        Some(p)
+    } else if let Some(p) = trimmed.strip_prefix("https://en.wikipedia.org/wiki/") {
+        Some(p)
+    } else if let Some(p) = trimmed.strip_prefix("http://en.wikipedia.org/wiki/") {
+        Some(p)
+    } else if let Some(p) = trimmed.strip_prefix("//en.wikipedia.org/wiki/") {
+        Some(p)
+    } else {
+        trimmed.find("/w/index.php?title=").map(|idx| &trimmed[idx + 19..])
+    };
+
+    if let Some(path) = wiki_path {
+        let raw_title = path.split('#').next().unwrap_or(path);
+        let raw_title = raw_title.split('&').next().unwrap_or(raw_title);
+
+        if let Some(colon_idx) = raw_title.find(':') {
+            let prefix = &raw_title[..colon_idx];
             if matches!(
                 prefix,
                 "Special"
@@ -46,10 +67,21 @@ pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
                 return None;
             }
         }
-        let raw_title = path.split('#').next().unwrap_or(path);
         let decoded = url_decode(raw_title).replace('_', " ");
-        Some(decoded)
-    } else {
-        None
+        let cleaned = decoded.trim().to_string();
+        if !cleaned.is_empty() {
+            return Some(cleaned);
+        }
     }
+
+    if trimmed.starts_with("http://") || trimmed.starts_with("https://") || trimmed.starts_with("//") {
+        let full_url = if trimmed.starts_with("//") {
+            format!("https:{}", trimmed)
+        } else {
+            trimmed.to_string()
+        };
+        return Some(full_url);
+    }
+
+    None
 }
