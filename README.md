@@ -18,9 +18,11 @@ a feature-rich terminal wikipedia client.
 
 ## installation
 
-### from crates.io
+### pre-built binaries
 
-requires [rust + cargo](https://www.rust-lang.org/tools/install) to be installed:
+download standalone pre-compiled binaries for linux (x86_64), macos (apple silicon), and windows from [GitHub Releases](https://github.com/sharkthakftw/wikid/releases).
+
+### from crates.io
 
 ```bash
 cargo install wikid
