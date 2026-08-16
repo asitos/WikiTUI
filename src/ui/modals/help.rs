@@ -46,6 +46,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
     help_text.push(Line::from("   ctrl-w s/v          split active pane horizontally / vertically"));
     help_text.push(Line::from("   ctrl-h/j/k/l        navigate focus between split panes"));
     help_text.push(Line::from(format!("   x / {}-c           close active pane", opt_label)));
+    help_text.push(Line::from(format!("   {}-shift-c         reopen last closed tab/pane", opt_label)));
     help_text.push(Line::from(format!("   {}-t               create new tab", opt_label)));
     help_text.push(Line::from(format!("   {}-h/l             switch to prev / next tab", opt_label)));
 

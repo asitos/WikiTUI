@@ -1,3 +1,4 @@
+use crate::api::NetworkCommand;
 use crate::app::pane::Pane;
 use crate::app::tab::Tab;
 use crate::app::App;
@@ -40,11 +41,38 @@ impl App {
 
     pub fn close_current_tab(&mut self) {
         if self.tabs.len() > 1 {
-            self.tabs.remove(self.active_tab_idx);
+            let removed_tab = self.tabs.remove(self.active_tab_idx);
+            for pane in removed_tab.panes {
+                if let Some(title) = pane.title() {
+                    self.closed_tabs_stack.push(crate::app::ClosedTabState {
+                        title,
+                        scroll_offset: pane.scroll_offset,
+                        history_back: pane.history_back,
+                        history_forward: pane.history_forward,
+                    });
+                    if self.closed_tabs_stack.len() > 30 {
+                        self.closed_tabs_stack.remove(0);
+                    }
+                }
+            }
             if self.active_tab_idx >= self.tabs.len() {
                 self.active_tab_idx = self.tabs.len() - 1;
             }
         } else {
+            let old_tab = &self.tabs[0];
+            for pane in &old_tab.panes {
+                if let Some(title) = pane.title() {
+                    self.closed_tabs_stack.push(crate::app::ClosedTabState {
+                        title,
+                        scroll_offset: pane.scroll_offset,
+                        history_back: pane.history_back.clone(),
+                        history_forward: pane.history_forward.clone(),
+                    });
+                    if self.closed_tabs_stack.len() > 30 {
+                        self.closed_tabs_stack.remove(0);
+                    }
+                }
+            }
             let new_pane_id = self.next_pane_id;
             self.next_pane_id += 1;
             self.tabs[0] = Tab::new("home".to_string(), new_pane_id);
@@ -76,14 +104,66 @@ impl App {
         let tab = self.active_tab_mut();
         let target_idx = tab.active_pane_idx;
 
-        if let Some(new_root) = tab.layout_root.remove_pane(target_idx) {
+        let closed_state = if let Some(new_root) = tab.layout_root.remove_pane(target_idx) {
             tab.layout_root = new_root;
             tab.layout_root.decrement_indices_above(target_idx);
 
-            tab.panes.remove(target_idx);
-
+            let removed_pane = tab.panes.remove(target_idx);
             if tab.active_pane_idx >= tab.panes.len() {
                 tab.active_pane_idx = tab.panes.len() - 1;
+            }
+            removed_pane.title().map(|title| crate::app::ClosedTabState {
+                title,
+                scroll_offset: removed_pane.scroll_offset,
+                history_back: removed_pane.history_back,
+                history_forward: removed_pane.history_forward,
+            })
+        } else {
+            None
+        };
+
+        if let Some(closed) = closed_state {
+            self.closed_tabs_stack.push(closed);
+            if self.closed_tabs_stack.len() > 30 {
+                self.closed_tabs_stack.remove(0);
+            }
+        }
+    }
+
+    pub fn reopen_last_closed(&mut self) {
+        if let Some(closed) = self.closed_tabs_stack.pop() {
+            let pane_id = self.next_pane_id;
+            self.next_pane_id += 1;
+
+            let mut pane = Pane::new(pane_id);
+            pane.scroll_offset = closed.scroll_offset;
+            pane.history_back = closed.history_back;
+            pane.history_forward = closed.history_forward;
+            pane.is_loading = true;
+
+            let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
+                pane_id,
+                title: closed.title.clone(),
+            });
+
+            let tab = Tab {
+                name: closed.title,
+                panes: vec![pane],
+                active_pane_idx: 0,
+                layout_root: crate::layout::LayoutNode::Leaf(0),
+            };
+
+            let is_single_empty_home = self.tabs.len() == 1
+                && self.tabs[0].name == "home"
+                && self.tabs[0].panes.len() == 1
+                && self.tabs[0].panes[0].title().is_none();
+
+            if is_single_empty_home {
+                self.tabs[0] = tab;
+                self.active_tab_idx = 0;
+            } else {
+                self.tabs.push(tab);
+                self.active_tab_idx = self.tabs.len() - 1;
             }
         }
     }

@@ -1,6 +1,7 @@
 use crate::app::pane::Pane;
 use crate::layout::LayoutNode;
 
+#[derive(Clone, Debug)]
 pub struct Tab {
     pub name: String,
     pub panes: Vec<Pane>,

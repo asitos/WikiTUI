@@ -36,6 +36,14 @@ pub(crate) fn is_article_link(title: &str) -> bool {
         && !lower.ends_with(".webp")
 }
 
+#[derive(Clone, Debug)]
+pub struct ClosedTabState {
+    pub title: String,
+    pub scroll_offset: usize,
+    pub history_back: Vec<String>,
+    pub history_forward: Vec<String>,
+}
+
 pub struct App {
     pub running: bool,
     pub tabs: Vec<Tab>,
@@ -63,6 +71,7 @@ pub struct App {
     pub pending_delete_is_list: bool,
     pub pending_delete_title: String,
     pub pending_delete_list_id: String,
+    pub closed_tabs_stack: Vec<ClosedTabState>,
 
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: mpsc::UnboundedSender<NetworkCommand>,
@@ -99,6 +108,7 @@ impl App {
             pending_delete_is_list: false,
             pending_delete_title: String::new(),
             pending_delete_list_id: String::new(),
+            closed_tabs_stack: Vec::new(),
 
             next_pane_id: 1,
             cmd_tx,

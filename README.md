@@ -70,6 +70,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **split pane** | `ctrl-w` `s`/`v` | split active pane horizontally (`s`) or vertically (`v`) |
 | **navigate panes** | `ctrl-h/j/k/l` | switch focus between split panes |
 | **close pane** | `x / alt-c` | close active pane |
+| **reopen closed** | `alt-shift-c` | reopen last closed tab or split pane |
 | **new tab** | `alt-t` | create a new empty tab |
 | **switch tabs** | `alt-h` / `alt-l` | switch to previous / next tab |
 | **restore session** | `S` | restore previous session (from home tab) |
