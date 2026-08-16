@@ -4,8 +4,7 @@ pub mod random;
 pub mod search;
 
 use crate::feed::algorithm::FeedItem;
-use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+use std::sync::mpsc::{Receiver, Sender};
 
 #[derive(Debug, Clone)]
 pub struct SearchResultItem {
@@ -40,83 +39,75 @@ pub enum NetworkEvent {
     },
 }
 
-pub async fn run_worker(
-    cmd_rx: Arc<Mutex<mpsc::UnboundedReceiver<NetworkCommand>>>,
-    ev_tx: Arc<Mutex<mpsc::UnboundedSender<NetworkEvent>>>,
-) {
-    let client = reqwest::Client::builder()
+pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>) {
+    let agent: ureq::Agent = ureq::builder()
+        .timeout(std::time::Duration::from_secs(10))
         .user_agent(concat!(
             "wikid/",
             env!("CARGO_PKG_VERSION"),
             " (https://github.com/sharkthakftw/wikid)"
         ))
-        .build()
-        .unwrap_or_else(|_| reqwest::Client::new());
+        .build();
 
-    while let Some(cmd) = cmd_rx.lock().await.recv().await {
-        let client_ref = client.clone();
-        let ev_tx_ref = ev_tx.clone();
+    while let Ok(cmd) = cmd_rx.recv() {
+        let agent = agent.clone();
+        let ev_tx = ev_tx.clone();
 
-        tokio::spawn(async move {
-            match cmd {
-                NetworkCommand::Search { pane_id, query } => {
-                    match search::search_wikipedia(&client_ref, &query).await {
-                        Ok(results) => {
-                            let _ = ev_tx_ref.lock().await.send(NetworkEvent::SearchResult {
-                                pane_id,
-                                query,
-                                results,
-                            });
-                        }
-                        Err(err) => {
-                            let _ = ev_tx_ref.lock().await.send(NetworkEvent::Error {
-                                pane_id,
-                                message: err,
-                            });
-                        }
+        std::thread::spawn(move || match cmd {
+            NetworkCommand::Search { pane_id, query } => {
+                match search::search_wikipedia(&agent, &query) {
+                    Ok(results) => {
+                        let _ = ev_tx.send(NetworkEvent::SearchResult {
+                            pane_id,
+                            query,
+                            results,
+                        });
+                    }
+                    Err(err) => {
+                        let _ = ev_tx.send(NetworkEvent::Error {
+                            pane_id,
+                            message: err,
+                        });
                     }
                 }
-                NetworkCommand::FetchArticle { pane_id, title } => {
-                    match article::fetch_article_wikipedia(&client_ref, &title).await {
-                        Ok(content) => {
-                            let _ = ev_tx_ref.lock().await.send(NetworkEvent::ArticleResult {
-                                pane_id,
-                                title,
-                                content,
-                            });
-                        }
-                        Err(err) => {
-                            let _ = ev_tx_ref.lock().await.send(NetworkEvent::Error {
-                                pane_id,
-                                message: err,
-                            });
-                        }
+            }
+            NetworkCommand::FetchArticle { pane_id, title } => {
+                match article::fetch_article_wikipedia(&agent, &title) {
+                    Ok(content) => {
+                        let _ = ev_tx.send(NetworkEvent::ArticleResult {
+                            pane_id,
+                            title,
+                            content,
+                        });
+                    }
+                    Err(err) => {
+                        let _ = ev_tx.send(NetworkEvent::Error {
+                            pane_id,
+                            message: err,
+                        });
                     }
                 }
-                NetworkCommand::FetchRandomArticle { pane_id } => {
-                    match random::fetch_random_article(&client_ref).await {
-                        Ok((title, content)) => {
-                            let _ = ev_tx_ref.lock().await.send(NetworkEvent::ArticleResult {
-                                pane_id,
-                                title,
-                                content,
-                            });
-                        }
-                        Err(err) => {
-                            let _ = ev_tx_ref.lock().await.send(NetworkEvent::Error {
-                                pane_id,
-                                message: err,
-                            });
-                        }
+            }
+            NetworkCommand::FetchRandomArticle { pane_id } => {
+                match random::fetch_random_article(&agent) {
+                    Ok((title, content)) => {
+                        let _ = ev_tx.send(NetworkEvent::ArticleResult {
+                            pane_id,
+                            title,
+                            content,
+                        });
+                    }
+                    Err(err) => {
+                        let _ = ev_tx.send(NetworkEvent::Error {
+                            pane_id,
+                            message: err,
+                        });
                     }
                 }
-                NetworkCommand::FetchFeedBatch => {
-                    if let Ok(items) = feed::fetch_feed_batch(&client_ref).await {
-                        let _ = ev_tx_ref
-                            .lock()
-                            .await
-                            .send(NetworkEvent::FeedBatchLoaded { items });
-                    }
+            }
+            NetworkCommand::FetchFeedBatch => {
+                if let Ok(items) = feed::fetch_feed_batch(&agent) {
+                    let _ = ev_tx.send(NetworkEvent::FeedBatchLoaded { items });
                 }
             }
         });

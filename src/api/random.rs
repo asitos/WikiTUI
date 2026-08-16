@@ -16,24 +16,20 @@ struct WikiRandomResponse {
     query: Option<WikiRandomQuery>,
 }
 
-pub async fn fetch_random_article(client: &reqwest::Client) -> Result<(String, String), String> {
+pub fn fetch_random_article(agent: &ureq::Agent) -> Result<(String, String), String> {
     let url = "https://en.wikipedia.org/w/api.php";
-    let res = client
+    let res = agent
         .get(url)
-        .query(&[
-            ("action", "query"),
-            ("list", "random"),
-            ("rnnamespace", "0"),
-            ("rnlimit", "1"),
-            ("format", "json"),
-        ])
-        .send()
-        .await
+        .query("action", "query")
+        .query("list", "random")
+        .query("rnnamespace", "0")
+        .query("rnlimit", "1")
+        .query("format", "json")
+        .call()
         .map_err(|e| format!("network error: {}", e))?;
 
     let rand_resp: WikiRandomResponse = res
-        .json()
-        .await
+        .into_json()
         .map_err(|e| format!("parse error: {}", e))?;
 
     let title = rand_resp
@@ -42,6 +38,6 @@ pub async fn fetch_random_article(client: &reqwest::Client) -> Result<(String, S
         .map(|r| r.title)
         .ok_or_else(|| "no random article returned".to_string())?;
 
-    let content = fetch_article_wikipedia(client, &title).await?;
+    let content = fetch_article_wikipedia(agent, &title)?;
     Ok((title, content))
 }

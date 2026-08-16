@@ -24,34 +24,30 @@ struct WikiFeedResponse {
     query: Option<WikiFeedQuery>,
 }
 
-async fn fetch_category_items(
-    client: &reqwest::Client,
+fn fetch_category_items(
+    agent: &ureq::Agent,
     category: &str,
 ) -> Result<Vec<FeedItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let category_title = format!("Category:{}", category);
-    let res = client
+    let res = agent
         .get(url)
-        .query(&[
-            ("action", "query"),
-            ("generator", "categorymembers"),
-            ("gcmtitle", &category_title),
-            ("gcmtype", "page"),
-            ("gcmlimit", "2"),
-            ("prop", "description|extracts|categories"),
-            ("exintro", "1"),
-            ("explaintext", "1"),
-            ("clshow", "!hidden"),
-            ("cllimit", "15"),
-            ("format", "json"),
-        ])
-        .send()
-        .await
+        .query("action", "query")
+        .query("generator", "categorymembers")
+        .query("gcmtitle", &category_title)
+        .query("gcmtype", "page")
+        .query("gcmlimit", "2")
+        .query("prop", "description|extracts|categories")
+        .query("exintro", "1")
+        .query("explaintext", "1")
+        .query("clshow", "!hidden")
+        .query("cllimit", "15")
+        .query("format", "json")
+        .call()
         .map_err(|e| format!("network error: {}", e))?;
 
     let feed_resp: WikiFeedResponse = res
-        .json()
-        .await
+        .into_json()
         .map_err(|e| format!("parse error: {}", e))?;
 
     let mut items = Vec::new();
@@ -105,29 +101,25 @@ async fn fetch_category_items(
     Ok(items)
 }
 
-async fn fetch_random_items(client: &reqwest::Client) -> Result<Vec<FeedItem>, String> {
+fn fetch_random_items(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
-    let res = client
+    let res = agent
         .get(url)
-        .query(&[
-            ("action", "query"),
-            ("generator", "random"),
-            ("grnnamespace", "0"),
-            ("grnlimit", "3"),
-            ("prop", "description|extracts|categories"),
-            ("exintro", "1"),
-            ("explaintext", "1"),
-            ("clshow", "!hidden"),
-            ("cllimit", "15"),
-            ("format", "json"),
-        ])
-        .send()
-        .await
+        .query("action", "query")
+        .query("generator", "random")
+        .query("grnnamespace", "0")
+        .query("grnlimit", "3")
+        .query("prop", "description|extracts|categories")
+        .query("exintro", "1")
+        .query("explaintext", "1")
+        .query("clshow", "!hidden")
+        .query("cllimit", "15")
+        .query("format", "json")
+        .call()
         .map_err(|e| format!("network error: {}", e))?;
 
     let feed_resp: WikiFeedResponse = res
-        .json()
-        .await
+        .into_json()
         .map_err(|e| format!("parse error: {}", e))?;
 
     let mut items = Vec::new();
@@ -181,7 +173,7 @@ async fn fetch_random_items(client: &reqwest::Client) -> Result<Vec<FeedItem>, S
     Ok(items)
 }
 
-pub async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>, String> {
+pub fn fetch_feed_batch(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
     let profile = crate::feed::profile::FeedProfile::load();
     let active_subcats = profile.get_active_subcategories();
 
@@ -193,22 +185,22 @@ pub async fn fetch_feed_batch(client: &reqwest::Client) -> Result<Vec<FeedItem>,
     }
 
     let mut items = Vec::new();
-    let mut tasks = Vec::new();
+    let mut handles = Vec::new();
 
     for cat in chosen_cats {
-        let client_ref = client.clone();
-        tasks.push(tokio::spawn(async move {
-            fetch_category_items(&client_ref, &cat).await
+        let agent = agent.clone();
+        handles.push(std::thread::spawn(move || {
+            fetch_category_items(&agent, &cat)
         }));
     }
 
-    let client_ref = client.clone();
-    tasks.push(tokio::spawn(async move {
-        fetch_random_items(&client_ref).await
+    let agent_rand = agent.clone();
+    handles.push(std::thread::spawn(move || {
+        fetch_random_items(&agent_rand)
     }));
 
-    for task in tasks {
-        if let Ok(Ok(batch)) = task.await {
+    for handle in handles {
+        if let Ok(Ok(batch)) = handle.join() {
             items.extend(batch);
         }
     }

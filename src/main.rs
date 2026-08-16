@@ -9,10 +9,9 @@ use crossterm::{
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::{
     io,
-    sync::Arc,
+    sync::mpsc,
     time::{Duration, Instant},
 };
-use tokio::sync::{mpsc, Mutex};
 
 use wikid::api::{self, NetworkCommand, NetworkEvent};
 use wikid::app::App;
@@ -20,7 +19,6 @@ use wikid::keybinds;
 use wikid::ui;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // terminal setup
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     let _ = execute!(
@@ -32,26 +30,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // communication channel setup (between tokio and ui)
-    let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<NetworkCommand>();
-    let (ev_tx, mut ev_rx) = mpsc::unbounded_channel::<NetworkEvent>();
+    let (cmd_tx, cmd_rx) = mpsc::channel::<NetworkCommand>();
+    let (ev_tx, ev_rx) = mpsc::channel::<NetworkEvent>();
 
-    let cmd_rx = Arc::new(Mutex::new(cmd_rx));
-    let ev_tx = Arc::new(Mutex::new(ev_tx));
-
-    // tokio background worker thread
     let worker = std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let _guard = rt.enter();
-        rt.block_on(async move {
-            api::run_worker(cmd_rx, ev_tx).await;
-        });
+        api::run_worker(cmd_rx, ev_tx);
     });
 
-    // panic hook
     let original_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         let _ = disable_raw_mode();
@@ -68,9 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tick_rate = Duration::from_millis(250);
     let mut last_tick = Instant::now();
 
-    // main event loop
     while app.running {
-        // drain background network events
         while let Ok(ev) = ev_rx.try_recv() {
             app.handle_network_event(ev);
         }
@@ -81,7 +64,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .checked_sub(last_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
-        // keybinds
         if event::poll(timeout)? {
             match event::read() {
                 Ok(Event::Key(key)) if key.kind == event::KeyEventKind::Press => {
@@ -97,7 +79,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // restore terminal
     disable_raw_mode()?;
     let _ = execute!(
         terminal.backend_mut(),

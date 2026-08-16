@@ -16,30 +16,26 @@ struct WikiParseResponse {
     parse: Option<WikiParseObject>,
 }
 
-pub async fn fetch_article_wikipedia(
-    client: &reqwest::Client,
+pub fn fetch_article_wikipedia(
+    agent: &ureq::Agent,
     title: &str,
 ) -> Result<String, String> {
     let decoded_title = crate::parser::url_decode(title).replace('_', " ");
     let url = "https://en.wikipedia.org/w/api.php";
-    let res = client
+    let res = agent
         .get(url)
-        .query(&[
-            ("action", "parse"),
-            ("page", &decoded_title),
-            ("prop", "text"),
-            ("format", "json"),
-            ("disableeditsection", "1"),
-            ("disabletoc", "1"),
-            ("redirects", "1"),
-        ])
-        .send()
-        .await
+        .query("action", "parse")
+        .query("page", &decoded_title)
+        .query("prop", "text")
+        .query("format", "json")
+        .query("disableeditsection", "1")
+        .query("disabletoc", "1")
+        .query("redirects", "1")
+        .call()
         .map_err(|e| format!("network error: {}", e))?;
 
     let parse_resp: WikiParseResponse = res
-        .json()
-        .await
+        .into_json()
         .map_err(|e| format!("parse error: {}", e))?;
 
     let html = parse_resp

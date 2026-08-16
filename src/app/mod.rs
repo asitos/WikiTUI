@@ -9,7 +9,7 @@ pub use tab::Tab;
 
 use crate::api::{NetworkCommand, NetworkEvent};
 use crate::parser::parse_wikipedia_html;
-use tokio::sync::mpsc;
+use std::sync::mpsc::Sender;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputMode {
@@ -75,11 +75,11 @@ pub struct App {
     pub status_message: Option<(String, std::time::Instant)>,
 
     pub(crate) next_pane_id: usize,
-    pub(crate) cmd_tx: mpsc::UnboundedSender<NetworkCommand>,
+    pub(crate) cmd_tx: Sender<NetworkCommand>,
 }
 
 impl App {
-    pub fn new(cmd_tx: mpsc::UnboundedSender<NetworkCommand>) -> Self {
+    pub fn new(cmd_tx: Sender<NetworkCommand>) -> Self {
         let mut app = Self {
             running: true,
             tabs: Vec::new(),
