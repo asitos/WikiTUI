@@ -121,7 +121,9 @@ impl SessionState {
                 panes.push(Pane::new(pane_id));
             }
             let active_idx = saved_tab.active_pane_idx.min(panes.len() - 1);
-            let tab_title = panes[active_idx].title().unwrap_or_else(|| "home".to_string());
+            let tab_title = panes[active_idx]
+                .title()
+                .unwrap_or_else(|| "home".to_string());
             app.tabs.push(Tab {
                 name: tab_title,
                 panes,

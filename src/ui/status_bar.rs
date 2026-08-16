@@ -61,7 +61,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
 
     let (status_text, status_style) = if let Some((ref msg, time)) = app.status_message {
         if time.elapsed().as_secs_f32() < 3.0 {
-            (format!(" {} ", msg), Style::default().fg(theme::LIME).bold())
+            (
+                format!(" {} ", msg),
+                Style::default().fg(theme::LIME).bold(),
+            )
         } else {
             (status_text, status_style)
         }

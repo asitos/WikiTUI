@@ -170,10 +170,8 @@ impl App {
         if !name.is_empty() {
             let list_id = self.saved_lists.create_list(&name);
             if !self.save_modal_target_title.is_empty() {
-                self.saved_lists.toggle_article_in_list(
-                    &list_id,
-                    &self.save_modal_target_title,
-                );
+                self.saved_lists
+                    .toggle_article_in_list(&list_id, &self.save_modal_target_title);
             }
         }
         self.create_list_input.clear();
@@ -303,12 +301,8 @@ impl App {
 
     pub fn toggle_feed_like(&mut self) {
         if let Some((title, _snippet, is_liked)) = self.feed.toggle_like() {
-            self.saved_lists.set_article_in_list(
-                "liked",
-                "Liked",
-                &title,
-                is_liked,
-            );
+            self.saved_lists
+                .set_article_in_list("liked", "Liked", &title, is_liked);
         }
     }
 }

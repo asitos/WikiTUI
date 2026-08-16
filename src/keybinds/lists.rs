@@ -26,10 +26,8 @@ pub fn handle_save_to_list_mode(app: &mut App, key: KeyEvent) {
             if app.save_modal_cursor_idx < custom_lists.len() {
                 let list_id = custom_lists[app.save_modal_cursor_idx].id.clone();
                 let target_title = app.save_modal_target_title.clone();
-                app.saved_lists.toggle_article_in_list(
-                    &list_id,
-                    &target_title,
-                );
+                app.saved_lists
+                    .toggle_article_in_list(&list_id, &target_title);
             } else {
                 app.create_list_input.clear();
                 app.create_list_return_mode = InputMode::SaveToList;
@@ -78,8 +76,7 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
             if app.viewer_focus_right {
                 if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {
                     if !list.articles.is_empty() {
-                        app.viewer_article_idx =
-                            (app.viewer_article_idx + 1) % list.articles.len();
+                        app.viewer_article_idx = (app.viewer_article_idx + 1) % list.articles.len();
                     }
                 }
             } else if !app.saved_lists.lists.is_empty() {
@@ -171,8 +168,7 @@ pub fn handle_confirm_delete_mode(app: &mut App, key: KeyEvent) {
             } else {
                 let list_id = app.pending_delete_list_id.clone();
                 let title = app.pending_delete_title.clone();
-                app.saved_lists
-                    .toggle_article_in_list(&list_id, &title);
+                app.saved_lists.toggle_article_in_list(&list_id, &title);
                 if app.viewer_article_idx > 0 {
                     app.viewer_article_idx -= 1;
                 }

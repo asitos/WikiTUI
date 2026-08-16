@@ -46,7 +46,9 @@ pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
     } else if let Some(p) = trimmed.strip_prefix("//en.wikipedia.org/wiki/") {
         Some(p)
     } else {
-        trimmed.find("/w/index.php?title=").map(|idx| &trimmed[idx + 19..])
+        trimmed
+            .find("/w/index.php?title=")
+            .map(|idx| &trimmed[idx + 19..])
     };
 
     if let Some(path) = wiki_path {
@@ -81,7 +83,10 @@ pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
         }
     }
 
-    if trimmed.starts_with("http://") || trimmed.starts_with("https://") || trimmed.starts_with("//") {
+    if trimmed.starts_with("http://")
+        || trimmed.starts_with("https://")
+        || trimmed.starts_with("//")
+    {
         let full_url = if trimmed.starts_with("//") {
             format!("https:{}", trimmed)
         } else {

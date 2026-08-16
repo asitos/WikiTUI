@@ -186,7 +186,11 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                     .modifiers
                     .intersects(KeyModifiers::ALT | KeyModifiers::META) =>
             {
-                let tab_idx = if c == '0' { 9 } else { (c as usize) - ('1' as usize) };
+                let tab_idx = if c == '0' {
+                    9
+                } else {
+                    (c as usize) - ('1' as usize)
+                };
                 app.switch_to_tab(tab_idx);
             }
             KeyCode::Char('x') => {

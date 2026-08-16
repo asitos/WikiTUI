@@ -10,7 +10,7 @@ use ratatui::{
 
 #[rustfmt::skip]
 pub fn render_help_modal(f: &mut Frame, size: Rect) {
-    let area = centered_rect(72, 85, size);
+    let area = centered_rect(80, 90, size);
     f.render_widget(Clear, area);
 
     let is_macos = cfg!(target_os = "macos");

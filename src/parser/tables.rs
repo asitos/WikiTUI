@@ -44,7 +44,9 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
             Span::styled(" 📋 ", Style::default().fg(theme::VIOLET)),
             Span::styled(
                 cap.clone(),
-                Style::default().fg(theme::BEIGE).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(theme::BEIGE)
+                    .add_modifier(Modifier::BOLD),
             ),
         ]));
     }
@@ -54,7 +56,10 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
 
     for r in 0..num_rows {
         for c in 0..num_cols {
-            if let CellEntry::Origin { tokens, colspan, .. } = &grid.cells[r][c] {
+            if let CellEntry::Origin {
+                tokens, colspan, ..
+            } = &grid.cells[r][c]
+            {
                 let full_text: String = tokens.iter().map(|t| t.text.as_str()).collect();
                 let longest_word = full_text
                     .split_whitespace()
@@ -91,7 +96,8 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
         }
     } else {
         for i in 0..num_cols {
-            let prop = (max_widths[i] as f64 / total_max as f64 * available_width as f64).round() as usize;
+            let prop =
+                (max_widths[i] as f64 / total_max as f64 * available_width as f64).round() as usize;
             col_widths[i] = prop.max(min_widths[i].min(15)).max(3);
         }
         let total_alloc: usize = col_widths.iter().sum();
@@ -115,8 +121,13 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
 
     for r in 0..num_rows {
         for c in 0..num_cols {
-            if let CellEntry::Origin { tokens, colspan, .. } = &grid.cells[r][c] {
-                let mut span_w = (0..*colspan).filter_map(|dc| col_widths.get(c + dc)).sum::<usize>();
+            if let CellEntry::Origin {
+                tokens, colspan, ..
+            } = &grid.cells[r][c]
+            {
+                let mut span_w = (0..*colspan)
+                    .filter_map(|dc| col_widths.get(c + dc))
+                    .sum::<usize>();
                 span_w += (*colspan - 1) * 3;
                 let (lines, links) = wrap_cell_tokens(tokens, span_w);
                 origin_lines[r][c] = lines;
@@ -143,7 +154,8 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
             if let CellEntry::Origin { rowspan, .. } = &grid.cells[r][c] {
                 if *rowspan > 1 {
                     let needed = origin_lines[r][c].len();
-                    let current_total: usize = (0..*rowspan).filter_map(|dr| row_heights.get(r + dr)).sum();
+                    let current_total: usize =
+                        (0..*rowspan).filter_map(|dr| row_heights.get(r + dr)).sum();
                     if needed > current_total {
                         let end_row = (r + *rowspan - 1).min(num_rows - 1);
                         row_heights[end_row] += needed - current_total;
@@ -166,7 +178,8 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
                     cell_rendered_lines[r][c] = all_lines.clone();
                     cell_rendered_links[r][c] = all_links.clone();
                 } else {
-                    let total_slots: usize = (0..*rowspan).filter_map(|dr| row_heights.get(r + dr)).sum();
+                    let total_slots: usize =
+                        (0..*rowspan).filter_map(|dr| row_heights.get(r + dr)).sum();
                     let top_pad = total_slots.saturating_sub(all_lines.len()) / 2;
                     let mut cursor = 0;
                     let mut slot = 0;
@@ -215,7 +228,9 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
             CellEntry::Origin { colspan, .. } => *colspan,
             _ => 1,
         };
-        let mut span_w = (0..colspan).filter_map(|dc| col_widths.get(c + dc)).sum::<usize>();
+        let mut span_w = (0..colspan)
+            .filter_map(|dc| col_widths.get(c + dc))
+            .sum::<usize>();
         span_w += (colspan - 1) * 3;
         top_spans.push(Span::styled("─".repeat(span_w + 2), border_style));
         c += colspan;
@@ -244,7 +259,9 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
                     }
                 };
 
-                let mut span_w = (0..colspan).filter_map(|dc| col_widths.get(c + dc)).sum::<usize>();
+                let mut span_w = (0..colspan)
+                    .filter_map(|dc| col_widths.get(c + dc))
+                    .sum::<usize>();
                 span_w += (colspan - 1) * 3;
 
                 let empty = Vec::new();
@@ -254,7 +271,10 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
                     .and_then(|lines| lines.get(line_in_row))
                     .unwrap_or(&empty);
 
-                let content_len: usize = cell_spans.iter().map(|s| UnicodeWidthStr::width(s.content.as_ref())).sum();
+                let content_len: usize = cell_spans
+                    .iter()
+                    .map(|s| UnicodeWidthStr::width(s.content.as_ref()))
+                    .sum();
                 let padding = span_w.saturating_sub(content_len);
 
                 for span in cell_spans {
@@ -330,7 +350,9 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
                         _ => 1,
                     },
                 };
-                let mut span_w = (0..colspan).filter_map(|dc| col_widths.get(col + dc)).sum::<usize>();
+                let mut span_w = (0..colspan)
+                    .filter_map(|dc| col_widths.get(col + dc))
+                    .sum::<usize>();
                 span_w += (colspan - 1) * 3;
 
                 if is_vert_cont {
@@ -366,7 +388,9 @@ pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: u
             CellEntry::Origin { colspan, .. } => *colspan,
             _ => 1,
         };
-        let mut span_w = (0..colspan).filter_map(|dc| col_widths.get(c + dc)).sum::<usize>();
+        let mut span_w = (0..colspan)
+            .filter_map(|dc| col_widths.get(c + dc))
+            .sum::<usize>();
         span_w += (colspan - 1) * 3;
         bot_spans.push(Span::styled("─".repeat(span_w + 2), border_style));
         c += colspan;
@@ -436,7 +460,13 @@ fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
         if let Some(child_ref) = ElementRef::wrap(child) {
             match child_ref.value().name() {
                 "caption" => {
-                    let clean = child_ref.text().collect::<Vec<_>>().join(" ").split_whitespace().collect::<Vec<_>>().join(" ");
+                    let clean = child_ref
+                        .text()
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                        .split_whitespace()
+                        .collect::<Vec<_>>()
+                        .join(" ");
                     if !clean.is_empty() {
                         caption = Some(clean);
                     }
@@ -470,11 +500,23 @@ fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
             let name = cell_child.value().name();
             if name == "th" || name == "td" {
                 let is_header = name == "th";
-                let colspan = cell_child.value().attr("colspan").and_then(|v| v.parse().ok()).unwrap_or(1).max(1);
-                let rowspan = cell_child.value().attr("rowspan").and_then(|v| v.parse().ok()).unwrap_or(1).max(1);
+                let colspan = cell_child
+                    .value()
+                    .attr("colspan")
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(1)
+                    .max(1);
+                let rowspan = cell_child
+                    .value()
+                    .attr("rowspan")
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(1)
+                    .max(1);
 
                 let default_style = if is_header {
-                    Style::default().fg(theme::BEIGE).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(theme::BEIGE)
+                        .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(theme::FG)
                 };
@@ -495,14 +537,22 @@ fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
                     }
                 }
 
-                grid[r][c] = Some(CellEntry::Origin { tokens, colspan, rowspan, is_header });
+                grid[r][c] = Some(CellEntry::Origin {
+                    tokens,
+                    colspan,
+                    rowspan,
+                    is_header,
+                });
 
                 for dr in 0..rowspan {
                     for dc in 0..colspan {
                         if dr == 0 && dc == 0 {
                             continue;
                         }
-                        grid[r + dr][c + dc] = Some(CellEntry::Covered { origin_r: r, origin_c: c });
+                        grid[r + dr][c + dc] = Some(CellEntry::Covered {
+                            origin_r: r,
+                            origin_c: c,
+                        });
                     }
                 }
                 c += colspan;
@@ -524,17 +574,24 @@ fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
         .map(|mut row| {
             row.resize(num_cols, None);
             row.into_iter()
-                .map(|opt| opt.unwrap_or_else(|| CellEntry::Origin {
-                    tokens: Vec::new(),
-                    colspan: 1,
-                    rowspan: 1,
-                    is_header: false,
-                }))
+                .map(|opt| {
+                    opt.unwrap_or_else(|| CellEntry::Origin {
+                        tokens: Vec::new(),
+                        colspan: 1,
+                        rowspan: 1,
+                        is_header: false,
+                    })
+                })
                 .collect()
         })
         .collect();
 
-    Some(TableGrid { num_rows, num_cols, cells: clean_grid, caption })
+    Some(TableGrid {
+        num_rows,
+        num_cols,
+        cells: clean_grid,
+        caption,
+    })
 }
 
 fn collect_cell_tokens(

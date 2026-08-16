@@ -118,12 +118,14 @@ impl App {
             if tab.active_pane_idx >= tab.panes.len() {
                 tab.active_pane_idx = tab.panes.len() - 1;
             }
-            removed_pane.title().map(|title| crate::app::ClosedTabState {
-                title,
-                scroll_offset: removed_pane.scroll_offset,
-                history_back: removed_pane.history_back,
-                history_forward: removed_pane.history_forward,
-            })
+            removed_pane
+                .title()
+                .map(|title| crate::app::ClosedTabState {
+                    title,
+                    scroll_offset: removed_pane.scroll_offset,
+                    history_back: removed_pane.history_back,
+                    history_forward: removed_pane.history_forward,
+                })
         } else {
             None
         };
