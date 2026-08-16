@@ -210,6 +210,13 @@ impl App {
         pane.selected_match_idx = None;
     }
 
+    pub fn clear_local_search(&mut self) {
+        let pane = self.active_pane_mut();
+        pane.local_search_query.clear();
+        pane.local_matches.clear();
+        pane.selected_match_idx = None;
+    }
+
     pub(crate) fn keep_local_match_visible(pane: &mut crate::app::pane::Pane, term_height: u16) {
         let target_line = match (pane.selected_match_idx, &pane.local_matches) {
             (Some(idx), matches) if !matches.is_empty() => matches[idx].line_idx,

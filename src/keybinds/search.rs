@@ -55,7 +55,11 @@ pub fn handle_local_search_mode(app: &mut App, key: KeyEvent, term_height: u16) 
             pane.local_search_query.pop();
             app.update_local_search(term_height);
         }
-        KeyCode::Enter | KeyCode::Esc => {
+        KeyCode::Enter => {
+            app.input_mode = InputMode::Normal;
+        }
+        KeyCode::Esc => {
+            app.clear_local_search();
             app.input_mode = InputMode::Normal;
         }
         _ => {}

@@ -75,6 +75,9 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
         }
     } else {
         match key.code {
+            KeyCode::Esc => {
+                app.clear_local_search();
+            }
             KeyCode::Char('q') => {
                 app.quit();
             }
