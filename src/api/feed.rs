@@ -24,10 +24,7 @@ struct WikiFeedResponse {
     query: Option<WikiFeedQuery>,
 }
 
-fn fetch_category_items(
-    agent: &ureq::Agent,
-    category: &str,
-) -> Result<Vec<FeedItem>, String> {
+fn fetch_category_items(agent: &ureq::Agent, category: &str) -> Result<Vec<FeedItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let category_title = format!("Category:{}", category);
     let res = agent
@@ -46,9 +43,7 @@ fn fetch_category_items(
         .call()
         .map_err(|e| format!("network error: {}", e))?;
 
-    let feed_resp: WikiFeedResponse = res
-        .into_json()
-        .map_err(|e| format!("parse error: {}", e))?;
+    let feed_resp: WikiFeedResponse = res.into_json().map_err(|e| format!("parse error: {}", e))?;
 
     let mut items = Vec::new();
     if let Some(query) = feed_resp.query {
@@ -118,9 +113,7 @@ fn fetch_random_items(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
         .call()
         .map_err(|e| format!("network error: {}", e))?;
 
-    let feed_resp: WikiFeedResponse = res
-        .into_json()
-        .map_err(|e| format!("parse error: {}", e))?;
+    let feed_resp: WikiFeedResponse = res.into_json().map_err(|e| format!("parse error: {}", e))?;
 
     let mut items = Vec::new();
     if let Some(query) = feed_resp.query {
@@ -195,9 +188,7 @@ pub fn fetch_feed_batch(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
     }
 
     let agent_rand = agent.clone();
-    handles.push(std::thread::spawn(move || {
-        fetch_random_items(&agent_rand)
-    }));
+    handles.push(std::thread::spawn(move || fetch_random_items(&agent_rand)));
 
     for handle in handles {
         if let Ok(Ok(batch)) = handle.join() {

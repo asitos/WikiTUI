@@ -121,10 +121,13 @@ pub fn decode_html_entities(s: &str) -> String {
                 if semicolon_idx <= 10 {
                     let entity = &remaining[1..semicolon_idx];
                     let decoded_char = if let Some(num_str) = entity.strip_prefix('#') {
-                        if let Some(hex_str) =
-                            num_str.strip_prefix('x').or_else(|| num_str.strip_prefix('X'))
+                        if let Some(hex_str) = num_str
+                            .strip_prefix('x')
+                            .or_else(|| num_str.strip_prefix('X'))
                         {
-                            u32::from_str_radix(hex_str, 16).ok().and_then(char::from_u32)
+                            u32::from_str_radix(hex_str, 16)
+                                .ok()
+                                .and_then(char::from_u32)
                         } else {
                             num_str.parse::<u32>().ok().and_then(char::from_u32)
                         }

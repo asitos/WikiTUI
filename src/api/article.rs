@@ -16,10 +16,7 @@ struct WikiParseResponse {
     parse: Option<WikiParseObject>,
 }
 
-pub fn fetch_article_wikipedia(
-    agent: &ureq::Agent,
-    title: &str,
-) -> Result<String, String> {
+pub fn fetch_article_wikipedia(agent: &ureq::Agent, title: &str) -> Result<String, String> {
     let decoded_title = crate::parser::url_decode(title).replace('_', " ");
     let url = "https://en.wikipedia.org/w/api.php";
     let res = agent
@@ -34,9 +31,8 @@ pub fn fetch_article_wikipedia(
         .call()
         .map_err(|e| format!("network error: {}", e))?;
 
-    let parse_resp: WikiParseResponse = res
-        .into_json()
-        .map_err(|e| format!("parse error: {}", e))?;
+    let parse_resp: WikiParseResponse =
+        res.into_json().map_err(|e| format!("parse error: {}", e))?;
 
     let html = parse_resp
         .parse

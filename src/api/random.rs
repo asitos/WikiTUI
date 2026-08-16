@@ -28,9 +28,8 @@ pub fn fetch_random_article(agent: &ureq::Agent) -> Result<(String, String), Str
         .call()
         .map_err(|e| format!("network error: {}", e))?;
 
-    let rand_resp: WikiRandomResponse = res
-        .into_json()
-        .map_err(|e| format!("parse error: {}", e))?;
+    let rand_resp: WikiRandomResponse =
+        res.into_json().map_err(|e| format!("parse error: {}", e))?;
 
     let title = rand_resp
         .query

@@ -18,10 +18,7 @@ struct WikiGenSearchResponse {
     query: Option<WikiGenSearchQuery>,
 }
 
-pub fn search_wikipedia(
-    agent: &ureq::Agent,
-    query: &str,
-) -> Result<Vec<SearchResultItem>, String> {
+pub fn search_wikipedia(agent: &ureq::Agent, query: &str) -> Result<Vec<SearchResultItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let res = agent
         .get(url)
@@ -34,9 +31,8 @@ pub fn search_wikipedia(
         .call()
         .map_err(|e| format!("network error: {}", e))?;
 
-    let search_resp: WikiGenSearchResponse = res
-        .into_json()
-        .map_err(|e| format!("parse error: {}", e))?;
+    let search_resp: WikiGenSearchResponse =
+        res.into_json().map_err(|e| format!("parse error: {}", e))?;
 
     let mut items = Vec::new();
     if let Some(q) = search_resp.query {
