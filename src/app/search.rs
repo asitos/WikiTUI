@@ -1,5 +1,5 @@
 use crate::api::{NetworkCommand, SearchResultItem};
-use crate::app::pane::{LocalMatch, PaneContent};
+use crate::app::pane::{LocalMatch, Pane, PaneContent};
 use crate::app::App;
 
 impl App {
@@ -234,6 +234,24 @@ impl App {
         }
     }
 
+    fn sync_link_focus_to_current_match(pane: &mut Pane) {
+        let Some(match_idx) = pane.selected_match_idx else {
+            return;
+        };
+        let Some(m) = pane.local_matches.get(match_idx) else {
+            return;
+        };
+        if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            if let Some(link_idx) = parsed_doc.links.iter().position(|link| {
+                link.span_indices
+                    .iter()
+                    .any(|&(l, s)| l == m.line_idx && s == m.span_idx)
+            }) {
+                pane.selected_link_idx = Some(link_idx);
+            }
+        }
+    }
+
     pub fn update_local_search(&mut self, term_height: u16) {
         let pane = self.active_pane_mut();
         pane.local_matches.clear();
@@ -248,7 +266,7 @@ impl App {
             for (line_idx, line) in parsed_doc.lines.iter().enumerate() {
                 let full_text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
                 let full_lower = full_text.to_lowercase();
-                if let Some(match_pos) = full_lower.find(&query) {
+                for (match_pos, _) in full_lower.match_indices(&query) {
                     let mut current_offset = 0;
                     let mut start_span_idx = 0;
                     for (idx, span) in line.spans.iter().enumerate() {
@@ -268,6 +286,7 @@ impl App {
             if !pane.local_matches.is_empty() {
                 pane.selected_match_idx = Some(0);
                 Self::keep_local_match_visible(pane, term_height);
+                Self::sync_link_focus_to_current_match(pane);
             }
         }
     }
@@ -283,6 +302,7 @@ impl App {
         };
         pane.selected_match_idx = Some(next_idx);
         Self::keep_local_match_visible(pane, term_height);
+        Self::sync_link_focus_to_current_match(pane);
     }
 
     pub fn prev_local_match(&mut self, term_height: u16) {
@@ -303,5 +323,6 @@ impl App {
         };
         pane.selected_match_idx = Some(prev_idx);
         Self::keep_local_match_visible(pane, term_height);
+        Self::sync_link_focus_to_current_match(pane);
     }
 }
