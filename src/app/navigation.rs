@@ -515,4 +515,23 @@ impl App {
         crate::clipboard::copy_to_clipboard(&target_url);
         self.set_status_message(format!("copied: {}", target_url));
     }
+
+    pub fn copy_article_link(&mut self) {
+        let pane = self.active_pane();
+        let target_url = match &pane.content {
+            PaneContent::ArticleText { title, .. } => {
+                format!("https://en.wikipedia.org/wiki/{}", title.replace(' ', "_"))
+            }
+            PaneContent::SearchResults { query, .. } => {
+                format!(
+                    "https://en.wikipedia.org/wiki/Special:Search?search={}",
+                    query.replace(' ', "_")
+                )
+            }
+            _ => return,
+        };
+
+        crate::clipboard::copy_to_clipboard(&target_url);
+        self.set_status_message(format!("copied article: {}", target_url));
+    }
 }

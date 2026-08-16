@@ -68,6 +68,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **open link in new tab** | `t` or `alt-enter` | open link in a new tab |
 | **open link in split** | `s` / `v` | open link in horizontal (`s`) or vertical (`v`) split |
 | **copy link** | `y` | copy focused link to clipboard |
+| **copy article URL** | `Y` | copy current article URL to clipboard |
 | **split pane** | `ctrl-w` `s`/`v` | split active pane horizontally (`s`) or vertically (`v`) |
 | **navigate panes** | `ctrl-h/j/k/l` | switch focus between split panes |
 | **close pane** | `x / alt-c` | close active pane |
