@@ -34,8 +34,14 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
         Line::from(""),
     ];
 
-    let list_count = app.saved_lists.lists.len();
-    for (idx, list) in app.saved_lists.lists.iter().enumerate() {
+    let custom_lists: Vec<_> = app
+        .saved_lists
+        .lists
+        .iter()
+        .filter(|l| l.id != "liked")
+        .collect();
+    let list_count = custom_lists.len();
+    for (idx, list) in custom_lists.iter().enumerate() {
         let is_focused = idx == app.save_modal_cursor_idx;
         let is_in_list = app
             .saved_lists

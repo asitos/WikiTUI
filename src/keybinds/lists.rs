@@ -2,13 +2,20 @@ use crate::app::{App, InputMode};
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub fn handle_save_to_list_mode(app: &mut App, key: KeyEvent) {
+    let custom_lists: Vec<_> = app
+        .saved_lists
+        .lists
+        .iter()
+        .filter(|l| l.id != "liked")
+        .cloned()
+        .collect();
+    let total = custom_lists.len() + 1;
+
     match key.code {
         KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab => {
-            let total = app.saved_lists.lists.len() + 1;
             app.save_modal_cursor_idx = (app.save_modal_cursor_idx + 1) % total;
         }
         KeyCode::Up | KeyCode::Char('k') | KeyCode::BackTab => {
-            let total = app.saved_lists.lists.len() + 1;
             if app.save_modal_cursor_idx == 0 {
                 app.save_modal_cursor_idx = total.saturating_sub(1);
             } else {
@@ -16,9 +23,8 @@ pub fn handle_save_to_list_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char(' ') | KeyCode::Enter => {
-            let list_count = app.saved_lists.lists.len();
-            if app.save_modal_cursor_idx < list_count {
-                let list_id = app.saved_lists.lists[app.save_modal_cursor_idx].id.clone();
+            if app.save_modal_cursor_idx < custom_lists.len() {
+                let list_id = custom_lists[app.save_modal_cursor_idx].id.clone();
                 let target_title = app.save_modal_target_title.clone();
                 app.saved_lists.toggle_article_in_list(
                     &list_id,
@@ -121,11 +127,13 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('d') | KeyCode::Delete => {
             if app.viewer_focus_right {
                 if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {
-                    if let Some(art) = list.articles.get(app.viewer_article_idx) {
-                        app.pending_delete_is_list = false;
-                        app.pending_delete_title = art.clone();
-                        app.pending_delete_list_id = list.id.clone();
-                        app.input_mode = InputMode::ConfirmDelete;
+                    if list.id != "liked" {
+                        if let Some(art) = list.articles.get(app.viewer_article_idx) {
+                            app.pending_delete_is_list = false;
+                            app.pending_delete_title = art.clone();
+                            app.pending_delete_list_id = list.id.clone();
+                            app.input_mode = InputMode::ConfirmDelete;
+                        }
                     }
                 }
             } else if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {

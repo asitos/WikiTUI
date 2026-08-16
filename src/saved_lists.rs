@@ -48,7 +48,8 @@ impl SavedListsStore {
             .ok()
             .and_then(|content| serde_json::from_str::<SavedListsStore>(&content).ok());
 
-        if let Some(store) = loaded {
+        if let Some(mut store) = loaded {
+            store.ensure_list("liked", "Liked");
             return store;
         }
         let store = Self::default();
@@ -90,6 +91,9 @@ impl SavedListsStore {
     }
 
     pub fn toggle_article_in_list(&mut self, list_id: &str, title: &str) -> bool {
+        if list_id == "liked" {
+            return false;
+        }
         let title_trimmed = title.trim();
         if title_trimmed.is_empty() {
             return false;
