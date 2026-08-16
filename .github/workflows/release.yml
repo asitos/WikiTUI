@@ -19,15 +19,15 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            archive_name: wikid-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
+            archive_name: wikid-${{ github.ref_name }}-x86_64-linux.tar.gz
 
           - os: macos-latest
             target: aarch64-apple-darwin
-            archive_name: wikid-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+            archive_name: wikid-${{ github.ref_name }}-aarch64-macos.tar.gz
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            archive_name: wikid-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip
+            archive_name: wikid-${{ github.ref_name }}-x86_64-windows.zip
 
     steps:
       - uses: actions/checkout@v4
@@ -72,9 +72,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release-artifacts/*
-          generate_release_notes: true
+          body_path: RELEASE.md
       - uses: dtolnay/rust-toolchain@stable
       - name: publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish
+        run: cargo publish --allow-dirty
