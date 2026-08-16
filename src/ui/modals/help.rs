@@ -60,7 +60,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
     )]));
 
     help_text.push(Line::from("   ctrl-s              search wikipedia (opens new tab)"));
-
+    help_text.push(Line::from("   0..9                open search result directly"));
     help_text.push(Line::from("   i                   edit search query in current tab"));
     help_text.push(Line::from("   r                   open random wikipedia article"));
     help_text.push(Line::from("   /                   in-page text search"));

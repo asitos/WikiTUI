@@ -57,6 +57,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **save to list** | `m` | save active article or item into custom list |
 | **view saved lists** | `M` | open custom lists & articles viewer |
 | **search wikipedia** | `ctrl-s` | open search modal (opens in new tab) |
+| **open search result** | `0`–`9` | open numbered search result directly |
 | **edit search** | `i` | edit current search query in active tab |
 | **in-page search** | `/` | in-page text search with match highlighting |
 | **next / prev match** | `n` / `N` | jump to next / previous in-page search match |

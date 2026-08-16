@@ -196,6 +196,9 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                 };
                 app.switch_to_tab(tab_idx);
             }
+            KeyCode::Char(c @ '0'..='9') if key.modifiers.is_empty() => {
+                app.activate_search_result_digit(c);
+            }
             KeyCode::Char('x') => {
                 app.close_active_pane();
             }

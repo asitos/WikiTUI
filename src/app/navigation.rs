@@ -159,6 +159,25 @@ impl App {
         }
     }
 
+    pub fn activate_search_result_digit(&mut self, digit: char) {
+        let idx = if digit == '0' { 9 } else { (digit as usize) - ('1' as usize) };
+        let pane = self.active_pane_mut();
+        let target_title = if let PaneContent::SearchResults { items, .. } = &mut pane.content {
+            if idx < items.len() {
+                pane.selected_idx = idx;
+                Some(items[idx].title.clone())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(title) = target_title {
+            self.open_article(&title);
+        }
+    }
+
     pub fn open_article(&mut self, title: &str) {
         let current_title = self.active_pane().title();
         let pane_id = self.active_pane().id;
