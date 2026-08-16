@@ -39,8 +39,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         }
         InputMode::ConfirmDelete => "".to_string(),
         InputMode::Normal => {
-            if app.active_pane().toc_focused {
+            let pane = app.active_pane();
+            if pane.toc_focused {
                 "j/k: navigate contents | enter: jump | o: close".to_string()
+            } else if let Some(link) = pane.focused_link().filter(|l| l.is_external()) {
+                format!("↗ external link: {} | enter/y: copy URL", link.title)
             } else {
                 "ctrl-s: search | r: random | F: feed | ?: help | q: quit".to_string()
             }
@@ -56,7 +59,17 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         | InputMode::SavedListsViewer
         | InputMode::ConfirmDelete => Style::default().fg(theme::VIOLET).bold(),
         InputMode::Help => Style::default().fg(theme::GREY).bold(),
-        InputMode::Normal => Style::default().fg(theme::GREY),
+        InputMode::Normal => {
+            if app
+                .active_pane()
+                .focused_link()
+                .is_some_and(|l| l.is_external())
+            {
+                Style::default().fg(theme::TEAL).bold()
+            } else {
+                Style::default().fg(theme::GREY)
+            }
+        }
     };
 
     let (status_text, status_style) = if let Some((ref msg, time)) = app.status_message {

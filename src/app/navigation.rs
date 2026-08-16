@@ -147,6 +147,12 @@ impl App {
                         });
                     }
                 }
+            } else if target.starts_with("http://")
+                || target.starts_with("https://")
+                || target.starts_with("//")
+            {
+                crate::clipboard::copy_to_clipboard(&target);
+                self.set_status_message(format!("copied external link: {}", target));
             } else if is_article_link(&target) {
                 self.open_article(&target);
             }

@@ -17,6 +17,14 @@ pub struct Link {
     pub span_indices: Vec<(usize, usize)>,
 }
 
+impl Link {
+    pub fn is_external(&self) -> bool {
+        self.title.starts_with("http://")
+            || self.title.starts_with("https://")
+            || self.title.starts_with("//")
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ParsedDocument {
     pub lines: Vec<Line<'static>>,

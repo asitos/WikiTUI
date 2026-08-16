@@ -89,4 +89,12 @@ impl Pane {
             _ => None,
         }
     }
+
+    pub fn focused_link(&self) -> Option<&crate::parser::types::Link> {
+        if let PaneContent::ArticleText { parsed_doc, .. } = &self.content {
+            self.selected_link_idx.and_then(|idx| parsed_doc.links.get(idx))
+        } else {
+            None
+        }
+    }
 }

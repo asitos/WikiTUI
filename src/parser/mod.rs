@@ -280,6 +280,9 @@ fn process_element(
             current_style = current_style.fg(theme::BLUE);
             if let Some(href) = element.value().attr("href") {
                 if let Some(title) = extract_title_from_href(href) {
+                    if title.starts_with("http://") || title.starts_with("https://") {
+                        current_style = current_style.fg(theme::TEAL);
+                    }
                     current_link = Some(title);
                 }
             } else if let Some(title_attr) = element.value().attr("title") {
@@ -377,6 +380,18 @@ fn process_element(
                 }
             }
             _ => {}
+        }
+    }
+
+    if tag_name == "a" {
+        if let Some(ref target) = current_link {
+            if target.starts_with("http://") || target.starts_with("https://") {
+                current_tokens.push(StyledToken {
+                    text: " ↗".to_string(),
+                    style: Style::default().fg(theme::TEAL),
+                    link_target: current_link.clone(),
+                });
+            }
         }
     }
 
