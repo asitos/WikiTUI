@@ -21,6 +21,7 @@ pub enum PaneContent {
 pub struct LocalMatch {
     pub line_idx: usize,
     pub span_idx: usize,
+    pub char_offset: usize,
 }
 
 #[derive(Clone, Debug)]

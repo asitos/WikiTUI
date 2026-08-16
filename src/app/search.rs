@@ -287,6 +287,7 @@ impl App {
                     pane.local_matches.push(LocalMatch {
                         line_idx,
                         span_idx: start_span_idx,
+                        char_offset: match_pos,
                     });
                 }
             }

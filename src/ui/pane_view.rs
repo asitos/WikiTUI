@@ -189,13 +189,6 @@ fn render_pane_at(
                     let full_lower = full_line_text.to_lowercase();
 
                     if full_lower.contains(&query) {
-                        let is_active_line = active_match.is_some_and(|m| m.line_idx == line_idx);
-                        let bg_color = if is_active_line {
-                            theme::YELLOW
-                        } else {
-                            theme::BEIGE
-                        };
-
                         let mut match_ranges = Vec::new();
                         let mut start = 0;
                         while let Some(pos) = full_lower[start..].find(&query) {
@@ -222,7 +215,16 @@ fn render_pane_at(
                                         global_pos >= r_start && global_pos < r_end
                                     });
 
-                                if let Some(&(_, r_end)) = active_range {
+                                if let Some(&(r_start, r_end)) = active_range {
+                                    let is_this_active = active_match.is_some_and(|m| {
+                                        m.line_idx == line_idx && m.char_offset == r_start
+                                    });
+                                    let bg_color = if is_this_active {
+                                        theme::YELLOW
+                                    } else {
+                                        theme::BEIGE
+                                    };
+
                                     let match_end_in_span = (r_end - span_start).min(span_len);
                                     let slice = &text[text_cursor..match_end_in_span];
                                     new_spans.push(Span::styled(
