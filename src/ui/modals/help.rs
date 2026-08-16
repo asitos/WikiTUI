@@ -49,6 +49,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
     help_text.push(Line::from(format!("   {}-shift-c         reopen last closed tab/pane", opt_label)));
     help_text.push(Line::from(format!("   {}-t               create new tab", opt_label)));
     help_text.push(Line::from(format!("   {}-h/l             switch to prev / next tab", opt_label)));
+    help_text.push(Line::from(format!("   {}-0..9            switch to tab 1-10", opt_label)));
 
     help_text.push(Line::from(""));
     help_text.push(Line::from(vec![Span::styled(

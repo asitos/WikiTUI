@@ -39,6 +39,12 @@ impl App {
         }
     }
 
+    pub fn switch_to_tab(&mut self, idx: usize) {
+        if idx < self.tabs.len() {
+            self.active_tab_idx = idx;
+        }
+    }
+
     pub fn close_current_tab(&mut self) {
         if self.tabs.len() > 1 {
             let removed_tab = self.tabs.remove(self.active_tab_idx);

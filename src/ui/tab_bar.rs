@@ -32,7 +32,13 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             tab.name.to_lowercase()
         };
 
-        tab_spans.push(Span::styled(tab_title, style));
+        let display_name = if app.tabs.len() > 1 {
+            format!("{}: {}", i + 1, tab_title)
+        } else {
+            tab_title
+        };
+
+        tab_spans.push(Span::styled(display_name, style));
         if i < app.tabs.len() - 1 {
             tab_spans.push(Span::styled(" | ", Style::default().fg(theme::GREY)));
         }

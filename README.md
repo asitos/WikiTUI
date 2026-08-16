@@ -73,6 +73,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **reopen closed** | `alt-shift-c` | reopen last closed tab or split pane |
 | **new tab** | `alt-t` | create a new empty tab |
 | **switch tabs** | `alt-h` / `alt-l` | switch to previous / next tab |
+| **jump to tab** | `alt-0..9` | switch to tab 1-10 |
 | **restore session** | `S` | restore previous session (from home tab) |
 | **help popup** | `?` | toggle keybindings cheat sheet |
 | **quit** | `q` | exit wikid |
