@@ -194,6 +194,8 @@ fn process_element(
                     | "mw-jump-link"
                     | "catlinks"
                     | "vector-menu"
+                    | "asbox"
+                    | "stub"
             )
         })
     }) {
