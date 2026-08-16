@@ -90,6 +90,12 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('r') => {
                 app.fetch_random_article();
             }
+            KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.intra_jump_back(term_height);
+            }
+            KeyCode::Char('i') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.intra_jump_forward(term_height);
+            }
             KeyCode::Char('o') => {
                 app.toggle_toc();
             }
@@ -164,8 +170,8 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                     }
                 }
             }
-            KeyCode::Char('H') | KeyCode::Backspace => {
-                app.history_back(term_height);
+            KeyCode::Char('H') => {
+                app.history_back();
             }
             KeyCode::Char('L') => {
                 app.history_forward();

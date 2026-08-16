@@ -130,7 +130,8 @@ impl App {
                 if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                     if let Some(&target_line) = parsed_doc.reference_targets.get(anchor) {
                         let current_scroll = pane.scroll_offset;
-                        pane.jump_stack.push(current_scroll);
+                        pane.intra_jump_back.push(current_scroll);
+                        pane.intra_jump_forward.clear();
                         pane.scroll_offset = target_line;
 
                         if let Some(target_link_idx) = parsed_doc.links.iter().position(|l| {
@@ -141,9 +142,9 @@ impl App {
 
                         self.clamp_link_selection_to_viewport(term_height);
                         self.set_status_message(if anchor.starts_with("cite_note") {
-                            "jumped to reference (press H to return)"
+                            "jumped to reference (ctrl-o to return)"
                         } else {
-                            "jumped to citation (press H to return)"
+                            "jumped to citation (ctrl-o to return)"
                         });
                     }
                 }
@@ -190,21 +191,35 @@ impl App {
         }
         active_pane.is_loading = true;
         active_pane.selected_link_idx = None;
-        active_pane.jump_stack.clear();
+        active_pane.intra_jump_back.clear();
+        active_pane.intra_jump_forward.clear();
         let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
             pane_id,
             title: title.to_string(),
         });
     }
 
-    pub fn history_back(&mut self, term_height: u16) {
+    pub fn intra_jump_back(&mut self, term_height: u16) {
         let pane = self.active_pane_mut();
-        if let Some(prev_scroll) = pane.jump_stack.pop() {
+        if let Some(prev_scroll) = pane.intra_jump_back.pop() {
+            let cur_scroll = pane.scroll_offset;
+            pane.intra_jump_forward.push(cur_scroll);
             pane.scroll_offset = prev_scroll;
             self.clamp_link_selection_to_viewport(term_height);
-            return;
         }
+    }
 
+    pub fn intra_jump_forward(&mut self, term_height: u16) {
+        let pane = self.active_pane_mut();
+        if let Some(next_scroll) = pane.intra_jump_forward.pop() {
+            let cur_scroll = pane.scroll_offset;
+            pane.intra_jump_back.push(cur_scroll);
+            pane.scroll_offset = next_scroll;
+            self.clamp_link_selection_to_viewport(term_height);
+        }
+    }
+
+    pub fn history_back(&mut self) {
         let current_title = self.active_pane().title();
         let active_pane = self.active_pane_mut();
         if let Some(target_title) = active_pane.history_back.pop() {
@@ -214,7 +229,8 @@ impl App {
             let pane_id = active_pane.id;
             active_pane.is_loading = true;
             active_pane.selected_link_idx = None;
-            active_pane.jump_stack.clear();
+            active_pane.intra_jump_back.clear();
+            active_pane.intra_jump_forward.clear();
             let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
                 pane_id,
                 title: target_title,
@@ -232,6 +248,8 @@ impl App {
             let pane_id = active_pane.id;
             active_pane.is_loading = true;
             active_pane.selected_link_idx = None;
+            active_pane.intra_jump_back.clear();
+            active_pane.intra_jump_forward.clear();
             let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
                 pane_id,
                 title: target_title,
@@ -520,6 +538,9 @@ impl App {
             _ => None,
         };
         if let Some(line) = target_line {
+            let cur = pane.scroll_offset;
+            pane.intra_jump_back.push(cur);
+            pane.intra_jump_forward.clear();
             pane.scroll_offset = line;
         }
         pane.show_toc = false;

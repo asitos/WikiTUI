@@ -53,7 +53,8 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **scroll down / up** | `j` / `k` | scroll line down / up |
 | **page down / up** | `f` / `b` | scroll full page down / up |
 | **jump to top / bottom** | `g` / `G` | jump directly to article top / bottom |
-| **history back / forward** | `H` / `L` | navigate backward / forward in article history |
+| **history back / forward** | `H` / `L` | navigate backward / forward in article page history |
+| **jump back / forward** | `ctrl-o` / `ctrl-i` | navigate backward / forward across intra-article jump history |
 | **save to list** | `m` | save active article or item into custom list |
 | **view saved lists** | `M` | open custom lists & articles viewer |
 | **search wikipedia** | `ctrl-s` | open search modal (opens in new tab) |

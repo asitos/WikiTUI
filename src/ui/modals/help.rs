@@ -23,6 +23,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
         Line::from("   j/k                 scroll down / up"),
         Line::from("   f/b                 scroll page down / up"),
         Line::from("   g/G                 jump to top / bottom"),
+        Line::from("   ctrl-o/i            jump backward / forward in article jumps"),
         Line::from("   H/L                 go backward / forward in article history"),
         Line::from("   ]/[                 jump to next / prev section heading"),
         Line::from("   o                   toggle table of contents"),

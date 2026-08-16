@@ -41,7 +41,8 @@ pub struct Pane {
 
     pub history_back: Vec<String>,
     pub history_forward: Vec<String>,
-    pub jump_stack: Vec<usize>,
+    pub intra_jump_back: Vec<usize>,
+    pub intra_jump_forward: Vec<usize>,
 }
 
 impl Pane {
@@ -63,7 +64,8 @@ impl Pane {
 
             history_back: Vec::new(),
             history_forward: Vec::new(),
-            jump_stack: Vec::new(),
+            intra_jump_back: Vec::new(),
+            intra_jump_forward: Vec::new(),
         }
     }
 
