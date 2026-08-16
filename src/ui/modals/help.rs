@@ -35,6 +35,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
         Line::from("   enter               open link in current pane"),
         Line::from("   t                   open link in new tab"),
         Line::from("   s/v                 open link in horizontal / vertical split"),
+        Line::from("   y                   copy focused link to clipboard"),
         Line::from(""),
         Line::from(vec![Span::styled(
             " panes & tabs",

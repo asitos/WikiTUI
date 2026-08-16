@@ -1,5 +1,6 @@
 pub mod api;
 pub mod app;
+pub mod clipboard;
 pub mod feed;
 pub mod keybinds;
 pub mod layout;

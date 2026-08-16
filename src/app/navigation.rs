@@ -468,4 +468,51 @@ impl App {
         pane.toc_focused = false;
         self.clamp_link_selection_to_viewport(term_height);
     }
+
+    pub fn set_status_message(&mut self, msg: impl Into<String>) {
+        self.status_message = Some((msg.into(), std::time::Instant::now()));
+    }
+
+    pub fn copy_focused_link(&mut self) {
+        let pane = self.active_pane();
+        let target_url = match &pane.content {
+            PaneContent::ArticleText {
+                title, parsed_doc, ..
+            } => {
+                if let Some(idx) = pane.selected_link_idx {
+                    if let Some(link) = parsed_doc.links.get(idx) {
+                        if link.title.starts_with("http://")
+                            || link.title.starts_with("https://")
+                            || link.title.starts_with("//")
+                        {
+                            link.title.clone()
+                        } else {
+                            format!(
+                                "https://en.wikipedia.org/wiki/{}",
+                                link.title.replace(' ', "_")
+                            )
+                        }
+                    } else {
+                        format!("https://en.wikipedia.org/wiki/{}", title.replace(' ', "_"))
+                    }
+                } else {
+                    format!("https://en.wikipedia.org/wiki/{}", title.replace(' ', "_"))
+                }
+            }
+            PaneContent::SearchResults { items, .. } => {
+                if let Some(item) = items.get(pane.selected_idx) {
+                    format!(
+                        "https://en.wikipedia.org/wiki/{}",
+                        item.title.replace(' ', "_")
+                    )
+                } else {
+                    return;
+                }
+            }
+            _ => return,
+        };
+
+        crate::clipboard::copy_to_clipboard(&target_url);
+        self.set_status_message(format!("copied: {}", target_url));
+    }
 }

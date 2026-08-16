@@ -72,6 +72,7 @@ pub struct App {
     pub pending_delete_title: String,
     pub pending_delete_list_id: String,
     pub closed_tabs_stack: Vec<ClosedTabState>,
+    pub status_message: Option<(String, std::time::Instant)>,
 
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: mpsc::UnboundedSender<NetworkCommand>,
@@ -109,6 +110,7 @@ impl App {
             pending_delete_title: String::new(),
             pending_delete_list_id: String::new(),
             closed_tabs_stack: Vec::new(),
+            status_message: None,
 
             next_pane_id: 1,
             cmd_tx,

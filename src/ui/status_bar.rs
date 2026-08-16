@@ -59,6 +59,16 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         InputMode::Normal => Style::default().fg(theme::GREY),
     };
 
+    let (status_text, status_style) = if let Some((ref msg, time)) = app.status_message {
+        if time.elapsed().as_secs_f32() < 3.0 {
+            (format!(" {} ", msg), Style::default().fg(theme::LIME).bold())
+        } else {
+            (status_text, status_style)
+        }
+    } else {
+        (status_text, status_style)
+    };
+
     let status_paragraph = Paragraph::new(status_text)
         .style(status_style)
         .alignment(Alignment::Center);
