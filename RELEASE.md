@@ -1,11 +1,8 @@
-## new feature(s)
-- added intra-page jump history; `ctrl-i/o` to jump: [5931e09](https://github.com/sharkthakftw/wikid/commit/5931e092b655c550dd03d6e1c73c4e8edb59338e)
-- implemented tab bar scrolling when tabs exceed terminal width: [9af3148](https://github.com/sharkthakftw/wikid/commit/9af31486ecaa64d91516dd7bd98357047c9e1094)
-## bug fix(es)
-- fixed multiple local search matches being highlighted together if they're in the same line: [a43dfb5](https://github.com/sharkthakftw/wikid/commit/a43dfb5513a74a3d31cacbb11a783d38e1ce6bf3)
-## qol/style change(s)
-- open search result with its corresponding number: [7da5f6f](https://github.com/sharkthakftw/wikid/commit/7da5f6f0123381e9b1052b3948ba25521d7be40f)
-- pressing `esc` clears local search now: [b316174](https://github.com/sharkthakftw/wikid/commit/b3161740b4b641c201708c1cf3a282469cfdd8a4)
-- clear indication if a link is an external link: [f3d9e5e](https://github.com/sharkthakftw/wikid/commit/f3d9e5ede4a86d2875ceba5737637fa43e273a29)
-- hid `asbox` and `stub` elements: [831889e](https://github.com/sharkthakftw/wikid/commit/831889e22a13fc5f7d6c947d26e133c2245321dc)
-- added github workflow to generate pre-built binaries: [6b2a58a](https://github.com/sharkthakftw/wikid/commit/6b2a58a7773439e60b73ab7235df42e6815ac070)
+## optimised dependencies: [a78f03f](https://github.com/sharkthakftw/wikid/commit/a78f03f8aeade7682cd088e6d018a40c3ef9f6ee), [684efe1](https://github.com/sharkthakftw/wikid/commit/684efe1d4ec3cca3532e49533b6372b854137a6d), [34e16b9](https://github.com/sharkthakftw/wikid/commit/34e16b9643b141e4098da523a27aa07380a85616)
+- removed `chrono`
+- replaced `rand` with `fastrand`
+- downgraded `unicode-width`
+- replaced `scraper` with `tl` (42 less crates)
+- replaced `reqwest` + `tokio` with `ureq` (44 less crates)
+
+significant reduction in compile times
