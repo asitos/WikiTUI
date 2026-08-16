@@ -24,7 +24,14 @@ pub fn url_decode(s: &str) -> String {
 
 pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
     let trimmed = href.trim();
-    if trimmed.is_empty() || trimmed.starts_with('#') {
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if let Some(anchor) = trimmed.strip_prefix('#') {
+        if anchor.starts_with("cite_note") || anchor.starts_with("cite_ref") {
+            return Some(trimmed.to_string());
+        }
         return None;
     }
 

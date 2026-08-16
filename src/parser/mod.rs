@@ -194,11 +194,18 @@ fn process_element(
                     | "mw-jump-link"
                     | "catlinks"
                     | "vector-menu"
-                    | "mw-cite-backlink"
             )
         })
     }) {
         return;
+    }
+
+    if let Some(id_attr) = element.value().attr("id") {
+        if id_attr.starts_with("cite_note") || id_attr.starts_with("cite_ref") {
+            doc.reference_targets
+                .entry(id_attr.to_string())
+                .or_insert_with(|| doc.lines.len());
+        }
     }
 
     // render tables

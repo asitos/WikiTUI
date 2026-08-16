@@ -161,8 +161,8 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                     }
                 }
             }
-            KeyCode::Char('H') => {
-                app.history_back();
+            KeyCode::Char('H') | KeyCode::Backspace => {
+                app.history_back(term_height);
             }
             KeyCode::Char('L') => {
                 app.history_forward();
@@ -237,7 +237,7 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                 app.activate_selected_in_new_tab();
             }
             KeyCode::Enter => {
-                app.activate_selected();
+                app.activate_selected(term_height);
             }
             _ => {}
         }

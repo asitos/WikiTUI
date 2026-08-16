@@ -1,6 +1,8 @@
 use ratatui::style::Style;
 use ratatui::text::Line;
 
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Heading {
     pub title: String,
@@ -20,6 +22,7 @@ pub struct ParsedDocument {
     pub lines: Vec<Line<'static>>,
     pub links: Vec<Link>,
     pub headings: Vec<Heading>,
+    pub reference_targets: HashMap<String, usize>,
 }
 
 #[derive(Debug, Clone)]
