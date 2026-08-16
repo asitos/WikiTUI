@@ -216,19 +216,35 @@ impl App {
     }
 
     pub fn active_tab(&self) -> &Tab {
-        &self.tabs[self.active_tab_idx]
+        let idx = self.active_tab_idx.min(self.tabs.len().saturating_sub(1));
+        &self.tabs[idx]
     }
 
     pub fn active_tab_mut(&mut self) -> &mut Tab {
-        &mut self.tabs[self.active_tab_idx]
+        if self.tabs.is_empty() {
+            self.tabs.push(Tab::new("home".to_string(), 0));
+        }
+        if self.active_tab_idx >= self.tabs.len() {
+            self.active_tab_idx = self.tabs.len() - 1;
+        }
+        let idx = self.active_tab_idx;
+        &mut self.tabs[idx]
     }
 
     pub fn active_pane(&self) -> &Pane {
-        &self.active_tab().panes[self.active_tab().active_pane_idx]
+        let tab = self.active_tab();
+        let idx = tab.active_pane_idx.min(tab.panes.len().saturating_sub(1));
+        &tab.panes[idx]
     }
 
     pub fn active_pane_mut(&mut self) -> &mut Pane {
         let tab = self.active_tab_mut();
+        if tab.panes.is_empty() {
+            tab.panes.push(Pane::new(0));
+        }
+        if tab.active_pane_idx >= tab.panes.len() {
+            tab.active_pane_idx = tab.panes.len() - 1;
+        }
         let idx = tab.active_pane_idx;
         &mut tab.panes[idx]
     }
