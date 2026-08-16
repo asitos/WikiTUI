@@ -1,11 +1,10 @@
 #![allow(clippy::needless_range_loop)]
 
 use super::types::{Link, ParsedDocument, StyledToken};
-use super::utils::extract_title_from_href;
+use super::utils::{decode_html_entities, extract_title_from_href};
 use crate::theme;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use scraper::{ElementRef, Node};
 use unicode_width::UnicodeWidthStr;
 
 type CellLinkInfo = (String, String, Vec<(usize, usize)>);
@@ -31,8 +30,13 @@ struct TableGrid {
     caption: Option<String>,
 }
 
-pub fn render_table(table_el: ElementRef, doc: &mut ParsedDocument, max_width: usize) {
-    let grid = match parse_table_into_grid(table_el) {
+pub fn render_table<'a>(
+    table_tag: &'a tl::HTMLTag<'a>,
+    parser: &'a tl::Parser<'a>,
+    doc: &mut ParsedDocument,
+    max_width: usize,
+) {
+    let grid = match parse_table_into_grid(table_tag, parser) {
         Some(g) if g.num_rows > 0 && g.num_cols > 0 => g,
         _ => return,
     };
@@ -452,18 +456,18 @@ fn wrap_cell_tokens(
     (lines, links)
 }
 
-fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
+fn parse_table_into_grid<'a>(
+    table_tag: &'a tl::HTMLTag<'a>,
+    parser: &'a tl::Parser<'a>,
+) -> Option<TableGrid> {
     let mut caption = None;
     let mut raw_tr_elements = Vec::new();
 
-    for child in table_el.children() {
-        if let Some(child_ref) = ElementRef::wrap(child) {
-            match child_ref.value().name() {
+    for child_handle in table_tag.children().top().iter() {
+        if let Some(tl::Node::Tag(child_tag)) = child_handle.get(parser) {
+            match child_tag.name().as_utf8_str().as_ref() {
                 "caption" => {
-                    let clean = child_ref
-                        .text()
-                        .collect::<Vec<_>>()
-                        .join(" ")
+                    let clean = decode_html_entities(&child_tag.inner_text(parser))
                         .split_whitespace()
                         .collect::<Vec<_>>()
                         .join(" ");
@@ -471,11 +475,13 @@ fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
                         caption = Some(clean);
                     }
                 }
-                "tr" => raw_tr_elements.push(child_ref),
+                "tr" => raw_tr_elements.push(child_tag),
                 "thead" | "tbody" | "tfoot" => {
-                    for sub in child_ref.children().filter_map(ElementRef::wrap) {
-                        if sub.value().name() == "tr" {
-                            raw_tr_elements.push(sub);
+                    for sub_handle in child_tag.children().top().iter() {
+                        if let Some(tl::Node::Tag(sub_tag)) = sub_handle.get(parser) {
+                            if sub_tag.name().as_utf8_str() == "tr" {
+                                raw_tr_elements.push(sub_tag);
+                            }
                         }
                     }
                 }
@@ -490,72 +496,77 @@ fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
 
     let mut grid: Vec<Vec<Option<CellEntry>>> = Vec::new();
 
-    for (r, tr_el) in raw_tr_elements.iter().enumerate() {
+    for (r, tr_tag) in raw_tr_elements.iter().enumerate() {
         if grid.len() <= r {
             grid.resize(r + 1, Vec::new());
         }
         let mut c = 0;
 
-        for cell_child in tr_el.children().filter_map(ElementRef::wrap) {
-            let name = cell_child.value().name();
-            if name == "th" || name == "td" {
-                let is_header = name == "th";
-                let colspan = cell_child
-                    .value()
-                    .attr("colspan")
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(1)
-                    .max(1);
-                let rowspan = cell_child
-                    .value()
-                    .attr("rowspan")
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(1)
-                    .max(1);
+        for cell_handle in tr_tag.children().top().iter() {
+            if let Some(tl::Node::Tag(cell_tag)) = cell_handle.get(parser) {
+                let name = cell_tag.name().as_utf8_str();
+                let name_str = name.as_ref();
+                if name_str == "th" || name_str == "td" {
+                    let is_header = name_str == "th";
+                    let colspan = cell_tag
+                        .attributes()
+                        .get("colspan")
+                        .flatten()
+                        .and_then(|v| v.as_utf8_str().parse().ok())
+                        .unwrap_or(1)
+                        .max(1);
+                    let rowspan = cell_tag
+                        .attributes()
+                        .get("rowspan")
+                        .flatten()
+                        .and_then(|v| v.as_utf8_str().parse().ok())
+                        .unwrap_or(1)
+                        .max(1);
 
-                let default_style = if is_header {
-                    Style::default()
-                        .fg(theme::BEIGE)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default().fg(theme::FG)
-                };
+                    let default_style = if is_header {
+                        Style::default()
+                            .fg(theme::BEIGE)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(theme::FG)
+                    };
 
-                let mut tokens = Vec::new();
-                collect_cell_tokens(cell_child, default_style, None, &mut tokens);
+                    let mut tokens = Vec::new();
+                    collect_cell_tokens(cell_tag, parser, default_style, None, &mut tokens);
 
-                while c < grid[r].len() && grid[r][c].is_some() {
-                    c += 1;
-                }
-
-                if grid.len() < r + rowspan {
-                    grid.resize(r + rowspan, Vec::new());
-                }
-                for row_idx in r..(r + rowspan) {
-                    if grid[row_idx].len() < c + colspan {
-                        grid[row_idx].resize(c + colspan, None);
+                    while c < grid[r].len() && grid[r][c].is_some() {
+                        c += 1;
                     }
-                }
 
-                grid[r][c] = Some(CellEntry::Origin {
-                    tokens,
-                    colspan,
-                    rowspan,
-                    is_header,
-                });
-
-                for dr in 0..rowspan {
-                    for dc in 0..colspan {
-                        if dr == 0 && dc == 0 {
-                            continue;
+                    if grid.len() < r + rowspan {
+                        grid.resize(r + rowspan, Vec::new());
+                    }
+                    for row_idx in r..(r + rowspan) {
+                        if grid[row_idx].len() < c + colspan {
+                            grid[row_idx].resize(c + colspan, None);
                         }
-                        grid[r + dr][c + dc] = Some(CellEntry::Covered {
-                            origin_r: r,
-                            origin_c: c,
-                        });
                     }
+
+                    grid[r][c] = Some(CellEntry::Origin {
+                        tokens,
+                        colspan,
+                        rowspan,
+                        is_header,
+                    });
+
+                    for dr in 0..rowspan {
+                        for dc in 0..colspan {
+                            if dr == 0 && dc == 0 {
+                                continue;
+                            }
+                            grid[r + dr][c + dc] = Some(CellEntry::Covered {
+                                origin_r: r,
+                                origin_c: c,
+                            });
+                        }
+                    }
+                    c += colspan;
                 }
-                c += colspan;
             }
         }
     }
@@ -594,17 +605,24 @@ fn parse_table_into_grid(table_el: ElementRef) -> Option<TableGrid> {
     })
 }
 
-fn collect_cell_tokens(
-    element: ElementRef,
+fn collect_cell_tokens<'a>(
+    tag: &'a tl::HTMLTag<'a>,
+    parser: &'a tl::Parser<'a>,
     style: Style,
     link: Option<String>,
     tokens: &mut Vec<StyledToken>,
 ) {
-    let tag = element.value().name();
-    if matches!(tag, "style" | "script" | "noscript") {
+    let tag_name = tag.name().as_utf8_str();
+    let tag_name_str = tag_name.as_ref();
+    if matches!(tag_name_str, "style" | "script" | "noscript") {
         return;
     }
-    if let Some(cls) = element.value().attr("class") {
+    if let Some(cls) = tag
+        .attributes()
+        .get("class")
+        .flatten()
+        .map(|b| b.as_utf8_str())
+    {
         if cls.contains("reference") {
             return;
         }
@@ -613,16 +631,26 @@ fn collect_cell_tokens(
     let mut current_style = style;
     let mut current_link = link;
 
-    match tag {
+    match tag_name_str {
         "b" | "strong" | "th" => current_style = current_style.add_modifier(Modifier::BOLD),
         "i" | "em" => current_style = current_style.add_modifier(Modifier::ITALIC),
         "a" => {
             current_style = current_style.fg(theme::BLUE);
-            if let Some(href) = element.value().attr("href") {
-                if let Some(title) = extract_title_from_href(href) {
+            if let Some(href) = tag
+                .attributes()
+                .get("href")
+                .flatten()
+                .map(|b| b.as_utf8_str())
+            {
+                if let Some(title) = extract_title_from_href(href.as_ref()) {
                     current_link = Some(title);
                 }
-            } else if let Some(title_attr) = element.value().attr("title") {
+            } else if let Some(title_attr) = tag
+                .attributes()
+                .get("title")
+                .flatten()
+                .map(|b| b.as_utf8_str())
+            {
                 current_link = Some(title_attr.to_string());
             }
         }
@@ -635,24 +663,32 @@ fn collect_cell_tokens(
         _ => {}
     }
 
-    for child in element.children() {
-        match child.value() {
-            Node::Text(text) => {
-                let cleaned = text.replace(['\r', '\t', '\n'], " ");
-                if !cleaned.trim().is_empty() || cleaned == " " {
-                    tokens.push(StyledToken {
-                        text: cleaned,
-                        style: current_style,
-                        link_target: current_link.clone(),
-                    });
+    for child_handle in tag.children().top().iter() {
+        if let Some(child_node) = child_handle.get(parser) {
+            match child_node {
+                tl::Node::Raw(bytes) => {
+                    let raw_text = bytes.as_utf8_str();
+                    let decoded_text = decode_html_entities(&raw_text);
+                    let cleaned = decoded_text.replace(['\r', '\t', '\n'], " ");
+                    if !cleaned.trim().is_empty() || cleaned == " " {
+                        tokens.push(StyledToken {
+                            text: cleaned,
+                            style: current_style,
+                            link_target: current_link.clone(),
+                        });
+                    }
                 }
-            }
-            Node::Element(_) => {
-                if let Some(child_ref) = ElementRef::wrap(child) {
-                    collect_cell_tokens(child_ref, current_style, current_link.clone(), tokens);
+                tl::Node::Tag(child_tag) => {
+                    collect_cell_tokens(
+                        child_tag,
+                        parser,
+                        current_style,
+                        current_link.clone(),
+                        tokens,
+                    );
                 }
+                _ => {}
             }
-            _ => {}
         }
     }
 }

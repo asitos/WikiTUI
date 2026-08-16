@@ -128,7 +128,31 @@ impl App {
             if let Some(anchor) = target.strip_prefix('#') {
                 let pane = self.active_pane_mut();
                 if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
-                    if let Some(&target_line) = parsed_doc.reference_targets.get(anchor) {
+                    let target_line_opt = parsed_doc
+                        .reference_targets
+                        .get(anchor)
+                        .or_else(|| parsed_doc.reference_targets.get(&target))
+                        .copied()
+                        .or_else(|| {
+                            parsed_doc.reference_targets.iter().find_map(|(k, &line)| {
+                                if k == anchor || k.ends_with(anchor) || anchor.ends_with(k) {
+                                    Some(line)
+                                } else {
+                                    None
+                                }
+                            })
+                        })
+                        .or_else(|| {
+                            parsed_doc.links.iter().find_map(|l| {
+                                if l.title == target || l.title == format!("#{}", anchor) {
+                                    l.span_indices.first().map(|(line, _)| *line)
+                                } else {
+                                    None
+                                }
+                            })
+                        });
+
+                    if let Some(target_line) = target_line_opt {
                         let current_scroll = pane.scroll_offset;
                         pane.intra_jump_back.push(current_scroll);
                         pane.intra_jump_forward.clear();

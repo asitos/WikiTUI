@@ -23,9 +23,17 @@ pub fn url_decode(s: &str) -> String {
 }
 
 pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
-    let trimmed = href.trim();
+    let decoded = decode_html_entities(href);
+    let trimmed = decoded.trim();
     if trimmed.is_empty() {
         return None;
+    }
+
+    if let Some(hash_idx) = trimmed.find('#') {
+        let anchor = &trimmed[hash_idx..];
+        if anchor.starts_with("#cite_note") || anchor.starts_with("#cite_ref") {
+            return Some(anchor.to_string());
+        }
     }
 
     if let Some(anchor) = trimmed.strip_prefix('#') {
@@ -96,4 +104,93 @@ pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
     }
 
     None
+}
+
+pub fn decode_html_entities(s: &str) -> String {
+    if !s.contains('&') {
+        return s.to_string();
+    }
+
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.char_indices().peekable();
+
+    while let Some((i, c)) = chars.next() {
+        if c == '&' {
+            let remaining = &s[i..];
+            if let Some(semicolon_idx) = remaining.find(';') {
+                if semicolon_idx <= 10 {
+                    let entity = &remaining[1..semicolon_idx];
+                    let decoded_char = if let Some(num_str) = entity.strip_prefix('#') {
+                        if let Some(hex_str) =
+                            num_str.strip_prefix('x').or_else(|| num_str.strip_prefix('X'))
+                        {
+                            u32::from_str_radix(hex_str, 16).ok().and_then(char::from_u32)
+                        } else {
+                            num_str.parse::<u32>().ok().and_then(char::from_u32)
+                        }
+                    } else {
+                        match entity {
+                            "amp" => Some('&'),
+                            "lt" => Some('<'),
+                            "gt" => Some('>'),
+                            "quot" => Some('"'),
+                            "apos" => Some('\''),
+                            "nbsp" => Some(' '),
+                            "ndash" => Some('–'),
+                            "mdash" => Some('—'),
+                            "lsquo" => Some('‘'),
+                            "rsquo" => Some('’'),
+                            "ldquo" => Some('“'),
+                            "rdquo" => Some('”'),
+                            "hellip" => Some('…'),
+                            "minus" => Some('−'),
+                            "times" => Some('×'),
+                            "divide" => Some('÷'),
+                            "plusmn" => Some('±'),
+                            "deg" => Some('°'),
+                            "bull" => Some('•'),
+                            "prime" => Some('′'),
+                            "Prime" => Some('″'),
+                            "frac12" => Some('½'),
+                            "frac14" => Some('¼'),
+                            "frac34" => Some('¾'),
+                            "copy" => Some('©'),
+                            "reg" => Some('®'),
+                            "trade" => Some('™'),
+                            "euro" => Some('€'),
+                            "pound" => Some('£'),
+                            "yen" => Some('¥'),
+                            "cent" => Some('¢'),
+                            "sect" => Some('§'),
+                            "para" => Some('¶'),
+                            "middot" => Some('·'),
+                            "larr" => Some('←'),
+                            "uarr" => Some('↑'),
+                            "rarr" => Some('→'),
+                            "darr" => Some('↓'),
+                            "harr" => Some('↔'),
+                            "crarr" => Some('↵'),
+                            _ => None,
+                        }
+                    };
+
+                    if let Some(ch) = decoded_char {
+                        result.push(ch);
+                        let end_pos = i + semicolon_idx;
+                        while let Some(&(next_i, _)) = chars.peek() {
+                            if next_i <= end_pos {
+                                chars.next();
+                            } else {
+                                break;
+                            }
+                        }
+                        continue;
+                    }
+                }
+            }
+        }
+        result.push(c);
+    }
+
+    result
 }
