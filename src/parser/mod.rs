@@ -15,6 +15,75 @@ use ratatui::text::{Line, Span};
 use types::StyledToken;
 use utils::{decode_html_entities, extract_title_from_href};
 
+fn is_references_heading(title: &str) -> bool {
+    let lower = title.to_lowercase();
+    let trimmed = lower.trim();
+    trimmed == "references"
+        || trimmed == "notes"
+        || trimmed == "notes and references"
+        || trimmed == "footnotes"
+        || trimmed == "citations"
+        || trimmed == "reference"
+        || trimmed == "footnote"
+        || trimmed == "citation"
+        || trimmed.starts_with("references ")
+        || trimmed.starts_with("notes ")
+        || trimmed.starts_with("footnotes ")
+}
+
+fn is_references_id(id_str: &str) -> bool {
+    let lower = id_str.to_lowercase();
+    lower == "references"
+        || lower == "notes"
+        || lower == "notes_and_references"
+        || lower == "footnotes"
+        || lower == "citations"
+        || lower.starts_with("cite_note")
+        || lower.starts_with("cite_ref")
+        || lower == "mw-references-wrap"
+}
+
+fn heading_info<'a>(
+    tag: &'a tl::HTMLTag<'a>,
+    parser: &'a tl::Parser<'a>,
+) -> Option<(u8, String, Option<String>)> {
+    let tag_name = tag.name().as_utf8_str();
+    let id_attr = tag
+        .attributes()
+        .get("id")
+        .flatten()
+        .map(|b| decode_html_entities(&b.as_utf8_str()));
+
+    if matches!(tag_name.as_ref(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
+        let level = tag_name.chars().nth(1).and_then(|c| c.to_digit(10)).unwrap_or(1) as u8;
+        let title = decode_html_entities(&tag.inner_text(parser)).trim().to_string();
+        return Some((level, title, id_attr));
+    }
+
+    if let Some(cls) = tag.attributes().get("class").flatten().map(|b| b.as_utf8_str()) {
+        if cls.contains("mw-heading") {
+            for child_handle in tag.children().top().iter() {
+                if let Some(tl::Node::Tag(child_tag)) = child_handle.get(parser) {
+                    let child_name = child_tag.name().as_utf8_str();
+                    if matches!(child_name.as_ref(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
+                        let level = child_name.chars().nth(1).and_then(|c| c.to_digit(10)).unwrap_or(1) as u8;
+                        let title = decode_html_entities(&child_tag.inner_text(parser)).trim().to_string();
+                        let child_id = child_tag
+                            .attributes()
+                            .get("id")
+                            .flatten()
+                            .map(|b| decode_html_entities(&b.as_utf8_str()))
+                            .or(id_attr);
+                        return Some((level, title, child_id));
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
 pub fn parse_wikipedia_html(
     html: &str,
     max_width: usize,
@@ -30,6 +99,7 @@ pub fn parse_wikipedia_html(
     let parser = dom.parser();
     let mut current_block_tokens: Vec<StyledToken> = Vec::new();
     let mut skipping_external_section = false;
+    let mut skipping_references_section = false;
 
     for handle in dom.children() {
         if let Some(node) = handle.get(parser) {
@@ -45,6 +115,7 @@ pub fn parse_wikipedia_html(
                 show_footnotes,
                 show_external_links,
                 &mut skipping_external_section,
+                &mut skipping_references_section,
             );
         }
     }
@@ -69,10 +140,11 @@ fn process_node<'a>(
     show_footnotes: bool,
     show_external_links: bool,
     skipping_external_section: &mut bool,
+    skipping_references_section: &mut bool,
 ) {
     match node {
         tl::Node::Raw(bytes) => {
-            if *skipping_external_section {
+            if *skipping_external_section || *skipping_references_section {
                 return;
             }
             let raw_text = bytes.as_utf8_str();
@@ -108,28 +180,40 @@ fn process_node<'a>(
                 .flatten()
                 .map(|b| decode_html_entities(&b.as_utf8_str()));
 
-            if *skipping_external_section {
-                if matches!(tag_name, "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
-                    let level = tag_name
-                        .chars()
-                        .nth(1)
-                        .and_then(|c| c.to_digit(10))
-                        .unwrap_or(1) as u8;
-                    let title = decode_html_entities(&tag.inner_text(parser))
-                        .trim()
-                        .to_string();
-                    let lower = title.to_lowercase();
-                    if lower.starts_with("external link") || lower.starts_with("external_link") {
-                        return;
-                    }
-                    if level <= 2 {
-                        *skipping_external_section = false;
-                    } else {
-                        return;
-                    }
-                } else {
+            if let Some((level, title, id_opt)) = heading_info(tag, parser) {
+                let lower_title = title.to_lowercase();
+                let lower_id = id_opt.as_deref().unwrap_or("").to_lowercase();
+
+                let is_ext = !show_external_links
+                    && (lower_title.starts_with("external link")
+                        || lower_title.starts_with("external_link")
+                        || lower_id == "external_links"
+                        || lower_id == "external-links"
+                        || lower_id == "externallinks");
+
+                let is_refs = !show_footnotes
+                    && (is_references_heading(&title)
+                        || is_references_id(&lower_id));
+
+                if is_ext {
+                    *skipping_external_section = true;
+                    *skipping_references_section = false;
                     return;
                 }
+                if is_refs {
+                    *skipping_references_section = true;
+                    *skipping_external_section = false;
+                    return;
+                }
+
+                if level <= 2 {
+                    *skipping_external_section = false;
+                    *skipping_references_section = false;
+                } else if *skipping_external_section || *skipping_references_section {
+                    return;
+                }
+            } else if *skipping_external_section || *skipping_references_section {
+                return;
             }
 
             if !show_external_links {
@@ -139,6 +223,18 @@ fn process_node<'a>(
                         || lower == "external-links"
                         || lower == "externallinks"
                     {
+                        *skipping_external_section = true;
+                        return;
+                    }
+                }
+            }
+
+            if !show_footnotes {
+                if let Some(ref id_str) = id_attr {
+                    if is_references_id(id_str) {
+                        if !id_str.starts_with("cite_note") && !id_str.starts_with("cite_ref") {
+                            *skipping_references_section = true;
+                        }
                         return;
                     }
                 }
@@ -363,14 +459,6 @@ fn process_node<'a>(
                     let title = decode_html_entities(&tag.inner_text(parser))
                         .trim()
                         .to_string();
-                    let lower = title.to_lowercase();
-                    if !show_external_links
-                        && (lower.starts_with("external link")
-                            || lower.starts_with("external_link"))
-                    {
-                        *skipping_external_section = true;
-                        return;
-                    }
                     if !title.is_empty() {
                         doc.headings.push(Heading {
                             title,
@@ -403,15 +491,9 @@ fn process_node<'a>(
                             let is_external =
                                 title.starts_with("http://") || title.starts_with("https://");
                             if is_external {
-                                if !show_external_links {
-                                    current_link = None;
-                                } else {
-                                    current_style = current_style.fg(theme::TEAL);
-                                    current_link = Some(title);
-                                }
-                            } else {
-                                current_link = Some(title);
+                                current_style = current_style.fg(theme::TEAL);
                             }
+                            current_link = Some(title);
                         }
                     } else if let Some(title_attr) = tag
                         .attributes()
@@ -510,11 +592,12 @@ fn process_node<'a>(
                         show_footnotes,
                         show_external_links,
                         skipping_external_section,
+                        skipping_references_section,
                     );
                 }
             }
 
-            if tag_name == "a" && show_external_links {
+            if tag_name == "a" {
                 if let Some(ref target) = current_link {
                     if target.starts_with("http://") || target.starts_with("https://") {
                         current_tokens.push(StyledToken {
