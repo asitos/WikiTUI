@@ -76,6 +76,7 @@ pub struct App {
     pub viewer_article_idx: usize,
     pub viewer_focus_right: bool,
     pub confirm_action: Option<ConfirmAction>,
+    pub config: crate::config::Config,
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
 
@@ -111,6 +112,7 @@ impl App {
             viewer_article_idx: 0,
             viewer_focus_right: false,
             confirm_action: None,
+            config: crate::config::Config::load(),
             closed_tabs_stack: Vec::new(),
             status_message: None,
 

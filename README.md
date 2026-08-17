@@ -84,6 +84,14 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **help popup** | `?` | toggle keybindings cheat sheet |
 | **quit** | `q` | exit wikid |
 
+## configuration
+
+wikid can be configured via `~/.config/wikid/config.toml`.
+
+```toml
+[general]
+liked_readonly = true # when set to false, allow deleting items from the "Liked" list
+```
 
 ## acknowledgements
 
