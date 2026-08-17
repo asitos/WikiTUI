@@ -14,6 +14,7 @@ pub enum PaneContent {
         parsed_doc: ParsedDocument,
         last_width: usize,
         last_show_footnotes: bool,
+        last_show_external_links: bool,
     },
     Error(String),
 }
@@ -71,21 +72,32 @@ impl Pane {
         }
     }
 
-    pub fn ensure_parsed_width(&mut self, width: usize, show_footnotes: bool) {
+    pub fn ensure_parsed_width(
+        &mut self,
+        width: usize,
+        show_footnotes: bool,
+        show_external_links: bool,
+    ) {
         if let PaneContent::ArticleText {
             raw_html,
             parsed_doc,
             last_width,
             last_show_footnotes,
+            last_show_external_links,
             ..
         } = &mut self.content
         {
-            if *last_width == width && *last_show_footnotes == show_footnotes {
+            if *last_width == width
+                && *last_show_footnotes == show_footnotes
+                && *last_show_external_links == show_external_links
+            {
                 return;
             }
-            *parsed_doc = parse_wikipedia_html(raw_html, width, show_footnotes);
+            *parsed_doc =
+                parse_wikipedia_html(raw_html, width, show_footnotes, show_external_links);
             *last_width = width;
             *last_show_footnotes = show_footnotes;
+            *last_show_external_links = show_external_links;
         }
     }
 

@@ -19,6 +19,7 @@ pub fn parse_wikipedia_html(
     html: &str,
     max_width: usize,
     show_footnotes: bool,
+    show_external_links: bool,
 ) -> ParsedDocument {
     let mut doc = ParsedDocument::default();
     let effective_width = max_width.max(10);
@@ -28,6 +29,7 @@ pub fn parse_wikipedia_html(
     };
     let parser = dom.parser();
     let mut current_block_tokens: Vec<StyledToken> = Vec::new();
+    let mut skipping_external_section = false;
 
     for handle in dom.children() {
         if let Some(node) = handle.get(parser) {
@@ -41,6 +43,8 @@ pub fn parse_wikipedia_html(
                 effective_width,
                 None,
                 show_footnotes,
+                show_external_links,
+                &mut skipping_external_section,
             );
         }
     }
@@ -63,9 +67,14 @@ fn process_node<'a>(
     max_width: usize,
     list_item_idx: Option<usize>,
     show_footnotes: bool,
+    show_external_links: bool,
+    skipping_external_section: &mut bool,
 ) {
     match node {
         tl::Node::Raw(bytes) => {
+            if *skipping_external_section {
+                return;
+            }
             let raw_text = bytes.as_utf8_str();
             let decoded_text = decode_html_entities(&raw_text);
             let cleaned_text = decoded_text.replace(['\n', '\r', '\t'], " ");
@@ -98,6 +107,42 @@ fn process_node<'a>(
                 .get("id")
                 .flatten()
                 .map(|b| decode_html_entities(&b.as_utf8_str()));
+
+            if *skipping_external_section {
+                if matches!(tag_name, "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
+                    let level = tag_name
+                        .chars()
+                        .nth(1)
+                        .and_then(|c| c.to_digit(10))
+                        .unwrap_or(1) as u8;
+                    let title = decode_html_entities(&tag.inner_text(parser))
+                        .trim()
+                        .to_string();
+                    let lower = title.to_lowercase();
+                    if lower.starts_with("external link") || lower.starts_with("external_link") {
+                        return;
+                    }
+                    if level <= 2 {
+                        *skipping_external_section = false;
+                    } else {
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            }
+
+            if !show_external_links {
+                if let Some(ref id_str) = id_attr {
+                    let lower = id_str.to_lowercase();
+                    if lower == "external_links"
+                        || lower == "external-links"
+                        || lower == "externallinks"
+                    {
+                        return;
+                    }
+                }
+            }
 
             if let Some(ref class_str) = class_attr {
                 if let Some(banner_type) = banners::classify_ambox_class(class_str.as_ref()) {
@@ -318,6 +363,14 @@ fn process_node<'a>(
                     let title = decode_html_entities(&tag.inner_text(parser))
                         .trim()
                         .to_string();
+                    let lower = title.to_lowercase();
+                    if !show_external_links
+                        && (lower.starts_with("external link")
+                            || lower.starts_with("external_link"))
+                    {
+                        *skipping_external_section = true;
+                        return;
+                    }
                     if !title.is_empty() {
                         doc.headings.push(Heading {
                             title,
@@ -347,10 +400,18 @@ fn process_node<'a>(
                         .map(|b| b.as_utf8_str())
                     {
                         if let Some(title) = extract_title_from_href(href.as_ref()) {
-                            if title.starts_with("http://") || title.starts_with("https://") {
-                                current_style = current_style.fg(theme::TEAL);
+                            let is_external =
+                                title.starts_with("http://") || title.starts_with("https://");
+                            if is_external {
+                                if !show_external_links {
+                                    current_link = None;
+                                } else {
+                                    current_style = current_style.fg(theme::TEAL);
+                                    current_link = Some(title);
+                                }
+                            } else {
+                                current_link = Some(title);
                             }
-                            current_link = Some(title);
                         }
                     } else if let Some(title_attr) = tag
                         .attributes()
@@ -447,11 +508,13 @@ fn process_node<'a>(
                         max_width,
                         child_list_idx,
                         show_footnotes,
+                        show_external_links,
+                        skipping_external_section,
                     );
                 }
             }
 
-            if tag_name == "a" {
+            if tag_name == "a" && show_external_links {
                 if let Some(ref target) = current_link {
                     if target.starts_with("http://") || target.starts_with("https://") {
                         current_tokens.push(StyledToken {

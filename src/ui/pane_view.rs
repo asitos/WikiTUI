@@ -43,8 +43,9 @@ fn render_pane_at(
     };
 
     let show_footnotes = app.config.reader.show_footnotes;
+    let show_external_links = app.config.reader.show_external_links;
     let pane = &mut app.tabs[tab_idx].panes[pane_idx];
-    pane.ensure_parsed_width(content_width, show_footnotes);
+    pane.ensure_parsed_width(content_width, show_footnotes, show_external_links);
     pane.viewport_height = if app.zen_mode {
         rect.height as usize
     } else {

@@ -97,6 +97,7 @@ auto_restore_session = false # when set to true, automatically restore previous 
 scroll_lines = 1 # number of lines to scroll per j/k press
 underline_links = false # enable/disable underlining links in articles
 show_footnotes = true # enable/disable inline citation markers and references
+show_external_links = true # enable/disable external links section
 ```
 
 ## acknowledgements

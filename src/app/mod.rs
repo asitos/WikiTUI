@@ -314,13 +314,18 @@ impl App {
                 content,
             } => {
                 let show_footnotes = self.config.reader.show_footnotes;
+                let show_external_links = self.config.reader.show_external_links;
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     pane.is_loading = false;
                     pane.scroll_offset = 0;
                     pane.toc_focused = false;
                     let initial_width = 80;
-                    let parsed_doc =
-                        parse_wikipedia_html(&content, initial_width, show_footnotes);
+                    let parsed_doc = parse_wikipedia_html(
+                        &content,
+                        initial_width,
+                        show_footnotes,
+                        show_external_links,
+                    );
                     let initial_link_idx = if !parsed_doc.links.is_empty() {
                         Some(0)
                     } else {
@@ -332,6 +337,7 @@ impl App {
                         parsed_doc,
                         last_width: initial_width,
                         last_show_footnotes: show_footnotes,
+                        last_show_external_links: show_external_links,
                     };
                     pane.selected_link_idx = initial_link_idx;
                 }
