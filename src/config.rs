@@ -16,12 +16,15 @@ fn default_true() -> bool {
 pub struct GeneralConfig {
     #[serde(default = "default_true")]
     pub liked_readonly: bool,
+    #[serde(default)]
+    pub auto_restore_session: bool,
 }
 
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
             liked_readonly: true,
+            auto_restore_session: false,
         }
     }
 }

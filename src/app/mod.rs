@@ -128,7 +128,14 @@ impl App {
                 app.feed.profile.liked_articles.insert(title.clone());
             }
         }
-        app.tabs.push(Tab::new("home".to_string(), 0));
+        if app.config.general.auto_restore_session {
+            if let Some(session) = crate::session::SessionState::load() {
+                app.restore_session(session);
+            }
+        }
+        if app.tabs.is_empty() {
+            app.tabs.push(Tab::new("home".to_string(), 0));
+        }
         app
     }
 
