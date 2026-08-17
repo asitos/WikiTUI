@@ -117,6 +117,15 @@ impl App {
             next_pane_id: 1,
             cmd_tx,
         };
+        for title in &app.feed.profile.liked_articles {
+            app.saved_lists
+                .set_article_in_list("liked", "Liked", title, true);
+        }
+        if let Some(liked_list) = app.saved_lists.lists.iter().find(|l| l.id == "liked") {
+            for title in &liked_list.articles {
+                app.feed.profile.liked_articles.insert(title.clone());
+            }
+        }
         app.tabs.push(Tab::new("home".to_string(), 0));
         app
     }
@@ -219,6 +228,10 @@ impl App {
 
     pub fn reset_feed(&mut self) {
         self.feed.reset();
+        if let Some(liked_list) = self.saved_lists.lists.iter_mut().find(|l| l.id == "liked") {
+            liked_list.articles.clear();
+            self.saved_lists.save();
+        }
         self.onboarding_cursor_idx = 0;
         self.onboarding_selected = vec![
             false, false, false, false, true, false, false, true, true, false, false, true,
@@ -226,7 +239,6 @@ impl App {
         self.input_mode = InputMode::CategoryOnboarding;
         self.set_status_message("feed reset: select initial categories");
     }
-
     pub fn active_tab(&self) -> &Tab {
         let idx = self.active_tab_idx.min(self.tabs.len().saturating_sub(1));
         &self.tabs[idx]
@@ -320,7 +332,9 @@ impl App {
             }
             NetworkEvent::FeedBatchLoaded { items } => {
                 self.feed.is_fetching = false;
-                for item in items {
+                for mut item in items {
+                    item.is_liked = self.feed.profile.liked_articles.contains(&item.title)
+                        || self.saved_lists.is_article_in_list("liked", &item.title);
                     self.feed.add_item(item);
                 }
             }
