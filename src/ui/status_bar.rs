@@ -93,4 +93,13 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         .style(status_style)
         .alignment(Alignment::Center);
     f.render_widget(status_paragraph, area);
+
+    if matches!(app.active_pane().content, crate::app::PaneContent::Empty) && !app.feed.active {
+        let version_paragraph = Paragraph::new(ratatui::text::Line::from(ratatui::text::Span::styled(
+            format!("v{} ", env!("CARGO_PKG_VERSION")),
+            Style::default().fg(theme::GREY).italic(),
+        )))
+        .alignment(Alignment::Right);
+        f.render_widget(version_paragraph, area);
+    }
 }
