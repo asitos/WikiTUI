@@ -30,6 +30,7 @@ impl Default for GeneralConfig {
 pub struct ReaderConfig {
     pub scroll_lines: usize,
     pub underline_links: bool,
+    pub show_footnotes: bool,
 }
 
 impl Default for ReaderConfig {
@@ -37,6 +38,7 @@ impl Default for ReaderConfig {
         Self {
             scroll_lines: 1,
             underline_links: false,
+            show_footnotes: true,
         }
     }
 }

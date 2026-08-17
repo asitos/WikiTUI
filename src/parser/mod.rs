@@ -15,7 +15,11 @@ use ratatui::text::{Line, Span};
 use types::StyledToken;
 use utils::{decode_html_entities, extract_title_from_href};
 
-pub fn parse_wikipedia_html(html: &str, max_width: usize) -> ParsedDocument {
+pub fn parse_wikipedia_html(
+    html: &str,
+    max_width: usize,
+    show_footnotes: bool,
+) -> ParsedDocument {
     let mut doc = ParsedDocument::default();
     let effective_width = max_width.max(10);
 
@@ -36,6 +40,7 @@ pub fn parse_wikipedia_html(html: &str, max_width: usize) -> ParsedDocument {
                 &mut doc,
                 effective_width,
                 None,
+                show_footnotes,
             );
         }
     }
@@ -57,6 +62,7 @@ fn process_node<'a>(
     doc: &mut ParsedDocument,
     max_width: usize,
     list_item_idx: Option<usize>,
+    show_footnotes: bool,
 ) {
     match node {
         tl::Node::Raw(bytes) => {
@@ -236,9 +242,28 @@ fn process_node<'a>(
                             | "cite-accessibility-label"
                             | "visually-hidden"
                             | "sr-only"
-                    )
+                    ) || (!show_footnotes
+                        && matches!(
+                            cls,
+                            "reference"
+                                | "reflist"
+                                | "references"
+                                | "mw-references-wrap"
+                                | "references-wrap"
+                        ))
                 }) {
                     return;
+                }
+            }
+
+            if !show_footnotes {
+                if let Some(ref id_str) = id_attr {
+                    if id_str.starts_with("cite_note")
+                        || id_str.starts_with("cite_ref")
+                        || id_str == "mw-references-wrap"
+                    {
+                        return;
+                    }
                 }
             }
 
@@ -247,7 +272,7 @@ fn process_node<'a>(
                     wrap_and_append_block(current_tokens, doc, max_width);
                     current_tokens.clear();
                 }
-                tables::render_table(tag, parser, doc, max_width);
+                tables::render_table(tag, parser, doc, max_width, show_footnotes);
                 return;
             }
 
@@ -421,6 +446,7 @@ fn process_node<'a>(
                         doc,
                         max_width,
                         child_list_idx,
+                        show_footnotes,
                     );
                 }
             }

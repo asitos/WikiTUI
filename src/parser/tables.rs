@@ -35,8 +35,9 @@ pub fn render_table<'a>(
     parser: &'a tl::Parser<'a>,
     doc: &mut ParsedDocument,
     max_width: usize,
+    show_footnotes: bool,
 ) {
-    let grid = match parse_table_into_grid(table_tag, parser) {
+    let grid = match parse_table_into_grid(table_tag, parser, show_footnotes) {
         Some(g) if g.num_rows > 0 && g.num_cols > 0 => g,
         _ => return,
     };
@@ -459,18 +460,17 @@ fn wrap_cell_tokens(
 fn parse_table_into_grid<'a>(
     table_tag: &'a tl::HTMLTag<'a>,
     parser: &'a tl::Parser<'a>,
+    show_footnotes: bool,
 ) -> Option<TableGrid> {
     let mut caption = None;
     let mut raw_tr_elements = Vec::new();
 
-    for child_handle in table_tag.children().top().iter() {
-        if let Some(tl::Node::Tag(child_tag)) = child_handle.get(parser) {
+    for handle in table_tag.children().top().iter() {
+        if let Some(tl::Node::Tag(child_tag)) = handle.get(parser) {
             match child_tag.name().as_utf8_str().as_ref() {
                 "caption" => {
-                    let clean = decode_html_entities(&child_tag.inner_text(parser))
-                        .split_whitespace()
-                        .collect::<Vec<_>>()
-                        .join(" ");
+                    let text = child_tag.inner_text(parser);
+                    let clean = decode_html_entities(&text).trim().to_string();
                     if !clean.is_empty() {
                         caption = Some(clean);
                     }
@@ -532,7 +532,14 @@ fn parse_table_into_grid<'a>(
                     };
 
                     let mut tokens = Vec::new();
-                    collect_cell_tokens(cell_tag, parser, default_style, None, &mut tokens);
+                    collect_cell_tokens(
+                        cell_tag,
+                        parser,
+                        default_style,
+                        None,
+                        &mut tokens,
+                        show_footnotes,
+                    );
 
                     while c < grid[r].len() && grid[r][c].is_some() {
                         c += 1;
@@ -554,17 +561,16 @@ fn parse_table_into_grid<'a>(
                         is_header,
                     });
 
-                    for dr in 0..rowspan {
-                        for dc in 0..colspan {
-                            if dr == 0 && dc == 0 {
+                    for row_offset in 0..rowspan {
+                        for col_offset in 0..colspan {
+                            if row_offset == 0 && col_offset == 0 {
                                 continue;
                             }
-                            grid[r + dr][c + dc] = Some(CellEntry::Covered {
-                                origin_r: r,
-                                origin_c: c,
-                            });
+                            grid[r + row_offset][c + col_offset] =
+                                Some(CellEntry::Covered { origin_r: r, origin_c: c });
                         }
                     }
+
                     c += colspan;
                 }
             }
@@ -572,11 +578,9 @@ fn parse_table_into_grid<'a>(
     }
 
     let num_rows = grid.len();
-    if num_rows == 0 {
-        return None;
-    }
     let num_cols = grid.iter().map(|row| row.len()).max().unwrap_or(0);
-    if num_cols == 0 {
+
+    if num_rows == 0 || num_cols == 0 {
         return None;
     }
 
@@ -611,6 +615,7 @@ fn collect_cell_tokens<'a>(
     style: Style,
     link: Option<String>,
     tokens: &mut Vec<StyledToken>,
+    show_footnotes: bool,
 ) {
     let tag_name = tag.name().as_utf8_str();
     let tag_name_str = tag_name.as_ref();
@@ -623,7 +628,7 @@ fn collect_cell_tokens<'a>(
         .flatten()
         .map(|b| b.as_utf8_str())
     {
-        if cls.contains("reference") {
+        if !show_footnotes && cls.contains("reference") {
             return;
         }
     }
@@ -685,6 +690,7 @@ fn collect_cell_tokens<'a>(
                         current_style,
                         current_link.clone(),
                         tokens,
+                        show_footnotes,
                     );
                 }
                 _ => {}
