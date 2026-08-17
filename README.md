@@ -95,6 +95,7 @@ auto_restore_session = false # when set to true, automatically restore previous 
 
 [reader]
 scroll_lines = 1 # number of lines to scroll per j/k press
+underline_links = false # when set to true, underline all links in articles
 ```
 
 ## acknowledgements

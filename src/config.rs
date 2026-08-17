@@ -29,11 +29,15 @@ impl Default for GeneralConfig {
 #[serde(default)]
 pub struct ReaderConfig {
     pub scroll_lines: usize,
+    pub underline_links: bool,
 }
 
 impl Default for ReaderConfig {
     fn default() -> Self {
-        Self { scroll_lines: 1 }
+        Self {
+            scroll_lines: 1,
+            underline_links: false,
+        }
     }
 }
 

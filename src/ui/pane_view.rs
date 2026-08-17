@@ -160,6 +160,18 @@ fn render_pane_at(
         PaneContent::ArticleText { parsed_doc, .. } => {
             let mut rendered_lines = parsed_doc.lines.clone();
 
+            if app.config.reader.underline_links {
+                for link in &parsed_doc.links {
+                    for &(line_idx, span_idx) in &link.span_indices {
+                        if let Some(line) = rendered_lines.get_mut(line_idx) {
+                            if let Some(span) = line.spans.get_mut(span_idx) {
+                                span.style = span.style.add_modifier(Modifier::UNDERLINED);
+                            }
+                        }
+                    }
+                }
+            }
+
             if let Some(link) = pane
                 .selected_link_idx
                 .and_then(|idx| parsed_doc.links.get(idx))
