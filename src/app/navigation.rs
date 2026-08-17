@@ -61,12 +61,11 @@ impl App {
     pub fn select_next_item(&mut self, term_height: u16) {
         let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
         if is_article {
+            let step = self.config.reader.scroll_lines.max(1);
             let pane = self.active_pane_mut();
             if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                 let max_scroll = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
-                if pane.scroll_offset < max_scroll {
-                    pane.scroll_offset += 1;
-                }
+                pane.scroll_offset = (pane.scroll_offset + step).min(max_scroll);
             }
             self.clamp_link_selection_to_viewport(term_height);
         } else {
@@ -84,10 +83,9 @@ impl App {
     pub fn select_prev_item(&mut self, term_height: u16) {
         let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
         if is_article {
+            let step = self.config.reader.scroll_lines.max(1);
             let pane = self.active_pane_mut();
-            if pane.scroll_offset > 0 {
-                pane.scroll_offset -= 1;
-            }
+            pane.scroll_offset = pane.scroll_offset.saturating_sub(step);
             self.clamp_link_selection_to_viewport(term_height);
         } else {
             let pane = self.active_pane_mut();

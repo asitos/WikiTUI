@@ -3,20 +3,16 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Config {
-    #[serde(default)]
     pub general: GeneralConfig,
-}
-
-fn default_true() -> bool {
-    true
+    pub reader: ReaderConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct GeneralConfig {
-    #[serde(default = "default_true")]
     pub liked_readonly: bool,
-    #[serde(default)]
     pub auto_restore_session: bool,
 }
 
@@ -26,6 +22,18 @@ impl Default for GeneralConfig {
             liked_readonly: true,
             auto_restore_session: false,
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ReaderConfig {
+    pub scroll_lines: usize,
+}
+
+impl Default for ReaderConfig {
+    fn default() -> Self {
+        Self { scroll_lines: 1 }
     }
 }
 

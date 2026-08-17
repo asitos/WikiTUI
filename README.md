@@ -92,6 +92,9 @@ wikid can be configured via `~/.config/wikid/config.toml`.
 [general]
 liked_readonly = true # when set to false, allow deleting items from the "Liked" list
 auto_restore_session = false # when set to true, automatically restore previous session on launch
+
+[reader]
+scroll_lines = 1 # number of lines to scroll per j/k press
 ```
 
 ## acknowledgements
