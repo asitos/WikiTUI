@@ -35,6 +35,13 @@ impl FeedState {
         self.active
     }
 
+    pub fn reset(&mut self) {
+        self.profile.reset();
+        self.items.clear();
+        self.active_idx = 0;
+        self.is_fetching = false;
+    }
+
     pub fn add_item(&mut self, item: FeedItem) {
         self.items.push(item);
     }

@@ -18,6 +18,10 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('l') => {
                 app.toggle_feed_like();
             }
+            KeyCode::Char('r') | KeyCode::Char('R') => {
+                app.confirm_action = Some(crate::app::ConfirmAction::ResetFeed);
+                app.input_mode = crate::app::InputMode::Confirm;
+            }
             KeyCode::Enter => {
                 if let Some(item) = app.feed.current_item().cloned() {
                     app.feed.active = false;

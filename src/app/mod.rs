@@ -12,6 +12,13 @@ use crate::parser::parse_wikipedia_html;
 use std::sync::mpsc::Sender;
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum ConfirmAction {
+    DeleteList { list_id: String, title: String },
+    DeleteArticle { list_id: String, title: String },
+    ResetFeed,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum InputMode {
     Normal,
     Search,
@@ -21,7 +28,7 @@ pub enum InputMode {
     SaveToList,
     CreateNewList,
     SavedListsViewer,
-    ConfirmDelete,
+    Confirm,
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -68,9 +75,7 @@ pub struct App {
     pub viewer_list_idx: usize,
     pub viewer_article_idx: usize,
     pub viewer_focus_right: bool,
-    pub pending_delete_is_list: bool,
-    pub pending_delete_title: String,
-    pub pending_delete_list_id: String,
+    pub confirm_action: Option<ConfirmAction>,
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
 
@@ -90,7 +95,6 @@ impl App {
             search_opens_new_tab: true,
             waiting_for_split_cmd: false,
             zen_mode: false,
-
             feed: crate::feed::FeedState::new(),
             onboarding_cursor_idx: 0,
             onboarding_selected: vec![
@@ -106,9 +110,7 @@ impl App {
             viewer_list_idx: 0,
             viewer_article_idx: 0,
             viewer_focus_right: false,
-            pending_delete_is_list: false,
-            pending_delete_title: String::new(),
-            pending_delete_list_id: String::new(),
+            confirm_action: None,
             closed_tabs_stack: Vec::new(),
             status_message: None,
 
@@ -213,6 +215,16 @@ impl App {
         if self.feed.items.is_empty() {
             self.maybe_fetch_feed_batch();
         }
+    }
+
+    pub fn reset_feed(&mut self) {
+        self.feed.reset();
+        self.onboarding_cursor_idx = 0;
+        self.onboarding_selected = vec![
+            false, false, false, false, true, false, false, true, true, false, false, true,
+        ];
+        self.input_mode = InputMode::CategoryOnboarding;
+        self.set_status_message("feed reset: select initial categories");
     }
 
     pub fn active_tab(&self) -> &Tab {

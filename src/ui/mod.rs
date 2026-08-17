@@ -77,7 +77,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         modals::render_saved_lists_viewer_modal(f, app, size);
     }
 
-    if app.input_mode == InputMode::ConfirmDelete {
-        modals::render_confirm_delete_modal(f, app, size);
+    if app.input_mode == InputMode::Confirm {
+        modals::render_confirm_modal(f, app, size);
     }
 }

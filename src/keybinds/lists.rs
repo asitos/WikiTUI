@@ -126,19 +126,21 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
                 if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {
                     if list.id != "liked" {
                         if let Some(art) = list.articles.get(app.viewer_article_idx) {
-                            app.pending_delete_is_list = false;
-                            app.pending_delete_title = art.clone();
-                            app.pending_delete_list_id = list.id.clone();
-                            app.input_mode = InputMode::ConfirmDelete;
+                            app.confirm_action = Some(crate::app::ConfirmAction::DeleteArticle {
+                                list_id: list.id.clone(),
+                                title: art.clone(),
+                            });
+                            app.input_mode = InputMode::Confirm;
                         }
                     }
                 }
             } else if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {
                 if list.id != "liked" {
-                    app.pending_delete_is_list = true;
-                    app.pending_delete_title = list.name.clone();
-                    app.pending_delete_list_id = list.id.clone();
-                    app.input_mode = InputMode::ConfirmDelete;
+                    app.confirm_action = Some(crate::app::ConfirmAction::DeleteList {
+                        list_id: list.id.clone(),
+                        title: list.name.clone(),
+                    });
+                    app.input_mode = InputMode::Confirm;
                 }
             }
         }
@@ -155,28 +157,40 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
     }
 }
 
-pub fn handle_confirm_delete_mode(app: &mut App, key: KeyEvent) {
+pub fn handle_confirm_mode(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Char('y') | KeyCode::Enter => {
-            if app.pending_delete_is_list {
-                let list_id = app.pending_delete_list_id.clone();
-                app.saved_lists.delete_list(&list_id);
-                if app.viewer_list_idx > 0 {
-                    app.viewer_list_idx -= 1;
+            match app.confirm_action.take() {
+                Some(crate::app::ConfirmAction::DeleteList { list_id, .. }) => {
+                    app.saved_lists.delete_list(&list_id);
+                    if app.viewer_list_idx > 0 {
+                        app.viewer_list_idx -= 1;
+                    }
+                    app.viewer_article_idx = 0;
+                    app.input_mode = InputMode::SavedListsViewer;
                 }
-                app.viewer_article_idx = 0;
-            } else {
-                let list_id = app.pending_delete_list_id.clone();
-                let title = app.pending_delete_title.clone();
-                app.saved_lists.toggle_article_in_list(&list_id, &title);
-                if app.viewer_article_idx > 0 {
-                    app.viewer_article_idx -= 1;
+                Some(crate::app::ConfirmAction::DeleteArticle { list_id, title }) => {
+                    app.saved_lists.toggle_article_in_list(&list_id, &title);
+                    if app.viewer_article_idx > 0 {
+                        app.viewer_article_idx -= 1;
+                    }
+                    app.input_mode = InputMode::SavedListsViewer;
+                }
+                Some(crate::app::ConfirmAction::ResetFeed) => {
+                    app.reset_feed();
+                }
+                None => {
+                    app.input_mode = InputMode::Normal;
                 }
             }
-            app.input_mode = InputMode::SavedListsViewer;
         }
         KeyCode::Char('n') | KeyCode::Esc => {
-            app.input_mode = InputMode::SavedListsViewer;
+            let action = app.confirm_action.take();
+            if matches!(action, Some(crate::app::ConfirmAction::ResetFeed)) {
+                app.input_mode = InputMode::Normal;
+            } else {
+                app.input_mode = InputMode::SavedListsViewer;
+            }
         }
         _ => {}
     }

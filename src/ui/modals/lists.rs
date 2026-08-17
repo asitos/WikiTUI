@@ -150,7 +150,6 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let left_area = chunks[0];
     let right_area = chunks[1];
 
-    // left lists pane
     let left_border_color = if !app.viewer_focus_right {
         theme::VIOLET
     } else {
@@ -192,7 +191,6 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let left_p = Paragraph::new(list_lines).block(left_block);
     f.render_widget(left_p, left_area);
 
-    // right articles pane
     let right_border_color = if app.viewer_focus_right {
         theme::VIOLET
     } else {
@@ -239,39 +237,74 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     f.render_widget(right_p, right_area);
 }
 
-pub fn render_confirm_delete_modal(f: &mut Frame, app: &App, size: Rect) {
+pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(50, 30, size);
     f.render_widget(Clear, area);
 
+    let modal_title = match &app.confirm_action {
+        Some(crate::app::ConfirmAction::ResetFeed) => " confirm feed reset ",
+        _ => " confirm deletion ",
+    };
+
     let block = Block::bordered()
-        .title(Title::from(" confirm deletion ").alignment(Alignment::Center))
+        .title(Title::from(modal_title).alignment(Alignment::Center))
         .border_style(Style::default().fg(theme::VIOLET))
         .style(Style::default().bg(theme::BG));
 
-    let item_type = if app.pending_delete_is_list {
-        "custom list"
-    } else {
-        "article"
+    let lines = match &app.confirm_action {
+        Some(crate::app::ConfirmAction::DeleteList { title, .. }) => {
+            vec![
+                Line::from("are you sure you want to delete:"),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("custom list: ", Style::default().fg(theme::GREY)),
+                    Span::styled(title, Style::default().fg(theme::YELLOW).bold()),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
+                    Span::styled("delete   ", Style::default().fg(theme::FG)),
+                    Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
+                    Span::styled("cancel", Style::default().fg(theme::FG)),
+                ]),
+            ]
+        }
+        Some(crate::app::ConfirmAction::DeleteArticle { title, .. }) => {
+            vec![
+                Line::from("are you sure you want to delete:"),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("article: ", Style::default().fg(theme::GREY)),
+                    Span::styled(title, Style::default().fg(theme::YELLOW).bold()),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
+                    Span::styled("delete   ", Style::default().fg(theme::FG)),
+                    Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
+                    Span::styled("cancel", Style::default().fg(theme::FG)),
+                ]),
+            ]
+        }
+        Some(crate::app::ConfirmAction::ResetFeed) => {
+            vec![
+                Line::from("are you sure you want to reset your feed?"),
+                Line::from(""),
+                Line::from(Span::styled(
+                    "all category scores and preferences will be cleared",
+                    Style::default().fg(theme::YELLOW),
+                )),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
+                    Span::styled("reset   ", Style::default().fg(theme::FG)),
+                    Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
+                    Span::styled("cancel", Style::default().fg(theme::FG)),
+                ]),
+            ]
+        }
+        None => Vec::new(),
     };
-
-    let lines = vec![
-        Line::from("are you sure you want to delete:"),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(format!("{}: ", item_type), Style::default().fg(theme::GREY)),
-            Span::styled(
-                &app.pending_delete_title,
-                Style::default().fg(theme::YELLOW).bold(),
-            ),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
-            Span::styled("delete   ", Style::default().fg(theme::FG)),
-            Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
-            Span::styled("cancel", Style::default().fg(theme::FG)),
-        ]),
-    ];
 
     let p = Paragraph::new(lines)
         .alignment(Alignment::Center)

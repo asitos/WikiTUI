@@ -37,15 +37,19 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         InputMode::SavedListsViewer => {
             "h/l: switch pane | j/k: navigate | enter: open | d: delete".to_string()
         }
-        InputMode::ConfirmDelete => "".to_string(),
+        InputMode::Confirm => "".to_string(),
         InputMode::Normal => {
-            let pane = app.active_pane();
-            if pane.toc_focused {
-                "j/k: navigate contents | enter: jump | o: close".to_string()
-            } else if let Some(link) = pane.focused_link().filter(|l| l.is_external()) {
-                format!("↗ external link: {} | enter/y: copy URL", link.title)
+            if app.feed.active {
+                "j/k: next/prev | l: like | enter: read | t: tab | r: reset feed | esc: exit".to_string()
             } else {
-                "ctrl-s: search | r: random | F: feed | ?: help | q: quit".to_string()
+                let pane = app.active_pane();
+                if pane.toc_focused {
+                    "j/k: navigate contents | enter: jump | o: close".to_string()
+                } else if let Some(link) = pane.focused_link().filter(|l| l.is_external()) {
+                    format!("↗ external link: {} | enter/y: copy URL", link.title)
+                } else {
+                    "ctrl-s: search | r: random | F: feed | ?: help | q: quit".to_string()
+                }
             }
         }
     };
@@ -57,7 +61,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         InputMode::SaveToList
         | InputMode::CreateNewList
         | InputMode::SavedListsViewer
-        | InputMode::ConfirmDelete => Style::default().fg(theme::VIOLET).bold(),
+        | InputMode::Confirm => Style::default().fg(theme::VIOLET).bold(),
         InputMode::Help => Style::default().fg(theme::GREY).bold(),
         InputMode::Normal => {
             if app

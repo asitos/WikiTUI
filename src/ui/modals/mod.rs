@@ -7,7 +7,7 @@ pub mod utils;
 
 pub use help::render_help_modal;
 pub use lists::{
-    render_confirm_delete_modal, render_create_new_list_modal, render_save_to_list_modal,
+    render_confirm_modal, render_create_new_list_modal, render_save_to_list_modal,
     render_saved_lists_viewer_modal,
 };
 pub use onboarding::render_category_onboarding_modal;

@@ -74,6 +74,11 @@ impl FeedProfile {
         }
     }
 
+    pub fn reset(&mut self) {
+        *self = Self::default();
+        self.save();
+    }
+
     pub fn record_engagement(&mut self, categories: &[String], points: i32) {
         for cat in categories {
             let cat_lower = cat.to_lowercase();
