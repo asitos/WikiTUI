@@ -519,6 +519,12 @@ fn process_node<'a>(
                         "h3" | "h4" => current_style.fg(theme::ORANGE).add_modifier(Modifier::BOLD),
                         _ => current_style.fg(theme::YELLOW).add_modifier(Modifier::BOLD),
                     };
+
+                    current_tokens.push(StyledToken {
+                        text: "▍".to_string(),
+                        style: current_style,
+                        link_target: None,
+                    });
                 }
                 "b" | "strong" => {
                     current_style = current_style.add_modifier(Modifier::BOLD);
