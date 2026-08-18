@@ -161,8 +161,8 @@ fn render_pane_at(
         }
         PaneContent::ArticleText { parsed_doc, .. } => {
             let view_start = pane.scroll_offset;
-            let view_len = (pane.viewport_height + 2)
-                .min(parsed_doc.lines.len().saturating_sub(view_start));
+            let view_len =
+                (pane.viewport_height + 2).min(parsed_doc.lines.len().saturating_sub(view_start));
             let view_end = view_start + view_len;
 
             let mut rendered_lines: Vec<Line<'static>> = parsed_doc

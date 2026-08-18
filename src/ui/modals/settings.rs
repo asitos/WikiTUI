@@ -47,7 +47,9 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                 Span::styled(" ", Style::default()),
                 Span::styled(
                     format!("[{}]", section),
-                    Style::default().fg(theme::VIOLET).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::VIOLET)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]));
             current_section = section;

@@ -43,7 +43,8 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         }
         InputMode::Normal => {
             if app.feed.active {
-                "j/k: next/prev | l: like | enter: read | t: tab | r: reset feed | esc: exit".to_string()
+                "j/k: next/prev | l: like | enter: read | t: tab | r: reset feed | esc: exit"
+                    .to_string()
             } else {
                 let pane = app.active_pane();
                 if pane.toc_focused {
@@ -51,7 +52,8 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 } else if let Some(link) = pane.focused_link().filter(|l| l.is_external()) {
                     format!("↗ external link: {} | enter/y: copy URL", link.title)
                 } else {
-                    "ctrl-s: search | r: random | F: feed | ,: settings | ?: help | q: quit".to_string()
+                    "ctrl-s: search | r: random | F: feed | ,: settings | ?: help | q: quit"
+                        .to_string()
                 }
             }
         }
@@ -99,11 +101,12 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(status_paragraph, area);
 
     if matches!(app.active_pane().content, crate::app::PaneContent::Empty) && !app.feed.active {
-        let version_paragraph = Paragraph::new(ratatui::text::Line::from(ratatui::text::Span::styled(
-            format!("v{} ", env!("CARGO_PKG_VERSION")),
-            Style::default().fg(theme::GREY).italic(),
-        )))
-        .alignment(Alignment::Right);
+        let version_paragraph =
+            Paragraph::new(ratatui::text::Line::from(ratatui::text::Span::styled(
+                format!("v{} ", env!("CARGO_PKG_VERSION")),
+                Style::default().fg(theme::GREY).italic(),
+            )))
+            .alignment(Alignment::Right);
         f.render_widget(version_paragraph, area);
     }
 }

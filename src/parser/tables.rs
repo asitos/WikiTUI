@@ -653,8 +653,10 @@ fn parse_table_into_grid<'a>(
                             if row_offset == 0 && col_offset == 0 {
                                 continue;
                             }
-                            grid[r + row_offset][c + col_offset] =
-                                Some(CellEntry::Covered { origin_r: r, origin_c: c });
+                            grid[r + row_offset][c + col_offset] = Some(CellEntry::Covered {
+                                origin_r: r,
+                                origin_c: c,
+                            });
                         }
                     }
 

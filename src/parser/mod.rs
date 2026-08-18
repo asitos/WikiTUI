@@ -56,19 +56,36 @@ fn heading_info<'a>(
         .map(|b| decode_html_entities(&b.as_utf8_str()));
 
     if matches!(tag_name.as_ref(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
-        let level = tag_name.chars().nth(1).and_then(|c| c.to_digit(10)).unwrap_or(1) as u8;
-        let title = decode_html_entities(&tag.inner_text(parser)).trim().to_string();
+        let level = tag_name
+            .chars()
+            .nth(1)
+            .and_then(|c| c.to_digit(10))
+            .unwrap_or(1) as u8;
+        let title = decode_html_entities(&tag.inner_text(parser))
+            .trim()
+            .to_string();
         return Some((level, title, id_attr));
     }
 
-    if let Some(cls) = tag.attributes().get("class").flatten().map(|b| b.as_utf8_str()) {
+    if let Some(cls) = tag
+        .attributes()
+        .get("class")
+        .flatten()
+        .map(|b| b.as_utf8_str())
+    {
         if cls.contains("mw-heading") {
             for child_handle in tag.children().top().iter() {
                 if let Some(tl::Node::Tag(child_tag)) = child_handle.get(parser) {
                     let child_name = child_tag.name().as_utf8_str();
                     if matches!(child_name.as_ref(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
-                        let level = child_name.chars().nth(1).and_then(|c| c.to_digit(10)).unwrap_or(1) as u8;
-                        let title = decode_html_entities(&child_tag.inner_text(parser)).trim().to_string();
+                        let level = child_name
+                            .chars()
+                            .nth(1)
+                            .and_then(|c| c.to_digit(10))
+                            .unwrap_or(1) as u8;
+                        let title = decode_html_entities(&child_tag.inner_text(parser))
+                            .trim()
+                            .to_string();
                         let child_id = child_tag
                             .attributes()
                             .get("id")
@@ -193,8 +210,7 @@ fn process_node<'a>(
                         || lower_id == "externallinks");
 
                 let is_refs = !show_footnotes
-                    && (is_references_heading(&title)
-                        || is_references_id(&lower_id));
+                    && (is_references_heading(&title) || is_references_id(&lower_id));
 
                 if is_ext {
                     *skipping_external_section = true;
@@ -438,7 +454,9 @@ fn process_node<'a>(
                     for child_handle in tag.children().top().iter() {
                         if let Some(tl::Node::Tag(pre_tag)) = child_handle.get(parser) {
                             if pre_tag.name().as_utf8_str() == "pre" {
-                                codeblocks::render_code_block(pre_tag, parser, doc, max_width, lang);
+                                codeblocks::render_code_block(
+                                    pre_tag, parser, doc, max_width, lang,
+                                );
                                 return;
                             }
                         }
