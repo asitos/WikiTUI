@@ -45,7 +45,6 @@ impl FeedProfile {
             let mut dir = PathBuf::from(home);
             dir.push(".config");
             dir.push("wikid");
-            let _ = fs::create_dir_all(&dir);
             dir.push("feed_profile.json");
             dir
         } else {
@@ -69,6 +68,9 @@ impl FeedProfile {
 
     pub fn save(&self) {
         let path = Self::profile_path();
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
         if let Ok(pretty_json) = serde_json::to_string_pretty(self) {
             let _ = fs::write(path, pretty_json);
         }

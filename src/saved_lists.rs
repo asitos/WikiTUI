@@ -34,7 +34,6 @@ impl SavedListsStore {
             let mut dir = PathBuf::from(home);
             dir.push(".config");
             dir.push("wikid");
-            let _ = fs::create_dir_all(&dir);
             dir.push("saved_articles.json");
             dir
         } else {
@@ -59,6 +58,9 @@ impl SavedListsStore {
 
     pub fn save(&self) {
         let path = Self::file_path();
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
         if let Ok(pretty_json) = serde_json::to_string_pretty(self) {
             let _ = fs::write(path, pretty_json);
         }

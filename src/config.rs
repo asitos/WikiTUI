@@ -53,7 +53,6 @@ impl Config {
             let mut dir = PathBuf::from(home);
             dir.push(".config");
             dir.push("wikid");
-            let _ = fs::create_dir_all(&dir);
             dir.push("config.toml");
             dir
         } else {
@@ -95,6 +94,9 @@ impl Config {
 
     pub fn save(&self) {
         let path = Self::config_path();
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
         if let Ok(content) = toml::to_string_pretty(self) {
             let _ = fs::write(path, content);
         }
