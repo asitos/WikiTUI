@@ -18,6 +18,16 @@ use wikid::app::App;
 use wikid::keybinds;
 use wikid::ui;
 
+fn restore_terminal() {
+    let _ = disable_raw_mode();
+    let _ = execute!(
+        io::stdout(),
+        LeaveAlternateScreen,
+        DisableMouseCapture,
+        PopKeyboardEnhancementFlags
+    );
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -27,6 +37,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         EnableMouseCapture,
         PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
     );
+
+    let original_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        restore_terminal();
+        original_hook(panic_info);
+    }));
+
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -37,19 +54,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         api::run_worker(cmd_rx, ev_tx);
     });
 
-    let original_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |panic_info| {
-        let _ = disable_raw_mode();
-        let _ = execute!(
-            io::stdout(),
-            LeaveAlternateScreen,
-            DisableMouseCapture,
-            PopKeyboardEnhancementFlags
-        );
-        original_hook(panic_info);
-    }));
-
     let mut app = App::new(cmd_tx.clone());
+    let run_res = run_app(&mut terminal, &mut app, &ev_rx);
+
+    restore_terminal();
+    let _ = terminal.show_cursor();
+
+    drop(app);
+    drop(cmd_tx);
+    let _ = worker.join();
+
+    run_res
+}
+
+fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    ev_rx: &mpsc::Receiver<NetworkEvent>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let tick_rate = Duration::from_millis(250);
     let mut last_tick = Instant::now();
 
@@ -60,19 +82,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             app.handle_network_event(ev);
         }
 
-        terminal.draw(|f| ui::draw(f, &mut app))?;
+        terminal.draw(|f| ui::draw(f, app))?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if event::poll(timeout)? {
-            match event::read() {
-                Ok(Event::Key(key)) if key.kind == event::KeyEventKind::Press => {
+            if let Ok(Event::Key(key)) = event::read() {
+                if key.kind == event::KeyEventKind::Press {
                     let size = terminal.size()?;
-                    keybinds::handle_key_event(&mut app, key, size.width, size.height);
+                    keybinds::handle_key_event(app, key, size.width, size.height);
                 }
-                _ => {}
             }
         }
 
@@ -80,19 +101,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             last_tick = Instant::now();
         }
     }
-
-    disable_raw_mode()?;
-    let _ = execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture,
-        PopKeyboardEnhancementFlags
-    );
-    terminal.show_cursor()?;
-
-    drop(app);
-    drop(cmd_tx);
-    let _ = worker.join();
 
     Ok(())
 }
