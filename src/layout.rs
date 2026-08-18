@@ -1,12 +1,13 @@
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SplitDirection {
     Horizontal,
     Vertical,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LayoutNode {
     Leaf(usize),
     Split {
@@ -14,6 +15,12 @@ pub enum LayoutNode {
         left: Box<LayoutNode>,
         right: Box<LayoutNode>,
     },
+}
+
+impl Default for LayoutNode {
+    fn default() -> Self {
+        LayoutNode::Leaf(0)
+    }
 }
 
 impl LayoutNode {

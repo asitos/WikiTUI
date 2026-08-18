@@ -16,6 +16,8 @@ pub struct SavedPaneState {
 pub struct SavedTabState {
     pub panes: Vec<SavedPaneState>,
     pub active_pane_idx: usize,
+    #[serde(default)]
+    pub layout_root: crate::layout::LayoutNode,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -63,21 +65,24 @@ impl SessionState {
         let mut saved_tabs = Vec::new();
         for tab in &app.tabs {
             let mut saved_panes = Vec::new();
+            let mut has_content = false;
             for pane in &tab.panes {
                 if pane.title().is_some() || !pane.history_back.is_empty() {
-                    saved_panes.push(SavedPaneState {
-                        title: pane.title(),
-                        scroll_offset: pane.scroll_offset,
-                        history_back: pane.history_back.clone(),
-                        history_forward: pane.history_forward.clone(),
-                    });
+                    has_content = true;
                 }
+                saved_panes.push(SavedPaneState {
+                    title: pane.title(),
+                    scroll_offset: pane.scroll_offset,
+                    history_back: pane.history_back.clone(),
+                    history_forward: pane.history_forward.clone(),
+                });
             }
-            if !saved_panes.is_empty() {
+            if has_content && !saved_panes.is_empty() {
                 let active_idx = tab.active_pane_idx.min(saved_panes.len() - 1);
                 saved_tabs.push(SavedTabState {
                     panes: saved_panes,
                     active_pane_idx: active_idx,
+                    layout_root: tab.layout_root.clone(),
                 });
             }
         }
@@ -130,7 +135,7 @@ impl SessionState {
                 name: tab_title,
                 panes,
                 active_pane_idx: active_idx,
-                layout_root: crate::layout::LayoutNode::Leaf(0),
+                layout_root: saved_tab.layout_root,
             });
         }
         if !app.tabs.is_empty() {
