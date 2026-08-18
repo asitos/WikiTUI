@@ -160,14 +160,27 @@ fn render_pane_at(
             }
         }
         PaneContent::ArticleText { parsed_doc, .. } => {
-            let mut rendered_lines = parsed_doc.lines.clone();
+            let view_start = pane.scroll_offset;
+            let view_len = (pane.viewport_height + 2)
+                .min(parsed_doc.lines.len().saturating_sub(view_start));
+            let view_end = view_start + view_len;
+
+            let mut rendered_lines: Vec<Line<'static>> = parsed_doc
+                .lines
+                .iter()
+                .skip(view_start)
+                .take(view_len)
+                .cloned()
+                .collect();
 
             if app.config.reader.underline_links {
                 for link in &parsed_doc.links {
                     for &(line_idx, span_idx) in &link.span_indices {
-                        if let Some(line) = rendered_lines.get_mut(line_idx) {
-                            if let Some(span) = line.spans.get_mut(span_idx) {
-                                span.style = span.style.add_modifier(Modifier::UNDERLINED);
+                        if line_idx >= view_start && line_idx < view_end {
+                            if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
+                                if let Some(span) = line.spans.get_mut(span_idx) {
+                                    span.style = span.style.add_modifier(Modifier::UNDERLINED);
+                                }
                             }
                         }
                     }
@@ -179,25 +192,27 @@ fn render_pane_at(
                 .and_then(|idx| parsed_doc.links.get(idx))
             {
                 for &(line_idx, span_idx) in &link.span_indices {
-                    if let Some(line) = rendered_lines.get_mut(line_idx) {
-                        if let Some(span) = line.spans.get_mut(span_idx) {
-                            span.style = Style::default()
-                                .fg(theme::VIOLET)
-                                .bold()
-                                .add_modifier(Modifier::UNDERLINED);
+                    if line_idx >= view_start && line_idx < view_end {
+                        if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
+                            if let Some(span) = line.spans.get_mut(span_idx) {
+                                span.style = Style::default()
+                                    .fg(theme::VIOLET)
+                                    .bold()
+                                    .add_modifier(Modifier::UNDERLINED);
+                            }
                         }
                     }
                 }
             }
 
-            // highlight local search matches
             let query = pane.local_search_query.to_lowercase();
             if !query.trim().is_empty() {
                 let active_match = pane
                     .selected_match_idx
                     .and_then(|idx| pane.local_matches.get(idx));
 
-                for (line_idx, line) in rendered_lines.iter_mut().enumerate() {
+                for (local_idx, line) in rendered_lines.iter_mut().enumerate() {
+                    let line_idx = view_start + local_idx;
                     let full_line_text: String =
                         line.spans.iter().map(|s| s.content.as_ref()).collect();
                     let full_lower = full_line_text.to_lowercase();
@@ -271,9 +286,7 @@ fn render_pane_at(
                 }
             }
 
-            let paragraph = Paragraph::new(rendered_lines)
-                .block(block)
-                .scroll((pane.scroll_offset as u16, 0));
+            let paragraph = Paragraph::new(rendered_lines).block(block);
             f.render_widget(paragraph, rect);
 
             if is_active && pane.show_toc && !parsed_doc.headings.is_empty() {
