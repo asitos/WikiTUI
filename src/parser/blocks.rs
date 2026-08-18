@@ -38,8 +38,8 @@ pub(crate) fn wrap_and_append_block(
             let word_len = unicode_width::UnicodeWidthStr::width(word);
 
             if current_line_len + word_len > max_width && current_line_len > 0 {
-                doc.lines.push(Line::from(current_line_spans.clone()));
-                current_line_spans.clear();
+                doc.lines
+                    .push(Line::from(std::mem::take(&mut current_line_spans)));
                 current_line_len = 0;
             }
 
