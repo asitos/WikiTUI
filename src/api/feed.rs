@@ -24,6 +24,56 @@ struct WikiFeedResponse {
     query: Option<WikiFeedQuery>,
 }
 
+fn parse_feed_items(query: WikiFeedQuery) -> Vec<FeedItem> {
+    let mut items = Vec::new();
+    if let Some(pages) = query.pages {
+        for (_, page) in pages {
+            if let Some(title) = page.title {
+                let short_description = page.description.filter(|d| !d.trim().is_empty());
+                let snippet = page.extract.unwrap_or_default().trim().to_string();
+                let mut categories: Vec<String> = page
+                    .categories
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|c| {
+                        if let Some(stripped) = c.title.strip_prefix("Category:") {
+                            stripped.to_string()
+                        } else {
+                            c.title
+                        }
+                    })
+                    .filter(|cat| {
+                        let lower = cat.to_lowercase();
+                        !lower.starts_with("all ")
+                            && !lower.starts_with("articles ")
+                            && !lower.starts_with("cs1 ")
+                            && !lower.contains("stubs")
+                            && !lower.contains("tracking")
+                    })
+                    .collect();
+
+                if categories.is_empty() {
+                    categories = title
+                        .split(|c: char| !c.is_alphanumeric())
+                        .filter(|w| w.len() > 3)
+                        .map(|w| w.to_lowercase())
+                        .take(3)
+                        .collect();
+                }
+
+                items.push(FeedItem {
+                    title,
+                    short_description,
+                    snippet,
+                    categories,
+                    is_liked: false,
+                });
+            }
+        }
+    }
+    items
+}
+
 fn fetch_category_items(agent: &ureq::Agent, category: &str) -> Result<Vec<FeedItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let category_title = format!("Category:{}", category);
@@ -44,56 +94,7 @@ fn fetch_category_items(agent: &ureq::Agent, category: &str) -> Result<Vec<FeedI
         .map_err(|e| format!("network error: {}", e))?;
 
     let feed_resp: WikiFeedResponse = res.into_json().map_err(|e| format!("parse error: {}", e))?;
-
-    let mut items = Vec::new();
-    if let Some(query) = feed_resp.query {
-        if let Some(pages) = query.pages {
-            for (_, page) in pages {
-                if let Some(title) = page.title {
-                    let short_description = page.description.filter(|d| !d.trim().is_empty());
-                    let snippet = page.extract.unwrap_or_default().trim().to_string();
-                    let mut categories: Vec<String> = page
-                        .categories
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|c| {
-                            if let Some(stripped) = c.title.strip_prefix("Category:") {
-                                stripped.to_string()
-                            } else {
-                                c.title
-                            }
-                        })
-                        .filter(|cat| {
-                            let lower = cat.to_lowercase();
-                            !lower.starts_with("all ")
-                                && !lower.starts_with("articles ")
-                                && !lower.starts_with("cs1 ")
-                                && !lower.contains("stubs")
-                                && !lower.contains("tracking")
-                        })
-                        .collect();
-
-                    if categories.is_empty() {
-                        categories = title
-                            .split(|c: char| !c.is_alphanumeric())
-                            .filter(|w| w.len() > 3)
-                            .map(|w| w.to_lowercase())
-                            .take(3)
-                            .collect();
-                    }
-
-                    items.push(FeedItem {
-                        title,
-                        short_description,
-                        snippet,
-                        categories,
-                        is_liked: false,
-                    });
-                }
-            }
-        }
-    }
-    Ok(items)
+    Ok(feed_resp.query.map(parse_feed_items).unwrap_or_default())
 }
 
 fn fetch_random_items(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
@@ -114,56 +115,7 @@ fn fetch_random_items(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
         .map_err(|e| format!("network error: {}", e))?;
 
     let feed_resp: WikiFeedResponse = res.into_json().map_err(|e| format!("parse error: {}", e))?;
-
-    let mut items = Vec::new();
-    if let Some(query) = feed_resp.query {
-        if let Some(pages) = query.pages {
-            for (_, page) in pages {
-                if let Some(title) = page.title {
-                    let short_description = page.description.filter(|d| !d.trim().is_empty());
-                    let snippet = page.extract.unwrap_or_default().trim().to_string();
-                    let mut categories: Vec<String> = page
-                        .categories
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|c| {
-                            if let Some(stripped) = c.title.strip_prefix("Category:") {
-                                stripped.to_string()
-                            } else {
-                                c.title
-                            }
-                        })
-                        .filter(|cat| {
-                            let lower = cat.to_lowercase();
-                            !lower.starts_with("all ")
-                                && !lower.starts_with("articles ")
-                                && !lower.starts_with("cs1 ")
-                                && !lower.contains("stubs")
-                                && !lower.contains("tracking")
-                        })
-                        .collect();
-
-                    if categories.is_empty() {
-                        categories = title
-                            .split(|c: char| !c.is_alphanumeric())
-                            .filter(|w| w.len() > 3)
-                            .map(|w| w.to_lowercase())
-                            .take(3)
-                            .collect();
-                    }
-
-                    items.push(FeedItem {
-                        title,
-                        short_description,
-                        snippet,
-                        categories,
-                        is_liked: false,
-                    });
-                }
-            }
-        }
-    }
-    Ok(items)
+    Ok(feed_resp.query.map(parse_feed_items).unwrap_or_default())
 }
 
 pub fn fetch_feed_batch(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
