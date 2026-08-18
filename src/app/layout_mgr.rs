@@ -62,7 +62,7 @@ impl App {
                 }
             }
             if self.active_tab_idx >= self.tabs.len() {
-                self.active_tab_idx = self.tabs.len() - 1;
+                self.active_tab_idx = self.tabs.len().saturating_sub(1);
             }
         } else {
             let old_tab = &self.tabs[0];
@@ -116,7 +116,7 @@ impl App {
 
             let removed_pane = tab.panes.remove(target_idx);
             if tab.active_pane_idx >= tab.panes.len() {
-                tab.active_pane_idx = tab.panes.len() - 1;
+                tab.active_pane_idx = tab.panes.len().saturating_sub(1);
             }
             removed_pane
                 .title()
