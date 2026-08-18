@@ -1,5 +1,6 @@
 pub mod banners;
 pub mod blocks;
+pub mod codeblocks;
 pub mod tables;
 pub mod types;
 pub mod utils;
@@ -417,6 +418,34 @@ fn process_node<'a>(
                 return;
             }
 
+            if tag_name == "pre" {
+                if !current_tokens.is_empty() {
+                    wrap_and_append_block(current_tokens, doc, max_width);
+                    current_tokens.clear();
+                }
+                let lang = codeblocks::extract_language(tag);
+                codeblocks::render_code_block(tag, parser, doc, max_width, lang);
+                return;
+            }
+
+            if let Some(ref class_str) = class_attr {
+                if class_str.contains("mw-highlight") {
+                    if !current_tokens.is_empty() {
+                        wrap_and_append_block(current_tokens, doc, max_width);
+                        current_tokens.clear();
+                    }
+                    let lang = codeblocks::extract_language(tag);
+                    for child_handle in tag.children().top().iter() {
+                        if let Some(tl::Node::Tag(pre_tag)) = child_handle.get(parser) {
+                            if pre_tag.name().as_utf8_str() == "pre" {
+                                codeblocks::render_code_block(pre_tag, parser, doc, max_width, lang);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
             let is_block_element = matches!(
                 tag_name,
                 "p" | "h1"
@@ -478,6 +507,9 @@ fn process_node<'a>(
                 }
                 "i" | "em" => {
                     current_style = current_style.add_modifier(Modifier::ITALIC);
+                }
+                "code" | "kbd" | "samp" | "tt" => {
+                    current_style = current_style.fg(theme::ORANGE);
                 }
                 "a" => {
                     current_style = current_style.fg(theme::BLUE);
