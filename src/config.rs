@@ -45,6 +45,8 @@ impl Default for ReaderConfig {
     }
 }
 
+use std::time::SystemTime;
+
 impl Config {
     pub fn config_path() -> PathBuf {
         if let Ok(home) = std::env::var("HOME") {
@@ -59,6 +61,11 @@ impl Config {
         }
     }
 
+    pub fn get_modified_time() -> Option<SystemTime> {
+        let path = Self::config_path();
+        fs::metadata(&path).ok().and_then(|m| m.modified().ok())
+    }
+
     pub fn load() -> Self {
         let path = Self::config_path();
         if let Ok(content) = fs::read_to_string(&path) {
@@ -69,6 +76,21 @@ impl Config {
         let config = Self::default();
         config.save();
         config
+    }
+
+    pub fn reload_if_changed(&mut self, last_mtime: &mut Option<SystemTime>) -> bool {
+        let current_mtime = Self::get_modified_time();
+        if current_mtime.is_some() && current_mtime != *last_mtime {
+            *last_mtime = current_mtime;
+            let path = Self::config_path();
+            if let Ok(content) = fs::read_to_string(&path) {
+                if let Ok(new_config) = toml::from_str::<Config>(&content) {
+                    *self = new_config;
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn save(&self) {

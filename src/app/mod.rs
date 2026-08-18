@@ -77,6 +77,8 @@ pub struct App {
     pub viewer_focus_right: bool,
     pub confirm_action: Option<ConfirmAction>,
     pub config: crate::config::Config,
+    pub config_last_mtime: Option<std::time::SystemTime>,
+    pub last_config_check: std::time::Instant,
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
 
@@ -113,6 +115,8 @@ impl App {
             viewer_focus_right: false,
             confirm_action: None,
             config: crate::config::Config::load(),
+            config_last_mtime: crate::config::Config::get_modified_time(),
+            last_config_check: std::time::Instant::now(),
             closed_tabs_stack: Vec::new(),
             status_message: None,
 
@@ -137,6 +141,13 @@ impl App {
             app.tabs.push(Tab::new("home".to_string(), 0));
         }
         app
+    }
+
+    pub fn check_config_sync(&mut self) {
+        if self.last_config_check.elapsed() >= std::time::Duration::from_millis(500) {
+            self.last_config_check = std::time::Instant::now();
+            self.config.reload_if_changed(&mut self.config_last_mtime);
+        }
     }
 
     pub fn save_session(&self) {

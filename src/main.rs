@@ -54,6 +54,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut last_tick = Instant::now();
 
     while app.running {
+        app.check_config_sync();
+
         while let Ok(ev) = ev_rx.try_recv() {
             app.handle_network_event(ev);
         }
