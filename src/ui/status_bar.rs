@@ -38,6 +38,9 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             "h/l: switch pane | j/k: navigate | enter: open | d: delete".to_string()
         }
         InputMode::Confirm => "".to_string(),
+        InputMode::Settings => {
+            "j/k: navigate | space/enter: toggle | h/l: adjust | r: reset | esc: close".to_string()
+        }
         InputMode::Normal => {
             if app.feed.active {
                 "j/k: next/prev | l: like | enter: read | t: tab | r: reset feed | esc: exit".to_string()
@@ -48,7 +51,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 } else if let Some(link) = pane.focused_link().filter(|l| l.is_external()) {
                     format!("↗ external link: {} | enter/y: copy URL", link.title)
                 } else {
-                    "ctrl-s: search | r: random | F: feed | ?: help | q: quit".to_string()
+                    "ctrl-s: search | r: random | F: feed | ,: settings | ?: help | q: quit".to_string()
                 }
             }
         }
@@ -62,6 +65,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         | InputMode::CreateNewList
         | InputMode::SavedListsViewer
         | InputMode::Confirm => Style::default().fg(theme::VIOLET).bold(),
+        InputMode::Settings => Style::default().fg(theme::ORANGE).bold(),
         InputMode::Help => Style::default().fg(theme::GREY).bold(),
         InputMode::Normal => {
             if app

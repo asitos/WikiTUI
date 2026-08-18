@@ -18,6 +18,59 @@ pub enum ConfirmAction {
     ResetFeed,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SettingItem {
+    LikedReadonly,
+    AutoRestoreSession,
+    ScrollLines,
+    UnderlineLinks,
+    ShowFootnotes,
+    ShowExternalLinks,
+}
+
+impl SettingItem {
+    pub const ALL: &'static [SettingItem] = &[
+        SettingItem::LikedReadonly,
+        SettingItem::AutoRestoreSession,
+        SettingItem::ScrollLines,
+        SettingItem::UnderlineLinks,
+        SettingItem::ShowFootnotes,
+        SettingItem::ShowExternalLinks,
+    ];
+
+    pub fn section(&self) -> &'static str {
+        match self {
+            SettingItem::LikedReadonly | SettingItem::AutoRestoreSession => "general",
+            SettingItem::ScrollLines
+            | SettingItem::UnderlineLinks
+            | SettingItem::ShowFootnotes
+            | SettingItem::ShowExternalLinks => "reader",
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            SettingItem::LikedReadonly => "liked list read-only",
+            SettingItem::AutoRestoreSession => "auto-restore last session",
+            SettingItem::ScrollLines => "scroll lines per step",
+            SettingItem::UnderlineLinks => "underline links",
+            SettingItem::ShowFootnotes => "show footnotes & citations",
+            SettingItem::ShowExternalLinks => "show external links section",
+        }
+    }
+
+    pub fn description(&self) -> &'static str {
+        match self {
+            SettingItem::LikedReadonly => "prevent manual deletion of articles from liked list",
+            SettingItem::AutoRestoreSession => "automatically restore last session on startup",
+            SettingItem::ScrollLines => "number of lines to scroll per j/k press (1-20)",
+            SettingItem::UnderlineLinks => "display underlined modifier on article links",
+            SettingItem::ShowFootnotes => "show inline reference numbers and references section",
+            SettingItem::ShowExternalLinks => "show the external links section at the bottom",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputMode {
     Normal,
@@ -29,6 +82,7 @@ pub enum InputMode {
     CreateNewList,
     SavedListsViewer,
     Confirm,
+    Settings,
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -79,6 +133,7 @@ pub struct App {
     pub config: crate::config::Config,
     pub config_last_mtime: Option<std::time::SystemTime>,
     pub last_config_check: std::time::Instant,
+    pub settings_cursor_idx: usize,
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
 
@@ -117,6 +172,7 @@ impl App {
             config: crate::config::Config::load(),
             config_last_mtime: crate::config::Config::get_modified_time(),
             last_config_check: std::time::Instant::now(),
+            settings_cursor_idx: 0,
             closed_tabs_stack: Vec::new(),
             status_message: None,
 
@@ -375,5 +431,71 @@ impl App {
             self.saved_lists
                 .set_article_in_list("liked", "Liked", &title, is_liked);
         }
+    }
+
+    pub fn adjust_selected_setting(&mut self, delta: i32) {
+        if let Some(item) = SettingItem::ALL.get(self.settings_cursor_idx).copied() {
+            match item {
+                SettingItem::ScrollLines => {
+                    let cur = self.config.reader.scroll_lines as i32;
+                    self.config.reader.scroll_lines = (cur + delta).clamp(1, 20) as usize;
+                }
+                SettingItem::LikedReadonly => {
+                    self.config.general.liked_readonly = !self.config.general.liked_readonly;
+                }
+                SettingItem::AutoRestoreSession => {
+                    self.config.general.auto_restore_session =
+                        !self.config.general.auto_restore_session;
+                }
+                SettingItem::UnderlineLinks => {
+                    self.config.reader.underline_links = !self.config.reader.underline_links;
+                }
+                SettingItem::ShowFootnotes => {
+                    self.config.reader.show_footnotes = !self.config.reader.show_footnotes;
+                }
+                SettingItem::ShowExternalLinks => {
+                    self.config.reader.show_external_links =
+                        !self.config.reader.show_external_links;
+                }
+            }
+            self.config.save();
+            self.config_last_mtime = crate::config::Config::get_modified_time();
+        }
+    }
+
+    pub fn reset_selected_setting(&mut self) {
+        if let Some(item) = SettingItem::ALL.get(self.settings_cursor_idx).copied() {
+            let default_config = crate::config::Config::default();
+            match item {
+                SettingItem::LikedReadonly => {
+                    self.config.general.liked_readonly = default_config.general.liked_readonly;
+                }
+                SettingItem::AutoRestoreSession => {
+                    self.config.general.auto_restore_session =
+                        default_config.general.auto_restore_session;
+                }
+                SettingItem::ScrollLines => {
+                    self.config.reader.scroll_lines = default_config.reader.scroll_lines;
+                }
+                SettingItem::UnderlineLinks => {
+                    self.config.reader.underline_links = default_config.reader.underline_links;
+                }
+                SettingItem::ShowFootnotes => {
+                    self.config.reader.show_footnotes = default_config.reader.show_footnotes;
+                }
+                SettingItem::ShowExternalLinks => {
+                    self.config.reader.show_external_links =
+                        default_config.reader.show_external_links;
+                }
+            }
+            self.config.save();
+            self.config_last_mtime = crate::config::Config::get_modified_time();
+        }
+    }
+
+    pub fn reset_all_settings(&mut self) {
+        self.config = crate::config::Config::default();
+        self.config.save();
+        self.config_last_mtime = crate::config::Config::get_modified_time();
     }
 }

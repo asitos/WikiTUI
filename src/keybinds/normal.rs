@@ -118,6 +118,9 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('?') => {
                 app.toggle_help_popup();
             }
+            KeyCode::Char(',') => {
+                app.input_mode = crate::app::InputMode::Settings;
+            }
             KeyCode::Char('/') => {
                 app.enter_local_search_mode();
             }
