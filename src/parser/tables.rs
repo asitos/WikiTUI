@@ -248,6 +248,7 @@ pub fn render_table<'a>(
 
     for r in 0..num_rows {
         let start_idx = doc.lines.len();
+        let mut cell_span_starts = vec![vec![0usize; num_cols]; row_heights[r]];
 
         for line_in_row in 0..row_heights[r] {
             let mut line_spans = vec![Span::styled("│ ", border_style)];
@@ -282,6 +283,8 @@ pub fn render_table<'a>(
                     .sum();
                 let padding = span_w.saturating_sub(content_len);
 
+                cell_span_starts[line_in_row][orig_c] = line_spans.len();
+
                 for span in cell_spans {
                     line_spans.push(span.clone());
                 }
@@ -303,25 +306,12 @@ pub fn render_table<'a>(
             if let Some(links) = cell_rendered_links.get(r).and_then(|row| row.get(col_i)) {
                 for (target, text, coords) in links {
                     let mut span_indices = Vec::new();
-                    for (local_l, local_s) in coords {
-                        let abs_l = start_idx + local_l;
-                        let mut offset = 1;
-                        let mut prev_c = 0;
-                        while prev_c < col_i {
-                            let (orig_c, prev_span) = match &grid.cells[r][prev_c] {
-                                CellEntry::Origin { colspan, .. } => (prev_c, *colspan),
-                                CellEntry::Covered { origin_c, .. } => (*origin_c, 1),
-                            };
-                            let spans_len = cell_rendered_lines
-                                .get(r)
-                                .and_then(|row| row.get(orig_c))
-                                .and_then(|lines| lines.get(*local_l))
-                                .map(|s| s.len())
-                                .unwrap_or(0);
-                            offset += spans_len + 2;
-                            prev_c += prev_span;
+                    for &(local_l, local_s) in coords {
+                        if local_l < row_heights[r] {
+                            let abs_l = start_idx + local_l;
+                            let span_start = cell_span_starts[local_l][col_i];
+                            span_indices.push((abs_l, span_start + local_s));
                         }
-                        span_indices.push((abs_l, offset + local_s));
                     }
                     if !span_indices.is_empty() {
                         doc.links.push(Link {
@@ -340,7 +330,13 @@ pub fn render_table<'a>(
                 _ => false,
             });
             let sep_char = if is_header_sep { "═" } else { "─" };
-            let mut sep_spans = vec![Span::styled("├", border_style)];
+
+            let col_0_vert = match &grid.cells[r + 1][0] {
+                CellEntry::Covered { origin_r, .. } => *origin_r <= r,
+                _ => false,
+            };
+            let left_joint = if col_0_vert { "│" } else { "├" };
+            let mut sep_spans = vec![Span::styled(left_joint, border_style)];
 
             let mut col = 0;
             while col < num_cols {
@@ -374,14 +370,37 @@ pub fn render_table<'a>(
                     };
                     let sep_joint = match (is_vert_cont, next_is_vert) {
                         (true, true) => "│",
-                        (true, false) => "┤",
-                        (false, true) => "├",
-                        (false, false) => "┼",
+                        (true, false) => {
+                            if is_header_sep {
+                                "╞"
+                            } else {
+                                "├"
+                            }
+                        }
+                        (false, true) => {
+                            if is_header_sep {
+                                "╡"
+                            } else {
+                                "┤"
+                            }
+                        }
+                        (false, false) => {
+                            if is_header_sep {
+                                "╪"
+                            } else {
+                                "┼"
+                            }
+                        }
                     };
                     sep_spans.push(Span::styled(sep_joint, border_style));
                 }
             }
-            sep_spans.push(Span::styled("┤", border_style));
+            let col_last_vert = match &grid.cells[r + 1][num_cols - 1] {
+                CellEntry::Covered { origin_r, .. } => *origin_r <= r,
+                _ => false,
+            };
+            let right_joint = if col_last_vert { "│" } else { "┤" };
+            sep_spans.push(Span::styled(right_joint, border_style));
             doc.lines.push(Line::from(sep_spans));
         }
     }
@@ -412,41 +431,109 @@ fn wrap_cell_tokens(
     tokens: &[StyledToken],
     max_width: usize,
 ) -> (Vec<Vec<Span<'static>>>, Vec<CellLinkInfo>) {
-    let mut lines = Vec::new();
-    let mut current_line = Vec::new();
+    let max_width = max_width.max(1);
+    let mut lines: Vec<Vec<Span<'static>>> = Vec::new();
+    let mut current_line: Vec<Span<'static>> = Vec::new();
     let mut current_line_len = 0;
-    let mut links = Vec::new();
+
+    let mut links: Vec<CellLinkInfo> = Vec::new();
+    let mut active_link_target: Option<String> = None;
+    let mut active_link_text = String::new();
+    let mut active_link_spans: Vec<(usize, usize)> = Vec::new();
 
     for token in tokens {
         if token.text == "\n" {
-            lines.push(current_line);
-            current_line = Vec::new();
+            if let Some(target) = active_link_target.take() {
+                if !active_link_spans.is_empty() {
+                    links.push((
+                        target,
+                        std::mem::take(&mut active_link_text).trim().to_string(),
+                        std::mem::take(&mut active_link_spans),
+                    ));
+                }
+            }
+            lines.push(std::mem::take(&mut current_line));
             current_line_len = 0;
             continue;
         }
 
-        let mut link_coords = Vec::new();
-        for word in token.text.split_inclusive(|c: char| c.is_whitespace()) {
+        if token.link_target != active_link_target {
+            if let Some(target) = active_link_target.take() {
+                if !active_link_spans.is_empty() {
+                    links.push((
+                        target,
+                        std::mem::take(&mut active_link_text).trim().to_string(),
+                        std::mem::take(&mut active_link_spans),
+                    ));
+                }
+            }
+            active_link_target = token.link_target.clone();
+        }
+
+        let words = token.text.split_inclusive(|c: char| c.is_whitespace());
+        for word in words {
             if word.is_empty() {
                 continue;
             }
-            let word_len = UnicodeWidthStr::width(word);
-            if current_line_len + word_len > max_width && current_line_len > 0 {
-                lines.push(current_line);
-                current_line = Vec::new();
-                current_line_len = 0;
-            }
-            if token.link_target.is_some() {
-                link_coords.push((lines.len(), current_line.len()));
-            }
-            current_line.push(Span::styled(word.to_string(), token.style));
-            current_line_len += word_len;
-        }
 
-        if let Some(target) = &token.link_target {
-            if !link_coords.is_empty() {
-                links.push((target.clone(), token.text.trim().to_string(), link_coords));
+            let mut remaining_word = word;
+            while !remaining_word.is_empty() {
+                let word_len = UnicodeWidthStr::width(remaining_word);
+
+                if current_line_len + word_len <= max_width {
+                    let current_line_idx = lines.len();
+                    if token.link_target.is_some() {
+                        active_link_spans.push((current_line_idx, current_line.len()));
+                        active_link_text.push_str(remaining_word);
+                    }
+                    current_line.push(Span::styled(remaining_word.to_string(), token.style));
+                    current_line_len += word_len;
+                    break;
+                }
+
+                if current_line_len > 0 {
+                    lines.push(std::mem::take(&mut current_line));
+                    current_line_len = 0;
+                    continue;
+                }
+
+                let mut take_chars = 0;
+                let mut take_w = 0;
+                for ch in remaining_word.chars() {
+                    let ch_w = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
+                    if take_w + ch_w > max_width && take_chars > 0 {
+                        break;
+                    }
+                    take_w += ch_w;
+                    take_chars += ch.len_utf8();
+                }
+
+                let chunk = &remaining_word[..take_chars];
+                remaining_word = &remaining_word[take_chars..];
+
+                let current_line_idx = lines.len();
+                if token.link_target.is_some() {
+                    active_link_spans.push((current_line_idx, current_line.len()));
+                    active_link_text.push_str(chunk);
+                }
+                current_line.push(Span::styled(chunk.to_string(), token.style));
+                current_line_len += take_w;
+
+                if !remaining_word.is_empty() {
+                    lines.push(std::mem::take(&mut current_line));
+                    current_line_len = 0;
+                }
             }
+        }
+    }
+
+    if let Some(target) = active_link_target {
+        if !active_link_spans.is_empty() {
+            links.push((
+                target,
+                active_link_text.trim().to_string(),
+                active_link_spans,
+            ));
         }
     }
 
