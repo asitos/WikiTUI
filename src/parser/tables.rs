@@ -660,6 +660,7 @@ fn collect_cell_tokens<'a>(
             }
         }
         "code" | "kbd" | "samp" | "tt" => current_style = current_style.fg(theme::ORANGE),
+        "abbr" => current_style = current_style.add_modifier(Modifier::UNDERLINED),
         "br" => tokens.push(StyledToken {
             text: "\n".to_string(),
             style: current_style,

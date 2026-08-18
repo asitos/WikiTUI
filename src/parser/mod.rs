@@ -511,6 +511,9 @@ fn process_node<'a>(
                 "code" | "kbd" | "samp" | "tt" => {
                     current_style = current_style.fg(theme::ORANGE);
                 }
+                "abbr" => {
+                    current_style = current_style.add_modifier(Modifier::UNDERLINED);
+                }
                 "a" => {
                     current_style = current_style.fg(theme::BLUE);
                     if let Some(href) = tag
