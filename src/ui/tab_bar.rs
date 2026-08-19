@@ -19,30 +19,38 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         .enumerate()
         .map(|(i, tab)| {
             let is_loading = tab.panes.iter().any(|p| p.is_loading);
-            let (icon, raw_title) = if is_loading {
+            let (icon, raw_title, is_saved) = if is_loading {
                 (
                     crate::ui::current_spinner_frame().to_string(),
                     "loading...".to_string(),
+                    false,
                 )
             } else if let Some(active_pane) = tab.panes.get(tab.active_pane_idx) {
                 match &active_pane.content {
                     PaneContent::ArticleText { title, .. } => {
-                        ("≡".to_string(), title.to_lowercase())
+                        let saved = app.saved_lists.is_article_saved_anywhere(title);
+                        ("≡".to_string(), title.to_lowercase(), saved)
                     }
                     PaneContent::SearchResults { query, .. } => {
-                        ("󰍉".to_string(), format!("search: {}", query.to_lowercase()))
+                        (
+                            "󰍉".to_string(),
+                            format!("search: {}", query.to_lowercase()),
+                            false,
+                        )
                     }
-                    PaneContent::Error(_) => ("󰅚".to_string(), "error".to_string()),
-                    PaneContent::Empty => ("󰋜".to_string(), tab.name.to_lowercase()),
+                    PaneContent::Error(_) => ("󰅚".to_string(), "error".to_string(), false),
+                    PaneContent::Empty => ("󰋜".to_string(), tab.name.to_lowercase(), false),
                 }
             } else {
-                ("󰋜".to_string(), tab.name.to_lowercase())
+                ("󰋜".to_string(), tab.name.to_lowercase(), false)
             };
 
+            let star = if is_saved { " ★" } else { "" };
+
             if app.tabs.len() > 1 {
-                format!("{} {} {}", icon, i + 1, raw_title)
+                format!("{} {} {}{}", icon, i + 1, raw_title, star)
             } else {
-                format!("{} {}", icon, raw_title)
+                format!("{} {}{}", icon, raw_title, star)
             }
         })
         .collect();

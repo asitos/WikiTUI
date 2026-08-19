@@ -121,6 +121,16 @@ impl SavedListsStore {
         }
     }
 
+    pub fn is_article_saved_anywhere(&self, title: &str) -> bool {
+        let title_trimmed = title.trim();
+        if title_trimmed.is_empty() {
+            return false;
+        }
+        self.lists
+            .iter()
+            .any(|l| l.articles.iter().any(|a| a.eq_ignore_ascii_case(title_trimmed)))
+    }
+
     pub fn ensure_list(&mut self, id: &str, name: &str) {
         if let Some(list) = self.lists.iter_mut().find(|l| l.id == id) {
             if list.name != name {
