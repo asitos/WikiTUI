@@ -141,6 +141,7 @@ pub struct App {
     pub settings_cursor_idx: usize,
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
+    pub wiki_stats: crate::api::WikiStatistics,
 
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: Sender<NetworkCommand>,
@@ -148,6 +149,7 @@ pub struct App {
 
 impl App {
     pub fn new(cmd_tx: Sender<NetworkCommand>) -> Self {
+        let _ = cmd_tx.send(NetworkCommand::FetchStats);
         let mut app = Self {
             running: true,
             tabs: Vec::new(),
@@ -180,6 +182,7 @@ impl App {
             settings_cursor_idx: 0,
             closed_tabs_stack: Vec::new(),
             status_message: None,
+            wiki_stats: crate::api::WikiStatistics::default(),
 
             next_pane_id: 1,
             cmd_tx,
@@ -427,6 +430,9 @@ impl App {
                         || self.saved_lists.is_article_in_list("liked", &item.title);
                     self.feed.add_item(item);
                 }
+            }
+            NetworkEvent::StatsLoaded(stats) => {
+                self.wiki_stats = stats;
             }
         }
     }

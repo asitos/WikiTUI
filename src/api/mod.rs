@@ -2,6 +2,9 @@ pub mod article;
 pub mod feed;
 pub mod random;
 pub mod search;
+pub mod stats;
+
+pub use stats::WikiStatistics;
 
 use crate::feed::algorithm::FeedItem;
 use std::sync::mpsc::{Receiver, Sender};
@@ -17,6 +20,7 @@ pub enum NetworkCommand {
     FetchArticle { pane_id: usize, title: String },
     FetchRandomArticle { pane_id: usize },
     FetchFeedBatch,
+    FetchStats,
 }
 
 pub enum NetworkEvent {
@@ -33,6 +37,7 @@ pub enum NetworkEvent {
     FeedBatchLoaded {
         items: Vec<FeedItem>,
     },
+    StatsLoaded(WikiStatistics),
     Error {
         pane_id: usize,
         message: String,
@@ -108,6 +113,11 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
             NetworkCommand::FetchFeedBatch => {
                 if let Ok(items) = feed::fetch_feed_batch(&agent) {
                     let _ = ev_tx.send(NetworkEvent::FeedBatchLoaded { items });
+                }
+            }
+            NetworkCommand::FetchStats => {
+                if let Ok(statistics) = stats::fetch_wiki_statistics(&agent) {
+                    let _ = ev_tx.send(NetworkEvent::StatsLoaded(statistics));
                 }
             }
         });
