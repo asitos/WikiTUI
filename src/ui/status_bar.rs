@@ -77,22 +77,20 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let right_width = right_text.chars().count() as u16 + 3;
 
     // center segment
-    let (center_text, center_style) = if let Some((ref msg, time)) = app.status_message {
+    let center_spans = if let Some((ref msg, time)) = app.status_message {
         if time.elapsed().as_secs_f32() < 3.0 {
-            (
+            vec![Span::styled(
                 format!("✓ {}", msg),
                 Style::default()
                     .fg(theme::LIME)
                     .add_modifier(Modifier::BOLD),
-            )
+            )]
         } else {
-            get_center_hints(app, active_pane)
+            get_center_spans(app, active_pane)
         }
     } else {
-        get_center_hints(app, active_pane)
+        get_center_spans(app, active_pane)
     };
-
-    let center_spans = vec![Span::styled(center_text, center_style)];
 
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -117,14 +115,14 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     );
 }
 
-fn get_center_hints(app: &App, active_pane: &crate::app::Pane) -> (String, Style) {
+fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'static>> {
     match app.input_mode {
-        InputMode::Search => (
-            "type query · enter search · esc cancel".to_string(),
+        InputMode::Search => vec![Span::styled(
+            "type query · enter search · esc cancel",
             Style::default()
                 .fg(theme::BEIGE)
                 .add_modifier(Modifier::BOLD),
-        ),
+        )],
         InputMode::LocalSearch => {
             let matches_info = if active_pane.local_matches.is_empty() {
                 "no matches".to_string()
@@ -135,76 +133,136 @@ fn get_center_hints(app: &App, active_pane: &crate::app::Pane) -> (String, Style
                     active_pane.local_matches.len()
                 )
             };
-            (
+            vec![Span::styled(
                 format!(
-                    "/ {}_ · {} · n next · N prev · esc exit",
+                    "/: {}_ · {} · n next · N prev · esc exit",
                     active_pane.local_search_query, matches_info
                 ),
                 Style::default()
                     .fg(theme::YELLOW)
                     .add_modifier(Modifier::BOLD),
-            )
+            )]
         }
-        InputMode::CategoryOnboarding => (
-            "j/k navigate · space toggle · enter start feed".to_string(),
+        InputMode::CategoryOnboarding => vec![Span::styled(
+            "j/k navigate · space toggle · enter start feed",
             Style::default()
                 .fg(theme::VIOLET)
                 .add_modifier(Modifier::BOLD),
-        ),
-        InputMode::Help => ("".to_string(), Style::default().fg(theme::GREY)),
-        InputMode::SaveToList => (
-            "j/k navigate · space toggle · c new list · esc done".to_string(),
+        )],
+        InputMode::Help => vec![],
+        InputMode::SaveToList => vec![Span::styled(
+            "j/k navigate · space toggle · c new list · esc done",
             Style::default()
                 .fg(theme::VIOLET)
                 .add_modifier(Modifier::BOLD),
-        ),
-        InputMode::CreateNewList => (
-            "enter confirm · esc cancel".to_string(),
+        )],
+        InputMode::CreateNewList => vec![Span::styled(
+            "enter confirm · esc cancel",
             Style::default()
                 .fg(theme::VIOLET)
                 .add_modifier(Modifier::BOLD),
-        ),
-        InputMode::SavedListsViewer => (
-            "h/l switch pane · j/k navigate · enter open · d delete".to_string(),
+        )],
+        InputMode::SavedListsViewer => vec![Span::styled(
+            "h/l switch pane · j/k navigate · enter open · d delete",
             Style::default()
                 .fg(theme::VIOLET)
                 .add_modifier(Modifier::BOLD),
-        ),
-        InputMode::Confirm => ("".to_string(), Style::default().fg(theme::RED)),
-        InputMode::Settings => (
-            "j/k navigate · space/enter toggle · h/l adjust · r reset · esc close".to_string(),
+        )],
+        InputMode::Confirm => vec![],
+        InputMode::Settings => vec![Span::styled(
+            "j/k navigate · space/enter toggle · h/l adjust · r reset · esc close",
             Style::default()
                 .fg(theme::ORANGE)
                 .add_modifier(Modifier::BOLD),
-        ),
+        )],
         InputMode::Normal => {
             if app.feed.active {
-                (
-                    "j/k browse · l like · enter read · t tab · r reset · esc exit"
-                        .to_string(),
-                    Style::default().fg(theme::VIOLET),
-                )
+                vec![Span::styled(
+                    "j/k browse · l like · enter read · t tab · r reset · esc exit",
+                    Style::default().fg(theme::GREY),
+                )]
             } else if active_pane.toc_focused {
-                (
-                    "j/k navigate contents · enter jump · o close".to_string(),
+                vec![Span::styled(
+                    "j/k navigate contents · enter jump · o close",
                     Style::default()
                         .fg(theme::LIME)
                         .add_modifier(Modifier::BOLD),
-                )
+                )]
             } else if let Some(link) = active_pane.focused_link().filter(|l| l.is_external()) {
-                (
+                vec![Span::styled(
                     format!("↗ external {} · enter/y copy URL", link.title),
                     Style::default()
                         .fg(theme::TEAL)
                         .add_modifier(Modifier::BOLD),
-                )
+                )]
+            } else if matches!(active_pane.content, PaneContent::ArticleText { .. })
+                && (!active_pane.history_back.is_empty() || !active_pane.history_forward.is_empty())
+            {
+                build_history_trail(active_pane)
             } else {
-                (
-                    "ctrl-s search · r random · F feed · , settings · ? help · q quit"
-                        .to_string(),
+                vec![Span::styled(
+                    "ctrl-s search · r random · F feed · , settings · ? help · q quit",
                     Style::default().fg(theme::GREY),
-                )
+                )]
             }
         }
+    }
+}
+
+fn build_history_trail(pane: &crate::app::Pane) -> Vec<Span<'static>> {
+    let mut spans = Vec::new();
+    let back_len = pane.history_back.len();
+    let start_idx = back_len.saturating_sub(2);
+
+    if start_idx > 0 {
+        spans.push(Span::styled("…", Style::default().fg(theme::GREY)));
+        spans.push(Span::styled(" › ", Style::default().fg(theme::GREY)));
+    }
+
+    for title in &pane.history_back[start_idx..] {
+        spans.push(Span::styled(
+            truncate_trail_title(title, 18),
+            Style::default().fg(theme::GREY),
+        ));
+        spans.push(Span::styled(" › ", Style::default().fg(theme::GREY)));
+    }
+
+    if let Some(cur_title) = pane.title() {
+        spans.push(Span::styled(
+            truncate_trail_title(&cur_title, 22),
+            Style::default()
+                .fg(theme::LIME)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
+
+    for title in pane.history_forward.iter().take(2) {
+        spans.push(Span::styled(" › ", Style::default().fg(theme::GREY)));
+        spans.push(Span::styled(
+            truncate_trail_title(title, 18),
+            Style::default()
+                .fg(theme::GREY)
+                .add_modifier(Modifier::ITALIC),
+        ));
+    }
+
+    if pane.history_forward.len() > 2 {
+        spans.push(Span::styled(" › …", Style::default().fg(theme::GREY)));
+    }
+
+    spans
+}
+
+fn truncate_trail_title(title: &str, max_len: usize) -> String {
+    let lower = title.to_lowercase();
+    if lower.chars().count() > max_len {
+        let byte_idx = lower
+            .char_indices()
+            .nth(max_len.saturating_sub(1))
+            .map(|(i, _)| i)
+            .unwrap_or(lower.len());
+        format!("{}…", &lower[..byte_idx])
+    } else {
+        lower
     }
 }
