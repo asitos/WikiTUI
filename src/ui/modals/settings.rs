@@ -1,11 +1,11 @@
-use super::utils::centered_rect;
+use super::utils::{centered_rect, create_modal_block};
 use crate::app::{App, SettingItem};
 use crate::theme;
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::Rect,
     style::{Modifier, Style, Stylize},
     text::{Line, Span},
-    widgets::{block::Title, Block, Clear, Paragraph},
+    widgets::{Clear, Paragraph},
     Frame,
 };
 
@@ -13,23 +13,8 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(64, 50, size);
     f.render_widget(Clear, area);
 
-    let modal_block = Block::bordered()
-        .border_style(Style::default().fg(theme::ORANGE))
-        .title(
-            Title::from(Span::styled(
-                " settings (config.toml) ",
-                Style::default().fg(theme::ORANGE).bold(),
-            ))
-            .alignment(Alignment::Center),
-        )
-        .title(
-            Title::from(Span::styled(
-                " esc / q to close ",
-                Style::default().fg(theme::GREY).italic(),
-            ))
-            .position(ratatui::widgets::block::Position::Bottom)
-            .alignment(Alignment::Right),
-        );
+    let modal_block =
+        create_modal_block("󰒓", "settings (config.toml)", theme::ORANGE);
 
     let inner = modal_block.inner(area);
     f.render_widget(modal_block, area);

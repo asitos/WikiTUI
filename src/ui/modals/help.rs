@@ -1,10 +1,10 @@
-use super::utils::centered_rect;
+use super::utils::{centered_rect, create_modal_block};
 use crate::theme;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{block::Title, Block, Clear, Paragraph},
+    widgets::{Clear, Paragraph},
     Frame,
 };
 
@@ -16,17 +16,7 @@ pub fn render_help_modal(f: &mut Frame, size: Rect) {
     let is_macos = cfg!(target_os = "macos");
     let opt_label = if is_macos { "opt" } else { "alt" };
 
-    let help_block = Block::bordered()
-        .border_style(Style::default().fg(theme::PINK))
-        .title(Title::from(" keybindings ").alignment(Alignment::Center))
-        .title(
-            Title::from(Span::styled(
-                " esc to close ",
-                Style::default().fg(theme::GREY).italic(),
-            ))
-            .position(ratatui::widgets::block::Position::Bottom)
-            .alignment(Alignment::Right),
-        );
+    let help_block = create_modal_block("󰘥", "keybindings", theme::PINK);
 
     let inner = help_block.inner(area);
     f.render_widget(help_block, area);

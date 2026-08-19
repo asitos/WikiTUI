@@ -1,10 +1,11 @@
+use super::utils::create_modal_block;
 use crate::app::App;
 use crate::theme;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{block::Title, Block, Clear, Paragraph},
+    widgets::{Clear, Paragraph},
     Frame,
 };
 
@@ -29,9 +30,7 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
 
     f.render_widget(Clear, area);
 
-    let search_block = Block::bordered()
-        .border_style(Style::default().fg(theme::BEIGE))
-        .title(Title::from(" search wikipedia ").alignment(Alignment::Left));
+    let search_block = create_modal_block("󰍉", "search wikipedia", theme::BEIGE);
 
     let visible_width = (area.width as usize).saturating_sub(6);
     let chars: Vec<char> = app.search_input.chars().collect();

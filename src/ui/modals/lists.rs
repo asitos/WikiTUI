@@ -1,11 +1,11 @@
-use super::utils::centered_rect;
+use super::utils::{centered_rect, create_modal_block};
 use crate::app::App;
 use crate::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{block::Title, Block, Clear, Paragraph},
+    widgets::{Block, Clear, Paragraph},
     Frame,
 };
 
@@ -13,10 +13,7 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(55, 60, size);
     f.render_widget(Clear, area);
 
-    let block = Block::bordered()
-        .title(Title::from(" save article to custom list ").alignment(Alignment::Center))
-        .border_style(Style::default().fg(theme::VIOLET))
-        .style(Style::default().bg(theme::BG));
+    let block = create_modal_block("★", "save to list", theme::VIOLET);
 
     let mut lines = vec![
         Line::from(vec![
@@ -89,12 +86,6 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
         Span::styled("[+] create new list...", create_style),
     ]));
 
-    lines.push(Line::from(""));
-    lines.push(Line::from(vec![Span::styled(
-        " j/k: navigate | space: toggle list | n: new list | esc: done ",
-        Style::default().fg(theme::GREY).italic(),
-    )]));
-
     let p = Paragraph::new(lines).block(block);
     f.render_widget(p, area);
 }
@@ -103,10 +94,7 @@ pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(45, 25, size);
     f.render_widget(Clear, area);
 
-    let block = Block::bordered()
-        .title(Title::from(" create new custom list ").alignment(Alignment::Center))
-        .border_style(Style::default().fg(theme::VIOLET))
-        .style(Style::default().bg(theme::BG));
+    let block = create_modal_block("★", "create new list", theme::VIOLET);
 
     let lines = vec![
         Line::from(" enter name for your new list:"),
@@ -119,11 +107,6 @@ pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
             ),
             Span::styled("█", Style::default().fg(theme::VIOLET)),
         ]),
-        Line::from(""),
-        Line::from(Span::styled(
-            " enter: confirm | esc: cancel ",
-            Style::default().fg(theme::GREY).italic(),
-        )),
     ];
 
     let p = Paragraph::new(lines).block(block);
@@ -134,10 +117,8 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(80, 80, size);
     f.render_widget(Clear, area);
 
-    let outer_block = Block::bordered()
-        .title(Title::from(" saved lists & articles ").alignment(Alignment::Center))
-        .border_style(Style::default().fg(theme::VIOLET))
-        .style(Style::default().bg(theme::BG));
+    let outer_block =
+        create_modal_block("★", "saved lists & articles", theme::VIOLET);
 
     let inner_area = outer_block.inner(area);
     f.render_widget(outer_block, area);
@@ -242,14 +223,11 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
     f.render_widget(Clear, area);
 
     let modal_title = match &app.confirm_action {
-        Some(crate::app::ConfirmAction::ResetFeed) => " confirm feed reset ",
-        _ => " confirm deletion ",
+        Some(crate::app::ConfirmAction::ResetFeed) => "confirm feed reset",
+        _ => "confirm deletion",
     };
 
-    let block = Block::bordered()
-        .title(Title::from(modal_title).alignment(Alignment::Center))
-        .border_style(Style::default().fg(theme::VIOLET))
-        .style(Style::default().bg(theme::BG));
+    let block = create_modal_block("󰅚", modal_title, theme::RED);
 
     let lines = match &app.confirm_action {
         Some(crate::app::ConfirmAction::DeleteList { title, .. }) => {

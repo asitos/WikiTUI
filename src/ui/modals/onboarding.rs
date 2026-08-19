@@ -1,11 +1,11 @@
-use super::utils::centered_rect;
+use super::utils::{centered_rect, create_modal_block};
 use crate::app::App;
 use crate::theme;
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::Rect,
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{block::Title, Block, Clear, Paragraph},
+    widgets::{Clear, Paragraph},
     Frame,
 };
 
@@ -13,10 +13,11 @@ pub fn render_category_onboarding_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(60, 80, size);
     f.render_widget(Clear, area);
 
-    let block = Block::bordered()
-        .title(Title::from(" welcome to wikid feed! ").alignment(Alignment::Center))
-        .border_style(Style::default().fg(theme::VIOLET))
-        .style(Style::default().bg(theme::BG));
+    let block = create_modal_block(
+        "󰠱",
+        "welcome to wikid feed",
+        theme::VIOLET,
+    );
 
     let mut lines = vec![
         Line::from(Span::styled(

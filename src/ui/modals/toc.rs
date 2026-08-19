@@ -1,12 +1,12 @@
-use super::utils::centered_rect;
+use super::utils::{centered_rect, create_modal_block};
 use crate::app::Pane;
 use crate::parser::ParsedDocument;
 use crate::theme;
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::Rect,
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{block::Title, Block, Clear, Paragraph},
+    widgets::{Clear, Paragraph},
     Frame,
 };
 
@@ -19,14 +19,7 @@ pub fn render_toc_modal(
     let toc_area = centered_rect(60, 60, container_rect);
     f.render_widget(Clear, toc_area);
 
-    let toc_block = Block::bordered()
-        .border_style(Style::default().fg(theme::LIME))
-        .title(" contents ")
-        .title(
-            Title::from(" enter: jump | o: close ")
-                .position(ratatui::widgets::block::Position::Bottom)
-                .alignment(Alignment::Right),
-        );
+    let toc_block = create_modal_block("≡", "contents", theme::LIME);
 
     let current_scroll = pane.scroll_offset;
     let active_heading_idx = parsed_doc
