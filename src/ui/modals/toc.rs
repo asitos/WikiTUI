@@ -17,11 +17,13 @@ pub fn render_toc_modal(
     container_rect: Rect,
     show_numbers: bool,
     rounded: bool,
+    show_icons: bool,
 ) {
     let toc_area = centered_rect(60, 60, container_rect);
     f.render_widget(Clear, toc_area);
 
-    let toc_block = create_modal_block("≡", "contents", theme::LIME, rounded);
+    let icon = if show_icons { "≡" } else { "" };
+    let toc_block = create_modal_block(icon, "contents", theme::LIME, rounded);
 
     let current_scroll = pane.scroll_offset;
     let active_heading_idx = parsed_doc

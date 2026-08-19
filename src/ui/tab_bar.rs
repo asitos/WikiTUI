@@ -19,6 +19,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         .enumerate()
         .map(|(i, tab)| {
             let is_loading = tab.panes.iter().any(|p| p.is_loading);
+            let show_icons = app.config.ui.icons;
             let (icon, raw_title, is_saved) = if is_loading {
                 (
                     crate::ui::current_spinner_frame().to_string(),
@@ -29,23 +30,49 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 match &active_pane.content {
                     PaneContent::ArticleText { title, .. } => {
                         let saved = app.saved_lists.is_article_saved_anywhere(title);
-                        ("≡".to_string(), title.to_lowercase(), saved)
+                        (
+                            if show_icons { "≡" } else { "" }.to_string(),
+                            title.to_lowercase(),
+                            saved,
+                        )
                     }
                     PaneContent::SearchResults { query, .. } => (
-                        "󰍉".to_string(),
+                        if show_icons { "󰍉" } else { "" }.to_string(),
                         format!("search: {}", query.to_lowercase()),
                         false,
                     ),
-                    PaneContent::Error(_) => ("󰅚".to_string(), "error".to_string(), false),
-                    PaneContent::Empty => ("󰋜".to_string(), tab.name.to_lowercase(), false),
+                    PaneContent::Error(_) => (
+                        if show_icons { "󰅚" } else { "" }.to_string(),
+                        "error".to_string(),
+                        false,
+                    ),
+                    PaneContent::Empty => (
+                        if show_icons { "󰋜" } else { "" }.to_string(),
+                        tab.name.to_lowercase(),
+                        false,
+                    ),
                 }
             } else {
-                ("󰋜".to_string(), tab.name.to_lowercase(), false)
+                (
+                    if show_icons { "󰋜" } else { "" }.to_string(),
+                    tab.name.to_lowercase(),
+                    false,
+                )
             };
 
-            let star = if is_saved { " ★" } else { "" };
+            let star = if is_saved {
+                if show_icons { " ★" } else { " *" }
+            } else {
+                ""
+            };
 
-            if app.tabs.len() > 1 {
+            if icon.is_empty() {
+                if app.tabs.len() > 1 {
+                    format!("{} {}{}", i + 1, raw_title, star)
+                } else {
+                    format!("{}{}", raw_title, star)
+                }
+            } else if app.tabs.len() > 1 {
                 format!("{} {} {}{}", icon, i + 1, raw_title, star)
             } else {
                 format!("{} {}{}", icon, raw_title, star)

@@ -16,7 +16,8 @@ pub fn render_help_modal(f: &mut Frame, app: &crate::app::App, size: Rect) {
     let is_macos = cfg!(target_os = "macos");
     let opt_label = if is_macos { "opt" } else { "alt" };
 
-    let help_block = create_modal_block("󰘥", "keybindings", theme::PINK, app.config.ui.rounded_borders);
+    let icon = if app.config.ui.icons { "󰘥" } else { "" };
+    let help_block = create_modal_block(icon, "keybindings", theme::PINK, app.config.ui.rounded_borders);
 
     let inner = help_block.inner(area);
     f.render_widget(help_block, area);

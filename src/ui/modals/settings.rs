@@ -13,8 +13,9 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(64, 50, size);
     f.render_widget(Clear, area);
 
+    let icon = if app.config.ui.icons { "󰒓" } else { "" };
     let modal_block = create_modal_block(
-        "󰒓",
+        icon,
         "settings (config.toml)",
         theme::ORANGE,
         app.config.ui.rounded_borders,
@@ -66,6 +67,10 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
             }
             SettingItem::RoundedBorders => {
                 let val = app.config.ui.rounded_borders;
+                bool_span(val)
+            }
+            SettingItem::Icons => {
+                let val = app.config.ui.icons;
                 bool_span(val)
             }
             SettingItem::ScrollLines => {

@@ -30,8 +30,9 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
 
     f.render_widget(Clear, area);
 
+    let icon = if app.config.ui.icons { "󰍉" } else { "" };
     let search_block = create_modal_block(
-        "󰍉",
+        icon,
         "search wikipedia",
         theme::BEIGE,
         app.config.ui.rounded_borders,

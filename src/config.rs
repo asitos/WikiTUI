@@ -26,10 +26,20 @@ impl Default for GeneralConfig {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UiConfig {
     pub rounded_borders: bool,
+    pub icons: bool,
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            rounded_borders: false,
+            icons: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -23,6 +23,7 @@ pub enum SettingItem {
     LikedReadonly,
     AutoRestoreSession,
     RoundedBorders,
+    Icons,
     ScrollLines,
     UnderlineLinks,
     ShowFootnotes,
@@ -35,6 +36,7 @@ impl SettingItem {
         SettingItem::LikedReadonly,
         SettingItem::AutoRestoreSession,
         SettingItem::RoundedBorders,
+        SettingItem::Icons,
         SettingItem::ScrollLines,
         SettingItem::UnderlineLinks,
         SettingItem::ShowFootnotes,
@@ -45,7 +47,7 @@ impl SettingItem {
     pub fn section(&self) -> &'static str {
         match self {
             SettingItem::LikedReadonly | SettingItem::AutoRestoreSession => "general",
-            SettingItem::RoundedBorders => "ui",
+            SettingItem::RoundedBorders | SettingItem::Icons => "ui",
             SettingItem::ScrollLines
             | SettingItem::UnderlineLinks
             | SettingItem::ShowFootnotes
@@ -59,6 +61,7 @@ impl SettingItem {
             SettingItem::LikedReadonly => "liked list read-only",
             SettingItem::AutoRestoreSession => "auto-restore last session",
             SettingItem::RoundedBorders => "rounded borders",
+            SettingItem::Icons => "icons",
             SettingItem::ScrollLines => "scroll lines per step",
             SettingItem::UnderlineLinks => "underline links",
             SettingItem::ShowFootnotes => "show footnotes & citations",
@@ -71,7 +74,8 @@ impl SettingItem {
         match self {
             SettingItem::LikedReadonly => "prevent manual deletion of articles from liked list",
             SettingItem::AutoRestoreSession => "automatically restore last session on startup",
-            SettingItem::RoundedBorders => "use rounded border corners (╭╮╯╰) instead of sharp (┌┐┘└)",
+            SettingItem::RoundedBorders => "use rounded border corners instead of sharp",
+            SettingItem::Icons => "display nerd font icons",
             SettingItem::ScrollLines => "number of lines to scroll per j/k press (1-20)",
             SettingItem::UnderlineLinks => "display underlined modifier on article links",
             SettingItem::ShowFootnotes => "show inline reference numbers and references section",
@@ -537,6 +541,9 @@ impl App {
                 SettingItem::RoundedBorders => {
                     self.config.ui.rounded_borders = !self.config.ui.rounded_borders;
                 }
+                SettingItem::Icons => {
+                    self.config.ui.icons = !self.config.ui.icons;
+                }
                 SettingItem::UnderlineLinks => {
                     self.config.reader.underline_links = !self.config.reader.underline_links;
                 }
@@ -570,6 +577,9 @@ impl App {
                 }
                 SettingItem::RoundedBorders => {
                     self.config.ui.rounded_borders = default_config.ui.rounded_borders;
+                }
+                SettingItem::Icons => {
+                    self.config.ui.icons = default_config.ui.icons;
                 }
                 SettingItem::ScrollLines => {
                     self.config.reader.scroll_lines = default_config.reader.scroll_lines;

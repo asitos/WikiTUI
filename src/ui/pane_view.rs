@@ -375,6 +375,7 @@ fn render_pane_at(
                     rect,
                     app.config.reader.toc_section_numbers,
                     app.config.ui.rounded_borders,
+                    app.config.ui.icons,
                 );
             }
         }

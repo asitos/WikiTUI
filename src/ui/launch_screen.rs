@@ -81,11 +81,18 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
     }
 
     lines.push(Line::from(""));
+    let show_icons = app.config.ui.icons;
+    let icon_art = if show_icons { "󰈙 " } else { "" };
+    let icon_edits = if show_icons { "󰑐 " } else { "" };
+    let icon_users = if show_icons { "󰒓 " } else { "" };
+    let icon_pages = if show_icons { "󰠱 " } else { "" };
+
     let stats_spans = if inner_width >= 75 {
         vec![
             Span::styled(
                 format!(
-                    "󰈙 {} articles",
+                    "{}{} articles",
+                    icon_art,
                     crate::api::stats::format_metric(app.wiki_stats.articles)
                 ),
                 Style::default().fg(theme::LIME),
@@ -93,7 +100,8 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
             Span::styled(
                 format!(
-                    "󰑐 {} edits",
+                    "{}{} edits",
+                    icon_edits,
                     crate::api::stats::format_metric(app.wiki_stats.edits)
                 ),
                 Style::default().fg(theme::TEAL),
@@ -101,7 +109,8 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
             Span::styled(
                 format!(
-                    "󰒓 {} active editors",
+                    "{}{} active editors",
+                    icon_users,
                     crate::api::stats::format_metric(app.wiki_stats.activeusers)
                 ),
                 Style::default().fg(theme::YELLOW),
@@ -109,7 +118,8 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
             Span::styled(
                 format!(
-                    "󰠱 {} pages",
+                    "{}{} pages",
+                    icon_pages,
                     crate::api::stats::format_metric(app.wiki_stats.pages)
                 ),
                 Style::default().fg(theme::VIOLET),
@@ -119,7 +129,8 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
         vec![
             Span::styled(
                 format!(
-                    "󰈙 {} articles",
+                    "{}{} articles",
+                    icon_art,
                     crate::api::stats::format_metric(app.wiki_stats.articles)
                 ),
                 Style::default().fg(theme::LIME),
@@ -127,7 +138,8 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
             Span::styled(
                 format!(
-                    "󰒓 {} active editors",
+                    "{}{} active editors",
+                    icon_users,
                     crate::api::stats::format_metric(app.wiki_stats.activeusers)
                 ),
                 Style::default().fg(theme::YELLOW),

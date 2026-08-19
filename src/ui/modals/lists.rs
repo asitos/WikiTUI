@@ -13,8 +13,9 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(55, 60, size);
     f.render_widget(Clear, area);
 
+    let icon = if app.config.ui.icons { "★" } else { "" };
     let block = create_modal_block(
-        "★",
+        icon,
         "save to list",
         theme::VIOLET,
         app.config.ui.rounded_borders,
@@ -99,8 +100,9 @@ pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(45, 25, size);
     f.render_widget(Clear, area);
 
+    let icon = if app.config.ui.icons { "★" } else { "" };
     let block = create_modal_block(
-        "★",
+        icon,
         "create new list",
         theme::VIOLET,
         app.config.ui.rounded_borders,
@@ -127,8 +129,9 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(80, 80, size);
     f.render_widget(Clear, area);
 
+    let icon = if app.config.ui.icons { "★" } else { "" };
     let outer_block = create_modal_block(
-        "★",
+        icon,
         "saved lists & articles",
         theme::VIOLET,
         app.config.ui.rounded_borders,
@@ -248,8 +251,9 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
         _ => "confirm deletion",
     };
 
+    let icon = if app.config.ui.icons { "󰅚" } else { "" };
     let block = create_modal_block(
-        "󰅚",
+        icon,
         modal_title,
         theme::RED,
         app.config.ui.rounded_borders,
