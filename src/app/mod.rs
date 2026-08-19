@@ -25,6 +25,7 @@ pub enum SettingItem {
     RoundedBorders,
     Icons,
     ScrollIndicator,
+    HeadingMarker,
     ScrollLines,
     UnderlineLinks,
     ShowFootnotes,
@@ -39,6 +40,7 @@ impl SettingItem {
         SettingItem::RoundedBorders,
         SettingItem::Icons,
         SettingItem::ScrollIndicator,
+        SettingItem::HeadingMarker,
         SettingItem::ScrollLines,
         SettingItem::UnderlineLinks,
         SettingItem::ShowFootnotes,
@@ -50,7 +52,8 @@ impl SettingItem {
         match self {
             SettingItem::LikedReadonly | SettingItem::AutoRestoreSession => "general",
             SettingItem::RoundedBorders | SettingItem::Icons | SettingItem::ScrollIndicator => "ui",
-            SettingItem::ScrollLines
+            SettingItem::HeadingMarker
+            | SettingItem::ScrollLines
             | SettingItem::UnderlineLinks
             | SettingItem::ShowFootnotes
             | SettingItem::ShowExternalLinks
@@ -65,6 +68,7 @@ impl SettingItem {
             SettingItem::RoundedBorders => "rounded borders",
             SettingItem::Icons => "icons",
             SettingItem::ScrollIndicator => "scroll indicator",
+            SettingItem::HeadingMarker => "heading marker",
             SettingItem::ScrollLines => "scroll lines per step",
             SettingItem::UnderlineLinks => "underline links",
             SettingItem::ShowFootnotes => "show footnotes & citations",
@@ -80,6 +84,7 @@ impl SettingItem {
             SettingItem::RoundedBorders => "use rounded border corners instead of sharp",
             SettingItem::Icons => "display nerd font icons",
             SettingItem::ScrollIndicator => "display scrollbar track on right edge of content panes",
+            SettingItem::HeadingMarker => "display colored bar marker (▍) before section headings",
             SettingItem::ScrollLines => "number of lines to scroll per j/k press (1-20)",
             SettingItem::UnderlineLinks => "display underlined modifier on article links",
             SettingItem::ShowFootnotes => "show inline reference numbers and references section",
@@ -474,6 +479,7 @@ impl App {
                 self.record_recent_article(&title);
                 let show_footnotes = self.config.reader.show_footnotes;
                 let show_external_links = self.config.reader.show_external_links;
+                let heading_marker = self.config.reader.heading_marker;
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     pane.is_loading = false;
                     pane.scroll_offset = 0;
@@ -484,6 +490,7 @@ impl App {
                         initial_width,
                         show_footnotes,
                         show_external_links,
+                        heading_marker,
                     );
                     let initial_link_idx = if !parsed_doc.links.is_empty() {
                         Some(0)
@@ -497,6 +504,7 @@ impl App {
                         last_width: initial_width,
                         last_show_footnotes: show_footnotes,
                         last_show_external_links: show_external_links,
+                        last_heading_marker: heading_marker,
                     };
                     pane.selected_link_idx = initial_link_idx;
                 }
@@ -551,6 +559,9 @@ impl App {
                 SettingItem::ScrollIndicator => {
                     self.config.ui.scroll_indicator = !self.config.ui.scroll_indicator;
                 }
+                SettingItem::HeadingMarker => {
+                    self.config.reader.heading_marker = !self.config.reader.heading_marker;
+                }
                 SettingItem::UnderlineLinks => {
                     self.config.reader.underline_links = !self.config.reader.underline_links;
                 }
@@ -590,6 +601,9 @@ impl App {
                 }
                 SettingItem::ScrollIndicator => {
                     self.config.ui.scroll_indicator = default_config.ui.scroll_indicator;
+                }
+                SettingItem::HeadingMarker => {
+                    self.config.reader.heading_marker = default_config.reader.heading_marker;
                 }
                 SettingItem::ScrollLines => {
                     self.config.reader.scroll_lines = default_config.reader.scroll_lines;

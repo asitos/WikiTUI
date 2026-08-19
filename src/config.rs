@@ -52,6 +52,7 @@ pub struct ReaderConfig {
     pub show_footnotes: bool,
     pub show_external_links: bool,
     pub toc_section_numbers: bool,
+    pub heading_marker: bool,
 }
 
 impl Default for ReaderConfig {
@@ -62,6 +63,7 @@ impl Default for ReaderConfig {
             show_footnotes: true,
             show_external_links: true,
             toc_section_numbers: true,
+            heading_marker: true,
         }
     }
 }

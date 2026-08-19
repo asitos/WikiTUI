@@ -15,6 +15,7 @@ pub enum PaneContent {
         last_width: usize,
         last_show_footnotes: bool,
         last_show_external_links: bool,
+        last_heading_marker: bool,
     },
     Error(String),
 }
@@ -77,6 +78,7 @@ impl Pane {
         width: usize,
         show_footnotes: bool,
         show_external_links: bool,
+        heading_marker: bool,
     ) {
         if let PaneContent::ArticleText {
             raw_html,
@@ -84,20 +86,28 @@ impl Pane {
             last_width,
             last_show_footnotes,
             last_show_external_links,
+            last_heading_marker,
             ..
         } = &mut self.content
         {
             if *last_width == width
                 && *last_show_footnotes == show_footnotes
                 && *last_show_external_links == show_external_links
+                && *last_heading_marker == heading_marker
             {
                 return;
             }
-            *parsed_doc =
-                parse_wikipedia_html(raw_html, width, show_footnotes, show_external_links);
+            *parsed_doc = parse_wikipedia_html(
+                raw_html,
+                width,
+                show_footnotes,
+                show_external_links,
+                heading_marker,
+            );
             *last_width = width;
             *last_show_footnotes = show_footnotes;
             *last_show_external_links = show_external_links;
+            *last_heading_marker = heading_marker;
         }
     }
 

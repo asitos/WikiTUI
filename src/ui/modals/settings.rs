@@ -77,6 +77,10 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                 let val = app.config.ui.scroll_indicator;
                 bool_span(val)
             }
+            SettingItem::HeadingMarker => {
+                let val = app.config.reader.heading_marker;
+                bool_span(val)
+            }
             SettingItem::ScrollLines => {
                 let val = app.config.reader.scroll_lines;
                 Span::styled(

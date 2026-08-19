@@ -107,6 +107,7 @@ pub fn parse_wikipedia_html(
     max_width: usize,
     show_footnotes: bool,
     show_external_links: bool,
+    heading_marker: bool,
 ) -> ParsedDocument {
     let mut doc = ParsedDocument::default();
     let effective_width = max_width.max(10);
@@ -136,6 +137,7 @@ pub fn parse_wikipedia_html(
                 &mut skipping_references_section,
                 false,
                 false,
+                heading_marker,
             );
         }
     }
@@ -163,6 +165,7 @@ fn process_node<'a>(
     skipping_references_section: &mut bool,
     is_sup: bool,
     is_sub: bool,
+    heading_marker: bool,
 ) {
     match node {
         tl::Node::Raw(bytes) => {
@@ -538,11 +541,13 @@ fn process_node<'a>(
                         _ => current_style.fg(theme::YELLOW).add_modifier(Modifier::BOLD),
                     };
 
-                    current_tokens.push(StyledToken {
-                        text: "▍".to_string(),
-                        style: current_style,
-                        link_target: None,
-                    });
+                    if heading_marker {
+                        current_tokens.push(StyledToken {
+                            text: "▍".to_string(),
+                            style: current_style,
+                            link_target: None,
+                        });
+                    }
                 }
                 "b" | "strong" => {
                     current_style = current_style.add_modifier(Modifier::BOLD);
@@ -687,6 +692,7 @@ fn process_node<'a>(
                         skipping_references_section,
                         current_is_sup,
                         current_is_sub,
+                        heading_marker,
                     );
                 }
             }
