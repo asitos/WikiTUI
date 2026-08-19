@@ -117,11 +117,7 @@ fn render_pane_at(
 
     match &pane.content {
         PaneContent::Empty => {
-            let empty_p = Paragraph::new("")
-                .fg(theme::GREY)
-                .block(block)
-                .alignment(Alignment::Center);
-            f.render_widget(empty_p, rect);
+            crate::ui::launch_screen::render_launch_screen(f, app, rect, block);
         }
         PaneContent::SearchResults { items, .. } => {
             if items.is_empty() {

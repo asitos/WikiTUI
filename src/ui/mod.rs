@@ -1,4 +1,5 @@
 pub mod feed;
+pub mod launch_screen;
 pub mod modals;
 pub mod pane_view;
 pub mod status_bar;
