@@ -149,7 +149,12 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                 .fg(theme::VIOLET)
                 .add_modifier(Modifier::BOLD),
         )],
-        InputMode::Help => vec![],
+        InputMode::Help => vec![Span::styled(
+            "j/k scroll · f/b page · esc/q close",
+            Style::default()
+                .fg(theme::PINK)
+                .add_modifier(Modifier::BOLD),
+        )],
         InputMode::SaveToList => vec![Span::styled(
             "j/k navigate · space toggle · c new list · esc done",
             Style::default()
@@ -163,12 +168,15 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                 .add_modifier(Modifier::BOLD),
         )],
         InputMode::SavedListsViewer => vec![Span::styled(
-            "h/l switch pane · j/k navigate · enter open · d delete",
+            "h/l switch pane · j/k navigate · enter open · d delete · esc close",
             Style::default()
                 .fg(theme::VIOLET)
                 .add_modifier(Modifier::BOLD),
         )],
-        InputMode::Confirm => vec![],
+        InputMode::Confirm => vec![Span::styled(
+            "y/enter confirm · n/esc cancel",
+            Style::default().fg(theme::RED).add_modifier(Modifier::BOLD),
+        )],
         InputMode::Settings => vec![Span::styled(
             "j/k navigate · space/enter toggle · h/l adjust · r reset · esc close",
             Style::default()
@@ -181,9 +189,9 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                     "j/k browse · l like · enter read · t tab · r reset · esc exit",
                     Style::default().fg(theme::GREY),
                 )]
-            } else if active_pane.toc_focused {
+            } else if active_pane.show_toc || active_pane.toc_focused {
                 vec![Span::styled(
-                    "j/k navigate contents · enter jump · o close",
+                    "j/k navigate contents · enter jump · esc/o close",
                     Style::default()
                         .fg(theme::LIME)
                         .add_modifier(Modifier::BOLD),

@@ -13,8 +13,7 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(64, 50, size);
     f.render_widget(Clear, area);
 
-    let modal_block =
-        create_modal_block("󰒓", "settings (config.toml)", theme::ORANGE);
+    let modal_block = create_modal_block("󰒓", "settings (config.toml)", theme::ORANGE);
 
     let inner = modal_block.inner(area);
     f.render_widget(modal_block, area);

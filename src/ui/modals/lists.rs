@@ -117,8 +117,7 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(80, 80, size);
     f.render_widget(Clear, area);
 
-    let outer_block =
-        create_modal_block("★", "saved lists & articles", theme::VIOLET);
+    let outer_block = create_modal_block("★", "saved lists & articles", theme::VIOLET);
 
     let inner_area = outer_block.inner(area);
     f.render_widget(outer_block, area);

@@ -31,13 +31,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                         let saved = app.saved_lists.is_article_saved_anywhere(title);
                         ("≡".to_string(), title.to_lowercase(), saved)
                     }
-                    PaneContent::SearchResults { query, .. } => {
-                        (
-                            "󰍉".to_string(),
-                            format!("search: {}", query.to_lowercase()),
-                            false,
-                        )
-                    }
+                    PaneContent::SearchResults { query, .. } => (
+                        "󰍉".to_string(),
+                        format!("search: {}", query.to_lowercase()),
+                        false,
+                    ),
                     PaneContent::Error(_) => ("󰅚".to_string(), "error".to_string(), false),
                     PaneContent::Empty => ("󰋜".to_string(), tab.name.to_lowercase(), false),
                 }
@@ -108,10 +106,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     {
         let is_active = i == active_idx;
         if is_active {
-            let active_style = Style::default()
-                .fg(theme::LIME)
-                .bg(theme::LIGHT_BG)
-                .bold();
+            let active_style = Style::default().fg(theme::LIME).bg(theme::LIGHT_BG).bold();
             tab_spans.push(Span::styled(format!(" {} ", title), active_style));
         } else {
             let inactive_style = Style::default().fg(theme::GREY);

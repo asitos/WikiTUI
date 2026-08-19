@@ -126,9 +126,11 @@ impl SavedListsStore {
         if title_trimmed.is_empty() {
             return false;
         }
-        self.lists
-            .iter()
-            .any(|l| l.articles.iter().any(|a| a.eq_ignore_ascii_case(title_trimmed)))
+        self.lists.iter().any(|l| {
+            l.articles
+                .iter()
+                .any(|a| a.eq_ignore_ascii_case(title_trimmed))
+        })
     }
 
     pub fn ensure_list(&mut self, id: &str, name: &str) {

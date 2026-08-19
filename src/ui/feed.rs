@@ -29,7 +29,10 @@ pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect) {
         let spinner = crate::ui::current_spinner_frame();
 
         lines.push(Line::from(vec![
-            Span::styled(format!("{} ", spinner), Style::default().fg(theme::LIME).bold()),
+            Span::styled(
+                format!("{} ", spinner),
+                Style::default().fg(theme::LIME).bold(),
+            ),
             Span::styled(
                 "fetching articles for your feed...",
                 Style::default().fg(theme::BEIGE).bold(),

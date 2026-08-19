@@ -99,7 +99,10 @@ fn render_pane_at(
         let spinner = crate::ui::current_spinner_frame();
 
         lines.push(Line::from(vec![
-            Span::styled(format!("{} ", spinner), Style::default().fg(theme::LIME).bold()),
+            Span::styled(
+                format!("{} ", spinner),
+                Style::default().fg(theme::LIME).bold(),
+            ),
             Span::styled(
                 "loading wikipedia data...",
                 Style::default().fg(theme::BEIGE).bold(),
@@ -153,18 +156,12 @@ fn render_pane_at(
                         lines.push(Line::from(vec![
                             Span::styled(
                                 badge_str,
-                                Style::default()
-                                    .bg(theme::LIME)
-                                    .fg(theme::BG)
-                                    .bold(),
+                                Style::default().bg(theme::LIME).fg(theme::BG).bold(),
                             ),
                             Span::styled(" ", Style::default().bg(theme::LIGHT_BG)),
                             Span::styled(
                                 title_lower,
-                                Style::default()
-                                    .bg(theme::LIGHT_BG)
-                                    .fg(theme::LIME)
-                                    .bold(),
+                                Style::default().bg(theme::LIGHT_BG).fg(theme::LIME).bold(),
                             ),
                             Span::styled(" ".repeat(pad_1), Style::default().bg(theme::LIGHT_BG)),
                         ]));
@@ -178,9 +175,7 @@ fn render_pane_at(
                                     Span::styled("   ", Style::default().bg(theme::LIGHT_BG)),
                                     Span::styled(
                                         s_line,
-                                        Style::default()
-                                            .bg(theme::LIGHT_BG)
-                                            .fg(theme::GREY),
+                                        Style::default().bg(theme::LIGHT_BG).fg(theme::GREY),
                                     ),
                                     Span::styled(
                                         " ".repeat(pad_s),
@@ -195,10 +190,7 @@ fn render_pane_at(
                                 format!(" {:>2} ", i + 1),
                                 Style::default().fg(theme::DARK_GREY),
                             ),
-                            Span::styled(
-                                title_lower,
-                                Style::default().fg(theme::FG).bold(),
-                            ),
+                            Span::styled(title_lower, Style::default().fg(theme::FG).bold()),
                         ]));
 
                         if !snippet_lower.is_empty() {

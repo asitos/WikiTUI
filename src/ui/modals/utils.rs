@@ -26,11 +26,7 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
-pub fn create_modal_block(
-    icon: &str,
-    title: &str,
-    border_color: Color,
-) -> Block<'static> {
+pub fn create_modal_block(icon: &str, title: &str, border_color: Color) -> Block<'static> {
     let top_title = if icon.is_empty() {
         format!(" {} ", title)
     } else {

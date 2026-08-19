@@ -193,7 +193,14 @@ fn process_node<'a>(
 
             if matches!(
                 tag_name,
-                "style" | "script" | "noscript" | "head" | "template" | "link" | "meta" | "annotation"
+                "style"
+                    | "script"
+                    | "noscript"
+                    | "head"
+                    | "template"
+                    | "link"
+                    | "meta"
+                    | "annotation"
             ) {
                 return;
             }
@@ -702,9 +709,7 @@ fn process_node<'a>(
                         });
                         current_tokens.push(StyledToken {
                             text: pill_text,
-                            style: Style::default()
-                                .fg(theme::GREY)
-                                .bg(theme::LIGHT_BG),
+                            style: Style::default().fg(theme::GREY).bg(theme::LIGHT_BG),
                             link_target: current_link.clone(),
                         });
                     }
