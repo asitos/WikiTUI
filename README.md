@@ -7,14 +7,17 @@ a feature-rich terminal wikipedia client.
 
 ## features
 
-- **tabs and splits**: work with multiple articles side-by-side or in tabs.
-- **vim-like navigation**: intuitive keybindings for fast scrolling, jumping, and pane movement.
-- **table of contents (`o`)**: pop-up article outline modal with instant heading jumping (`enter`).
+- **rich launch dashboard**: big ascii logo, live wikipedia metrics and a continue reading section.
+- **tabs & splits**: work with multiple articles side-by-side or in tabs.
+- **smart status bar**: 3-segment layout with active history trails and contextual action hints.
+- **vim-like navigation**: intuitive keybindings for fast scrolling, jumping, heading traversal and pane management.
+- **table of contents (`o`)**: pop-up outline modal with hierarchical section numbering.
 - **zen mode (`z`)**: distraction-free reading canvas with no borders, tab bars, or status indicators.
-- **personalized recommendation feed**: personalized article discovery feed based on reading preferences. inspired by [xikipedia](https://github.com/rebane2001/xikipedia)
-- **random article discovery (`r`)**: instantly discover and load random wikipedia articles in new tabs.
-- **in-page substring search (`/`)**: exact match highlighting and jumping through matches (`n` / `N`).
-- **custom saved lists (`m` / `M`)**: save articles into custom reading lists stored in `~/.config/wikid/saved_articles.json`.
+- **personalized recommendation feed (`F`)**: article discovery feed tailored to your reading history. inspired by [xikipedia](https://github.com/rebane2001/xikipedia).
+- **random article discovery (`r`)**: instantly fetch and explore random wikipedia articles in new tabs.
+- **in-page search (`/`)**: exact substring search with live match highlighting and cycling (`n` / `N`).
+- **custom saved lists (`m` / `M`)**: save articles into custom lists stored in `~/.config/wikid/saved_articles.json`.
+- **live settings (`,`)**: in-app settings modal with instant hot-reloading.
 
 ## installation
 
@@ -57,6 +60,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **jump back / forward** | `ctrl-o` / `ctrl-i` | navigate backward / forward across intra-article jump history |
 | **save to list** | `m` | save active article or item into custom list |
 | **view saved lists** | `M` | open custom lists & articles viewer |
+| **open recent article** | `1`–`7` | open recent article from launch dashboard |
 | **search wikipedia** | `ctrl-s` | open search modal (opens in new tab) |
 | **open search result** | `0`–`9` | open numbered search result directly |
 | **edit search** | `i` | edit current search query in active tab |
@@ -81,23 +85,32 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **switch tabs** | `alt-h` / `alt-l` | switch to previous / next tab |
 | **jump to tab** | `alt-0..9` | switch to tab 1-10 |
 | **restore session** | `S` | restore previous session (from home tab) |
+| **settings modal** | `,` | open interactive settings modal |
 | **help popup** | `?` | toggle keybindings cheat sheet |
 | **quit** | `q` | exit wikid |
 
 ## configuration
 
-wikid can be configured via `~/.config/wikid/config.toml`.
+wikid can be configured via `~/.config/wikid/config.toml` or via the settings modal from within wikid (`,`).
 
 ```toml
 [general]
 liked_readonly = true # when set to false, allow deleting items from the "Liked" list
 auto_restore_session = false # when set to true, automatically restore previous session on launch
+confirm_quit = true # enable/disable confirmation prompt on quit
 
 [reader]
 scroll_lines = 1 # number of lines to scroll per j/k press
 underline_links = false # enable/disable underlining links in articles
 show_footnotes = true # enable/disable inline citation markers and references
 show_external_links = true # enable/disable external links section
+toc_section_numbers = true # enable/disable table of contents section markers
+heading_marker = true # enable/disable colored heading marker in section headings
+
+[ui]
+rounded_borders = false # enable/disable rounded borders
+icons = true # enable/disable icons
+scroll_indicator = true # enable/disable scroll indicator on the right edge
 ```
 
 ## acknowledgements
