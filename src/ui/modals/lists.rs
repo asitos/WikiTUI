@@ -248,6 +248,7 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
 
     let modal_title = match &app.confirm_action {
         Some(crate::app::ConfirmAction::ResetFeed) => "confirm feed reset",
+        Some(crate::app::ConfirmAction::Quit) => "confirm quit",
         _ => "confirm deletion",
     };
 
@@ -306,6 +307,29 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
                 Line::from(vec![
                     Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
                     Span::styled("reset   ", Style::default().fg(theme::FG)),
+                    Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
+                    Span::styled("cancel", Style::default().fg(theme::FG)),
+                ]),
+            ]
+        }
+        Some(crate::app::ConfirmAction::Quit) => {
+            let tab_count = app.tabs.len();
+            let subtext = if tab_count > 1 {
+                format!("you have {} open tabs", tab_count)
+            } else {
+                "exit wikid reader".to_string()
+            };
+            vec![
+                Line::from("are you sure you want to quit wikid?"),
+                Line::from(""),
+                Line::from(Span::styled(
+                    subtext,
+                    Style::default().fg(theme::YELLOW),
+                )),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
+                    Span::styled("quit   ", Style::default().fg(theme::FG)),
                     Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
                     Span::styled("cancel", Style::default().fg(theme::FG)),
                 ]),

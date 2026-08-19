@@ -16,12 +16,14 @@ pub enum ConfirmAction {
     DeleteList { list_id: String, title: String },
     DeleteArticle { list_id: String, title: String },
     ResetFeed,
+    Quit,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SettingItem {
     LikedReadonly,
     AutoRestoreSession,
+    ConfirmQuit,
     RoundedBorders,
     Icons,
     ScrollIndicator,
@@ -37,6 +39,7 @@ impl SettingItem {
     pub const ALL: &'static [SettingItem] = &[
         SettingItem::LikedReadonly,
         SettingItem::AutoRestoreSession,
+        SettingItem::ConfirmQuit,
         SettingItem::RoundedBorders,
         SettingItem::Icons,
         SettingItem::ScrollIndicator,
@@ -50,7 +53,9 @@ impl SettingItem {
 
     pub fn section(&self) -> &'static str {
         match self {
-            SettingItem::LikedReadonly | SettingItem::AutoRestoreSession => "general",
+            SettingItem::LikedReadonly
+            | SettingItem::AutoRestoreSession
+            | SettingItem::ConfirmQuit => "general",
             SettingItem::RoundedBorders | SettingItem::Icons | SettingItem::ScrollIndicator => "ui",
             SettingItem::HeadingMarker
             | SettingItem::ScrollLines
@@ -65,6 +70,7 @@ impl SettingItem {
         match self {
             SettingItem::LikedReadonly => "liked list read-only",
             SettingItem::AutoRestoreSession => "auto-restore last session",
+            SettingItem::ConfirmQuit => "confirm before quitting",
             SettingItem::RoundedBorders => "rounded borders",
             SettingItem::Icons => "icons",
             SettingItem::ScrollIndicator => "scroll indicator",
@@ -81,8 +87,9 @@ impl SettingItem {
         match self {
             SettingItem::LikedReadonly => "prevent manual deletion of articles from liked list",
             SettingItem::AutoRestoreSession => "automatically restore last session on startup",
+            SettingItem::ConfirmQuit => "prompt for confirmation when exiting wikid",
             SettingItem::RoundedBorders => "use rounded border corners instead of sharp",
-            SettingItem::Icons => "display nerd font icons",
+            SettingItem::Icons => "display nerd fonts",
             SettingItem::ScrollIndicator => "display scrollbar track on right edge of content panes",
             SettingItem::HeadingMarker => "display colored bar marker (▍) before section headings",
             SettingItem::ScrollLines => "number of lines to scroll per j/k press (1-20)",
@@ -311,8 +318,13 @@ impl App {
     }
 
     pub fn quit(&mut self) {
-        self.save_session();
-        self.running = false;
+        if self.config.general.confirm_quit {
+            self.confirm_action = Some(ConfirmAction::Quit);
+            self.input_mode = InputMode::Confirm;
+        } else {
+            self.save_session();
+            self.running = false;
+        }
     }
 
     pub fn open_save_to_list_modal(&mut self) {
@@ -550,6 +562,9 @@ impl App {
                     self.config.general.auto_restore_session =
                         !self.config.general.auto_restore_session;
                 }
+                SettingItem::ConfirmQuit => {
+                    self.config.general.confirm_quit = !self.config.general.confirm_quit;
+                }
                 SettingItem::RoundedBorders => {
                     self.config.ui.rounded_borders = !self.config.ui.rounded_borders;
                 }
@@ -592,6 +607,9 @@ impl App {
                 SettingItem::AutoRestoreSession => {
                     self.config.general.auto_restore_session =
                         default_config.general.auto_restore_session;
+                }
+                SettingItem::ConfirmQuit => {
+                    self.config.general.confirm_quit = default_config.general.confirm_quit;
                 }
                 SettingItem::RoundedBorders => {
                     self.config.ui.rounded_borders = default_config.ui.rounded_borders;

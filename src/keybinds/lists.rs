@@ -202,13 +202,20 @@ pub fn handle_confirm_mode(app: &mut App, key: KeyEvent) {
             Some(crate::app::ConfirmAction::ResetFeed) => {
                 app.reset_feed();
             }
+            Some(crate::app::ConfirmAction::Quit) => {
+                app.save_session();
+                app.running = false;
+            }
             None => {
                 app.input_mode = InputMode::Normal;
             }
         },
         KeyCode::Char('n') | KeyCode::Esc => {
             let action = app.confirm_action.take();
-            if matches!(action, Some(crate::app::ConfirmAction::ResetFeed)) {
+            if matches!(
+                action,
+                Some(crate::app::ConfirmAction::ResetFeed) | Some(crate::app::ConfirmAction::Quit)
+            ) {
                 app.input_mode = InputMode::Normal;
             } else {
                 app.input_mode = InputMode::SavedListsViewer;

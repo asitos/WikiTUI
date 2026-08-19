@@ -65,6 +65,10 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                 let val = app.config.general.auto_restore_session;
                 bool_span(val)
             }
+            SettingItem::ConfirmQuit => {
+                let val = app.config.general.confirm_quit;
+                bool_span(val)
+            }
             SettingItem::RoundedBorders => {
                 let val = app.config.ui.rounded_borders;
                 bool_span(val)

@@ -15,6 +15,7 @@ pub struct Config {
 pub struct GeneralConfig {
     pub liked_readonly: bool,
     pub auto_restore_session: bool,
+    pub confirm_quit: bool,
 }
 
 impl Default for GeneralConfig {
@@ -22,6 +23,7 @@ impl Default for GeneralConfig {
         Self {
             liked_readonly: true,
             auto_restore_session: false,
+            confirm_quit: true,
         }
     }
 }
