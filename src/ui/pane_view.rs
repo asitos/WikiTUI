@@ -137,25 +137,79 @@ fn render_pane_at(
                 f.render_widget(no_res_p, rect);
             } else {
                 let mut lines = Vec::new();
+                let inner_width = (rect.width as usize).saturating_sub(4).max(20);
+
                 for (i, item) in items.iter().enumerate() {
                     let is_selected = i == pane.selected_idx;
-                    let prefix = if is_selected { "> " } else { "  " };
-                    let title_style = if is_selected {
-                        Style::default().fg(theme::LIME).bold()
-                    } else {
-                        Style::default().fg(theme::FG).bold()
-                    };
+                    let title_lower = item.title.to_lowercase();
+                    let snippet_lower = item.snippet.to_lowercase();
 
-                    lines.push(Line::from(vec![
-                        Span::styled(prefix, title_style),
-                        Span::styled(format!("{}. {}", i + 1, item.title), title_style),
-                    ]));
+                    if is_selected {
+                        let badge_str = format!(" {} ", i + 1);
+                        let badge_w = unicode_width::UnicodeWidthStr::width(badge_str.as_str());
+                        let title_w = unicode_width::UnicodeWidthStr::width(title_lower.as_str());
+                        let pad_1 = inner_width.saturating_sub(badge_w + 1 + title_w);
 
-                    if !item.snippet.is_empty() {
                         lines.push(Line::from(vec![
-                            Span::raw("    "),
-                            Span::styled(&item.snippet, Style::default().fg(theme::GREY)),
+                            Span::styled(
+                                badge_str,
+                                Style::default()
+                                    .bg(theme::LIME)
+                                    .fg(theme::BG)
+                                    .bold(),
+                            ),
+                            Span::styled(" ", Style::default().bg(theme::LIGHT_BG)),
+                            Span::styled(
+                                title_lower,
+                                Style::default()
+                                    .bg(theme::LIGHT_BG)
+                                    .fg(theme::LIME)
+                                    .bold(),
+                            ),
+                            Span::styled(" ".repeat(pad_1), Style::default().bg(theme::LIGHT_BG)),
                         ]));
+
+                        if !snippet_lower.is_empty() {
+                            let wrap_w = inner_width.saturating_sub(3).max(10);
+                            for s_line in wrap_text(&snippet_lower, wrap_w) {
+                                let s_w = unicode_width::UnicodeWidthStr::width(s_line.as_str());
+                                let pad_s = inner_width.saturating_sub(3 + s_w);
+                                lines.push(Line::from(vec![
+                                    Span::styled("   ", Style::default().bg(theme::LIGHT_BG)),
+                                    Span::styled(
+                                        s_line,
+                                        Style::default()
+                                            .bg(theme::LIGHT_BG)
+                                            .fg(theme::GREY),
+                                    ),
+                                    Span::styled(
+                                        " ".repeat(pad_s),
+                                        Style::default().bg(theme::LIGHT_BG),
+                                    ),
+                                ]));
+                            }
+                        }
+                    } else {
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                format!(" {:>2} ", i + 1),
+                                Style::default().fg(theme::DARK_GREY),
+                            ),
+                            Span::styled(
+                                title_lower,
+                                Style::default().fg(theme::FG).bold(),
+                            ),
+                        ]));
+
+                        if !snippet_lower.is_empty() {
+                            let wrap_w = inner_width.saturating_sub(4).max(10);
+                            for s_line in wrap_text(&snippet_lower, wrap_w) {
+                                lines.push(Line::from(vec![
+                                    Span::raw("    "),
+                                    Span::styled(s_line, Style::default().fg(theme::GREY)),
+                                ]));
+                            }
+                        }
                     }
                     lines.push(Line::from(""));
                 }
@@ -315,4 +369,30 @@ fn render_pane_at(
             f.render_widget(err_p, rect);
         }
     }
+}
+
+fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current_line = String::new();
+    let mut current_width = 0;
+
+    for word in text.split_whitespace() {
+        let word_width = unicode_width::UnicodeWidthStr::width(word);
+        if current_line.is_empty() {
+            current_line.push_str(word);
+            current_width = word_width;
+        } else if current_width + 1 + word_width <= max_width {
+            current_line.push(' ');
+            current_line.push_str(word);
+            current_width += 1 + word_width;
+        } else {
+            lines.push(current_line);
+            current_line = word.to_string();
+            current_width = word_width;
+        }
+    }
+    if !current_line.is_empty() {
+        lines.push(current_line);
+    }
+    lines
 }
