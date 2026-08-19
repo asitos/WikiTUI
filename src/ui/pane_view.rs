@@ -2,10 +2,10 @@ use crate::app::{App, PaneContent};
 use crate::theme;
 use crate::ui::modals::render_toc_modal;
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::{Alignment, Margin, Rect},
     style::{Modifier, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Padding, Paragraph},
+    widgets::{Block, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
     Frame,
 };
 
@@ -213,10 +213,22 @@ fn render_pane_at(
                     }
                     lines.push(Line::from(""));
                 }
+                let total_lines = lines.len();
                 let results_p = Paragraph::new(lines)
                     .block(block)
                     .scroll((pane.scroll_offset as u16, 0));
                 f.render_widget(results_p, rect);
+
+                render_scroll_indicator(
+                    f,
+                    rect,
+                    total_lines,
+                    pane.viewport_height,
+                    pane.scroll_offset,
+                    border_color,
+                    is_active,
+                    app.zen_mode,
+                );
             }
         }
         PaneContent::ArticleText { parsed_doc, .. } => {
@@ -349,6 +361,17 @@ fn render_pane_at(
             let paragraph = Paragraph::new(rendered_lines).block(block);
             f.render_widget(paragraph, rect);
 
+            render_scroll_indicator(
+                f,
+                rect,
+                parsed_doc.lines.len(),
+                pane.viewport_height,
+                pane.scroll_offset,
+                border_color,
+                is_active,
+                app.zen_mode,
+            );
+
             if is_active && pane.show_toc && !parsed_doc.headings.is_empty() {
                 render_toc_modal(f, pane, parsed_doc, rect);
             }
@@ -368,6 +391,40 @@ fn render_pane_at(
                 .alignment(Alignment::Center);
             f.render_widget(err_p, rect);
         }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_scroll_indicator(
+    f: &mut Frame,
+    rect: Rect,
+    total_lines: usize,
+    viewport_height: usize,
+    scroll_offset: usize,
+    border_color: ratatui::style::Color,
+    is_active: bool,
+    zen_mode: bool,
+) {
+    if !zen_mode && total_lines > viewport_height {
+        let total_scrollable = total_lines.saturating_sub(viewport_height);
+        let mut scrollbar_state = ScrollbarState::new(total_scrollable).position(scroll_offset);
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None)
+            .track_symbol(Some("│"))
+            .thumb_symbol("┃")
+            .track_style(Style::default().fg(theme::DARK_GREY))
+            .thumb_style(Style::default().fg(if is_active {
+                border_color
+            } else {
+                theme::DARK_GREY
+            }));
+
+        let scroll_area = rect.inner(&Margin {
+            vertical: 1,
+            horizontal: 0,
+        });
+        f.render_stateful_widget(scrollbar, scroll_area, &mut scrollbar_state);
     }
 }
 
