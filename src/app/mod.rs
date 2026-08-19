@@ -142,12 +142,75 @@ pub struct App {
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
     pub wiki_stats: crate::api::WikiStatistics,
+    pub recent_articles: Vec<String>,
 
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: Sender<NetworkCommand>,
 }
 
 impl App {
+    pub fn recent_articles_file_path() -> std::path::PathBuf {
+        if let Ok(home) = std::env::var("HOME") {
+            let mut dir = std::path::PathBuf::from(home);
+            dir.push(".config");
+            dir.push("wikid");
+            dir.push("recent_articles.json");
+            dir
+        } else {
+            std::path::PathBuf::from("recent_articles.json")
+        }
+    }
+
+    pub fn load_recent_articles() -> Vec<String> {
+        let path = Self::recent_articles_file_path();
+        std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|c| serde_json::from_str::<Vec<String>>(&c).ok())
+            .unwrap_or_default()
+    }
+
+    pub fn save_recent_articles(&self) {
+        let path = Self::recent_articles_file_path();
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(json) = serde_json::to_string_pretty(&self.recent_articles) {
+            let _ = std::fs::write(path, json);
+        }
+    }
+
+    pub fn record_recent_article(&mut self, title: &str) {
+        if title.trim().is_empty() {
+            return;
+        }
+        self.recent_articles.retain(|t| t != title);
+        self.recent_articles.insert(0, title.to_string());
+        if self.recent_articles.len() > 10 {
+            self.recent_articles.truncate(10);
+        }
+        self.save_recent_articles();
+    }
+
+    pub fn get_continue_reading_articles(&self) -> Vec<String> {
+        let mut list = self.recent_articles.clone();
+        if list.is_empty() {
+            for l in &self.saved_lists.lists {
+                for a in l.articles.iter().rev() {
+                    if !list.contains(a) {
+                        list.push(a.clone());
+                    }
+                    if list.len() >= 10 {
+                        break;
+                    }
+                }
+                if list.len() >= 10 {
+                    break;
+                }
+            }
+        }
+        list
+    }
+
     pub fn new(cmd_tx: Sender<NetworkCommand>) -> Self {
         let _ = cmd_tx.send(NetworkCommand::FetchStats);
         let mut app = Self {
@@ -183,6 +246,7 @@ impl App {
             closed_tabs_stack: Vec::new(),
             status_message: None,
             wiki_stats: crate::api::WikiStatistics::default(),
+            recent_articles: Self::load_recent_articles(),
 
             next_pane_id: 1,
             cmd_tx,
@@ -388,6 +452,7 @@ impl App {
                 title,
                 content,
             } => {
+                self.record_recent_article(&title);
                 let show_footnotes = self.config.reader.show_footnotes;
                 let show_external_links = self.config.reader.show_external_links;
                 if let Some(pane) = self.find_pane_mut(pane_id) {

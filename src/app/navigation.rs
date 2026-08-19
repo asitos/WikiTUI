@@ -69,13 +69,22 @@ impl App {
             }
             self.clamp_link_selection_to_viewport(term_height);
         } else {
-            let pane = self.active_pane_mut();
-            match &pane.content {
-                PaneContent::SearchResults { items, .. } if !items.is_empty() => {
-                    pane.selected_idx = (pane.selected_idx + 1).min(items.len() - 1);
-                    Self::keep_search_selection_visible(pane, term_height);
+            let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
+            if is_empty {
+                let recent = self.get_continue_reading_articles();
+                if !recent.is_empty() {
+                    let pane = self.active_pane_mut();
+                    pane.selected_idx = (pane.selected_idx + 1).min(recent.len() - 1);
                 }
-                _ => {}
+            } else {
+                let pane = self.active_pane_mut();
+                match &pane.content {
+                    PaneContent::SearchResults { items, .. } if !items.is_empty() => {
+                        pane.selected_idx = (pane.selected_idx + 1).min(items.len() - 1);
+                        Self::keep_search_selection_visible(pane, term_height);
+                    }
+                    _ => {}
+                }
             }
         }
     }
@@ -91,7 +100,9 @@ impl App {
             let pane = self.active_pane_mut();
             if pane.selected_idx > 0 {
                 pane.selected_idx -= 1;
-                Self::keep_search_selection_visible(pane, term_height);
+                if matches!(pane.content, PaneContent::SearchResults { .. }) {
+                    Self::keep_search_selection_visible(pane, term_height);
+                }
             }
         }
     }
@@ -106,6 +117,10 @@ impl App {
                     } else {
                         (pane.id, None)
                     }
+                }
+                PaneContent::Empty => {
+                    let recent = self.get_continue_reading_articles();
+                    (pane.id, recent.get(pane.selected_idx).cloned())
                 }
                 PaneContent::ArticleText { parsed_doc, .. } => {
                     if let Some(link_idx) = pane.selected_link_idx {
@@ -188,16 +203,27 @@ impl App {
         } else {
             (digit as usize) - ('1' as usize)
         };
-        let pane = self.active_pane_mut();
-        let target_title = if let PaneContent::SearchResults { items, .. } = &mut pane.content {
-            if idx < items.len() {
-                pane.selected_idx = idx;
-                Some(items[idx].title.clone())
+        let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
+        let target_title = if is_empty {
+            let recent = self.get_continue_reading_articles();
+            if idx < recent.len() {
+                self.active_pane_mut().selected_idx = idx;
+                Some(recent[idx].clone())
             } else {
                 None
             }
         } else {
-            None
+            let pane = self.active_pane_mut();
+            if let PaneContent::SearchResults { items, .. } = &mut pane.content {
+                if idx < items.len() {
+                    pane.selected_idx = idx;
+                    Some(items[idx].title.clone())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
         };
 
         if let Some(title) = target_title {
@@ -290,6 +316,10 @@ impl App {
                 PaneContent::SearchResults { items, .. } => {
                     items.get(pane.selected_idx).map(|item| item.title.clone())
                 }
+                PaneContent::Empty => {
+                    let recent = self.get_continue_reading_articles();
+                    recent.get(pane.selected_idx).cloned()
+                }
                 PaneContent::ArticleText { parsed_doc, .. } => pane
                     .selected_link_idx
                     .and_then(|idx| parsed_doc.links.get(idx))
@@ -316,6 +346,10 @@ impl App {
             match &pane.content {
                 PaneContent::SearchResults { items, .. } => {
                     items.get(pane.selected_idx).map(|item| item.title.clone())
+                }
+                PaneContent::Empty => {
+                    let recent = self.get_continue_reading_articles();
+                    recent.get(pane.selected_idx).cloned()
                 }
                 PaneContent::ArticleText { parsed_doc, .. } => pane
                     .selected_link_idx
