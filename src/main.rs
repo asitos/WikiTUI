@@ -84,7 +84,19 @@ fn run_app(
 
         terminal.draw(|f| ui::draw(f, app))?;
 
-        let timeout = tick_rate
+        let has_loading = app.feed.is_fetching
+            || (app.feed.active && app.feed.items.is_empty())
+            || app
+                .tabs
+                .iter()
+                .any(|t| t.panes.iter().any(|p| p.is_loading));
+        let active_tick = if has_loading {
+            Duration::from_millis(80)
+        } else {
+            tick_rate
+        };
+
+        let timeout = active_tick
             .checked_sub(last_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
@@ -97,7 +109,7 @@ fn run_app(
             }
         }
 
-        if last_tick.elapsed() >= tick_rate {
+        if last_tick.elapsed() >= active_tick {
             last_tick = Instant::now();
         }
     }

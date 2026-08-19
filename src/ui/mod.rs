@@ -5,13 +5,21 @@ pub mod status_bar;
 pub mod tab_bar;
 
 use crate::app::{App, InputMode};
-use crate::theme;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout},
-    style::Style,
-    widgets::Paragraph,
+    layout::{Constraint, Direction, Layout},
     Frame,
 };
+
+pub const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+pub fn current_spinner_frame() -> &'static str {
+    let elapsed_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let frame_idx = ((elapsed_ms / 80) % (SPINNER_FRAMES.len() as u128)) as usize;
+    SPINNER_FRAMES[frame_idx]
+}
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let size = f.size();
@@ -26,11 +34,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         let status_area = chunks[1];
 
         feed::render_feed_view(f, &app.feed, feed_area);
-
-        let status_p = Paragraph::new(" j/k: navigate | l: like | enter: read | esc: exit ")
-            .style(Style::default().fg(theme::GREY))
-            .alignment(Alignment::Center);
-        f.render_widget(status_p, status_area);
+        status_bar::render(f, app, status_area);
     } else if app.zen_mode {
         let zen_area = modals::centered_rect(80, 90, size);
         pane_view::render_single_active_pane(f, app, zen_area);

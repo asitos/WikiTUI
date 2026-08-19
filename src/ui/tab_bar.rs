@@ -18,7 +18,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         .iter()
         .enumerate()
         .map(|(i, tab)| {
-            let raw_title = if let Some(active_pane) = tab.panes.get(tab.active_pane_idx) {
+            let is_loading = tab.panes.iter().any(|p| p.is_loading);
+            let raw_title = if is_loading {
+                format!("{} loading...", crate::ui::current_spinner_frame())
+            } else if let Some(active_pane) = tab.panes.get(tab.active_pane_idx) {
                 match &active_pane.content {
                     PaneContent::ArticleText { title, .. } => title.to_lowercase(),
                     PaneContent::SearchResults { query, .. } => {

@@ -95,10 +95,16 @@ fn render_pane_at(
         for _ in 0..vertical_offset {
             lines.push(Line::from(""));
         }
-        lines.push(Line::from(Span::styled(
-            "loading wikipedia data...",
-            Style::default().fg(theme::YELLOW).bold(),
-        )));
+
+        let spinner = crate::ui::current_spinner_frame();
+
+        lines.push(Line::from(vec![
+            Span::styled(format!("{} ", spinner), Style::default().fg(theme::LIME).bold()),
+            Span::styled(
+                "loading wikipedia data...",
+                Style::default().fg(theme::BEIGE).bold(),
+            ),
+        ]));
         let loading_p = Paragraph::new(lines)
             .block(block)
             .alignment(Alignment::Center);

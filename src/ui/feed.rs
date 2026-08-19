@@ -25,10 +25,16 @@ pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect) {
         for _ in 0..vertical_offset {
             lines.push(Line::from(""));
         }
-        lines.push(Line::from(Span::styled(
-            " fetching articles for your feed... ",
-            Style::default().fg(theme::YELLOW).bold(),
-        )));
+
+        let spinner = crate::ui::current_spinner_frame();
+
+        lines.push(Line::from(vec![
+            Span::styled(format!("{} ", spinner), Style::default().fg(theme::LIME).bold()),
+            Span::styled(
+                "fetching articles for your feed...",
+                Style::default().fg(theme::BEIGE).bold(),
+            ),
+        ]));
 
         let loading_p = Paragraph::new(lines).alignment(Alignment::Center);
         f.render_widget(loading_p, inner_area);
@@ -54,11 +60,22 @@ pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect) {
         Style::default().fg(theme::GREY)
     };
 
+    let post_title = if feed.is_fetching {
+        format!(
+            " post {} of {} · {} fetching more... ",
+            active_idx + 1,
+            feed.items.len(),
+            crate::ui::current_spinner_frame()
+        )
+    } else {
+        format!(" post {} of {} ", active_idx + 1, feed.items.len())
+    };
+
     let card_block = Block::bordered()
         .border_style(Style::default().fg(card_border_color))
         .title(Title::from(format!(" {} ", item.title.to_lowercase())).alignment(Alignment::Center))
         .title(
-            Title::from(format!(" post {} of {} ", active_idx + 1, feed.items.len()))
+            Title::from(post_title)
                 .position(ratatui::widgets::block::Position::Bottom)
                 .alignment(Alignment::Left),
         )
