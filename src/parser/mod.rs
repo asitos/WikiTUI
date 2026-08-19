@@ -686,10 +686,25 @@ fn process_node<'a>(
 
             if tag_name == "a" {
                 if let Some(ref target) = current_link {
-                    if target.starts_with("http://") || target.starts_with("https://") {
+                    if target.starts_with("http://")
+                        || target.starts_with("https://")
+                        || target.starts_with("//")
+                    {
+                        let pill_text = if let Some(domain) = utils::extract_domain(target) {
+                            format!(" ↗ {} ", domain)
+                        } else {
+                            " ↗ ".to_string()
+                        };
                         current_tokens.push(StyledToken {
-                            text: " ↗".to_string(),
-                            style: Style::default().fg(theme::TEAL),
+                            text: " ".to_string(),
+                            style: Style::default(),
+                            link_target: None,
+                        });
+                        current_tokens.push(StyledToken {
+                            text: pill_text,
+                            style: Style::default()
+                                .fg(theme::GREY)
+                                .bg(theme::LIGHT_BG),
                             link_target: current_link.clone(),
                         });
                     }

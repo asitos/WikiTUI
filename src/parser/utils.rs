@@ -106,6 +106,36 @@ pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
     None
 }
 
+pub fn extract_domain(url: &str) -> Option<String> {
+    let without_proto = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+        .or_else(|| url.strip_prefix("//"))?;
+
+    let host = without_proto
+        .split('/')
+        .next()?
+        .split('?')
+        .next()?
+        .split('#')
+        .next()?
+        .split(':')
+        .next()?;
+
+    let host_trimmed = host.trim();
+    if host_trimmed.is_empty() {
+        return None;
+    }
+
+    let clean_host = if let Some(h) = host_trimmed.strip_prefix("www.") {
+        h
+    } else {
+        host_trimmed
+    };
+
+    Some(clean_host.to_lowercase())
+}
+
 pub fn decode_html_entities(s: &str) -> String {
     if !s.contains('&') {
         return s.to_string();
