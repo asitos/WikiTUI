@@ -31,6 +31,7 @@ impl Default for GeneralConfig {
 pub struct UiConfig {
     pub rounded_borders: bool,
     pub icons: bool,
+    pub scroll_indicator: bool,
 }
 
 impl Default for UiConfig {
@@ -38,6 +39,7 @@ impl Default for UiConfig {
         Self {
             rounded_borders: false,
             icons: true,
+            scroll_indicator: true,
         }
     }
 }

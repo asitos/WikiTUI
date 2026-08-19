@@ -24,6 +24,7 @@ pub enum SettingItem {
     AutoRestoreSession,
     RoundedBorders,
     Icons,
+    ScrollIndicator,
     ScrollLines,
     UnderlineLinks,
     ShowFootnotes,
@@ -37,6 +38,7 @@ impl SettingItem {
         SettingItem::AutoRestoreSession,
         SettingItem::RoundedBorders,
         SettingItem::Icons,
+        SettingItem::ScrollIndicator,
         SettingItem::ScrollLines,
         SettingItem::UnderlineLinks,
         SettingItem::ShowFootnotes,
@@ -47,7 +49,7 @@ impl SettingItem {
     pub fn section(&self) -> &'static str {
         match self {
             SettingItem::LikedReadonly | SettingItem::AutoRestoreSession => "general",
-            SettingItem::RoundedBorders | SettingItem::Icons => "ui",
+            SettingItem::RoundedBorders | SettingItem::Icons | SettingItem::ScrollIndicator => "ui",
             SettingItem::ScrollLines
             | SettingItem::UnderlineLinks
             | SettingItem::ShowFootnotes
@@ -62,6 +64,7 @@ impl SettingItem {
             SettingItem::AutoRestoreSession => "auto-restore last session",
             SettingItem::RoundedBorders => "rounded borders",
             SettingItem::Icons => "icons",
+            SettingItem::ScrollIndicator => "scroll indicator",
             SettingItem::ScrollLines => "scroll lines per step",
             SettingItem::UnderlineLinks => "underline links",
             SettingItem::ShowFootnotes => "show footnotes & citations",
@@ -76,6 +79,7 @@ impl SettingItem {
             SettingItem::AutoRestoreSession => "automatically restore last session on startup",
             SettingItem::RoundedBorders => "use rounded border corners instead of sharp",
             SettingItem::Icons => "display nerd font icons",
+            SettingItem::ScrollIndicator => "display scrollbar track on right edge of content panes",
             SettingItem::ScrollLines => "number of lines to scroll per j/k press (1-20)",
             SettingItem::UnderlineLinks => "display underlined modifier on article links",
             SettingItem::ShowFootnotes => "show inline reference numbers and references section",
@@ -544,6 +548,9 @@ impl App {
                 SettingItem::Icons => {
                     self.config.ui.icons = !self.config.ui.icons;
                 }
+                SettingItem::ScrollIndicator => {
+                    self.config.ui.scroll_indicator = !self.config.ui.scroll_indicator;
+                }
                 SettingItem::UnderlineLinks => {
                     self.config.reader.underline_links = !self.config.reader.underline_links;
                 }
@@ -580,6 +587,9 @@ impl App {
                 }
                 SettingItem::Icons => {
                     self.config.ui.icons = default_config.ui.icons;
+                }
+                SettingItem::ScrollIndicator => {
+                    self.config.ui.scroll_indicator = default_config.ui.scroll_indicator;
                 }
                 SettingItem::ScrollLines => {
                     self.config.reader.scroll_lines = default_config.reader.scroll_lines;

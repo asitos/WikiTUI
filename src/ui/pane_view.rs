@@ -223,6 +223,7 @@ fn render_pane_at(
                     border_color,
                     is_active,
                     app.zen_mode,
+                    app.config.ui.scroll_indicator,
                 );
             }
         }
@@ -365,6 +366,7 @@ fn render_pane_at(
                 border_color,
                 is_active,
                 app.zen_mode,
+                app.config.ui.scroll_indicator,
             );
 
             if is_active && pane.show_toc && !parsed_doc.headings.is_empty() {
@@ -407,8 +409,9 @@ fn render_scroll_indicator(
     border_color: ratatui::style::Color,
     is_active: bool,
     zen_mode: bool,
+    show_indicator: bool,
 ) {
-    if !zen_mode && total_lines > viewport_height {
+    if show_indicator && !zen_mode && total_lines > viewport_height {
         let total_scrollable = total_lines.saturating_sub(viewport_height);
         let mut scrollbar_state = ScrollbarState::new(total_scrollable).position(scroll_offset);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
