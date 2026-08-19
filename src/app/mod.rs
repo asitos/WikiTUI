@@ -143,6 +143,7 @@ pub struct App {
     pub status_message: Option<(String, std::time::Instant)>,
     pub wiki_stats: crate::api::WikiStatistics,
     pub recent_articles: Vec<String>,
+    pub launch_quote_idx: usize,
 
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: Sender<NetworkCommand>,
@@ -213,6 +214,10 @@ impl App {
 
     pub fn new(cmd_tx: Sender<NetworkCommand>) -> Self {
         let _ = cmd_tx.send(NetworkCommand::FetchStats);
+        let quote_idx = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as usize)
+            .unwrap_or(0);
         let mut app = Self {
             running: true,
             tabs: Vec::new(),
@@ -247,6 +252,7 @@ impl App {
             status_message: None,
             wiki_stats: crate::api::WikiStatistics::default(),
             recent_articles: Self::load_recent_articles(),
+            launch_quote_idx: quote_idx,
 
             next_pane_id: 1,
             cmd_tx,

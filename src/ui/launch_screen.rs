@@ -10,18 +10,26 @@ use ratatui::{
 
 pub const LOGO_WIDTH: usize = 53;
 pub const LOGO: &[&str] = &[
-    r#"                                              _______"#,
-    r#"             .--.     .     .--.\  ___ `'.           "#,
-    r#"      _     _|__|   .'|     |__| ' |--.\  \          "#,
-    r#"/\    \\   //.--. .'  |     .--. | |    \  '         "#,
-    r#"`\\  //\\ // |  |<    |     |  | | |     |  '        "#,
-    r#"  \`//  \'/  |  | |   | ____|  | | |     |  |        "#,
-    r#"   \|   |/   |  | |   | \ .'|  | | |     ' .'        "#,
-    r#"    '        |  | |   |/  . |  | | |___.' /'         "#,
-    r#"             |__| |    /\  \|__|/_______.'/          "#,
-    r#"                  |   |  \  \   \_______|/           "#,
-    r#"                  '    \  \  \                       "#,
-    r#"                 '------'  '---'                     "#,
+    r#"                                             "#,
+    r#"             .--.     .     .--.\  ___ `'.   "#,
+    r#"      _     _|__|   .'|     |__| ' |--.\  \  "#,
+    r#"/\    \\   //.--. .'  |     .--. | |    \  ' "#,
+    r#"`\\  //\\ // |  |<    |     |  | | |     |  '"#,
+    r#"  \`//  \'/  |  | |   | ____|  | | |     |  |"#,
+    r#"   \|   |/   |  | |   | \ .'|  | | |     ' .'"#,
+    r#"    '        |  | |   |/  . |  | | |___.' /' "#,
+    r#"             |__| |    /\  \|__|/_______.'/  "#,
+    r#"                  |   |  \  \   \_______|/   "#,
+    r#"                  '    \  \  \               "#,
+    r#"                 '------'  '---'             "#,
+];
+
+pub const QUOTES: &[&str] = &[
+    "wikipedia reader for the terminal",
+    "it's wicked",
+    "just one more before bed",
+    "genuine autism",
+    "press r",
 ];
 
 pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) {
@@ -55,12 +63,22 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
     }
 
     lines.push(Line::from(""));
-    let subtitle = "wikipedia reader for the terminal";
-    let sub_pad = (inner_width.saturating_sub(subtitle.len())) / 2;
-    lines.push(Line::from(vec![
-        Span::raw(" ".repeat(sub_pad)),
-        Span::styled(subtitle, Style::default().fg(theme::GREY).italic()),
-    ]));
+    let quote = QUOTES[app.launch_quote_idx % QUOTES.len()];
+    let quote_len = quote.chars().count();
+    if inner_width >= quote_len {
+        let q_pad = (inner_width.saturating_sub(quote_len)) / 2;
+        lines.push(Line::from(vec![
+            Span::raw(" ".repeat(q_pad)),
+            Span::styled(quote, Style::default().fg(theme::GREY).italic()),
+        ]));
+    } else {
+        let default_sub = "wikipedia reader for the terminal";
+        let sub_pad = (inner_width.saturating_sub(default_sub.len())) / 2;
+        lines.push(Line::from(vec![
+            Span::raw(" ".repeat(sub_pad)),
+            Span::styled(default_sub, Style::default().fg(theme::GREY).italic()),
+        ]));
+    }
 
     lines.push(Line::from(""));
     let stats_spans = if inner_width >= 75 {
