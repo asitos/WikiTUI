@@ -32,6 +32,7 @@ pub struct ReaderConfig {
     pub underline_links: bool,
     pub show_footnotes: bool,
     pub show_external_links: bool,
+    pub toc_section_numbers: bool,
 }
 
 impl Default for ReaderConfig {
@@ -41,6 +42,7 @@ impl Default for ReaderConfig {
             underline_links: false,
             show_footnotes: true,
             show_external_links: true,
+            toc_section_numbers: true,
         }
     }
 }

@@ -26,6 +26,7 @@ pub enum SettingItem {
     UnderlineLinks,
     ShowFootnotes,
     ShowExternalLinks,
+    TocSectionNumbers,
 }
 
 impl SettingItem {
@@ -36,6 +37,7 @@ impl SettingItem {
         SettingItem::UnderlineLinks,
         SettingItem::ShowFootnotes,
         SettingItem::ShowExternalLinks,
+        SettingItem::TocSectionNumbers,
     ];
 
     pub fn section(&self) -> &'static str {
@@ -44,7 +46,8 @@ impl SettingItem {
             SettingItem::ScrollLines
             | SettingItem::UnderlineLinks
             | SettingItem::ShowFootnotes
-            | SettingItem::ShowExternalLinks => "reader",
+            | SettingItem::ShowExternalLinks
+            | SettingItem::TocSectionNumbers => "reader",
         }
     }
 
@@ -56,6 +59,7 @@ impl SettingItem {
             SettingItem::UnderlineLinks => "underline links",
             SettingItem::ShowFootnotes => "show footnotes & citations",
             SettingItem::ShowExternalLinks => "show external links section",
+            SettingItem::TocSectionNumbers => "toc section numbers",
         }
     }
 
@@ -67,6 +71,7 @@ impl SettingItem {
             SettingItem::UnderlineLinks => "display underlined modifier on article links",
             SettingItem::ShowFootnotes => "show inline reference numbers and references section",
             SettingItem::ShowExternalLinks => "show the external links section at the bottom",
+            SettingItem::TocSectionNumbers => "display hierarchical numbers in table of contents",
         }
     }
 }
@@ -457,6 +462,10 @@ impl App {
                     self.config.reader.show_external_links =
                         !self.config.reader.show_external_links;
                 }
+                SettingItem::TocSectionNumbers => {
+                    self.config.reader.toc_section_numbers =
+                        !self.config.reader.toc_section_numbers;
+                }
             }
             self.config.save();
             self.config_last_mtime = crate::config::Config::get_modified_time();
@@ -486,6 +495,10 @@ impl App {
                 SettingItem::ShowExternalLinks => {
                     self.config.reader.show_external_links =
                         default_config.reader.show_external_links;
+                }
+                SettingItem::TocSectionNumbers => {
+                    self.config.reader.toc_section_numbers =
+                        default_config.reader.toc_section_numbers;
                 }
             }
             self.config.save();

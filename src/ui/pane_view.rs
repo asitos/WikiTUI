@@ -365,7 +365,13 @@ fn render_pane_at(
             );
 
             if is_active && pane.show_toc && !parsed_doc.headings.is_empty() {
-                render_toc_modal(f, pane, parsed_doc, rect);
+                render_toc_modal(
+                    f,
+                    pane,
+                    parsed_doc,
+                    rect,
+                    app.config.reader.toc_section_numbers,
+                );
             }
         }
         PaneContent::Error(err_msg) => {

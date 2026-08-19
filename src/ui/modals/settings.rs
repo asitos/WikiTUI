@@ -82,6 +82,10 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                 let val = app.config.reader.show_external_links;
                 bool_span(val)
             }
+            SettingItem::TocSectionNumbers => {
+                let val = app.config.reader.toc_section_numbers;
+                bool_span(val)
+            }
         };
 
         let pad_len = 34_usize.saturating_sub(label.len());

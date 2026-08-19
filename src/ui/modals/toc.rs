@@ -15,6 +15,7 @@ pub fn render_toc_modal(
     pane: &Pane,
     parsed_doc: &ParsedDocument,
     container_rect: Rect,
+    show_numbers: bool,
 ) {
     let toc_area = centered_rect(60, 60, container_rect);
     f.render_widget(Clear, toc_area);
@@ -30,6 +31,12 @@ pub fn render_toc_modal(
 
     let selected_idx = pane.selected_toc_idx.unwrap_or(active_heading_idx);
 
+    let section_numbers = if show_numbers {
+        compute_section_numbers(&parsed_doc.headings)
+    } else {
+        Vec::new()
+    };
+
     let mut toc_lines = Vec::new();
     for (idx, h) in parsed_doc.headings.iter().enumerate() {
         let is_selected = idx == selected_idx;
@@ -43,7 +50,10 @@ pub fn render_toc_modal(
             Style::default().fg(theme::FG)
         };
 
-        let avail_w = (toc_area.width as usize).saturating_sub(6 + indent_len);
+        let num_str = section_numbers.get(idx).map(|s| s.as_str()).unwrap_or("");
+        let num_len = num_str.len();
+
+        let avail_w = (toc_area.width as usize).saturating_sub(6 + indent_len + num_len);
         let truncated_title = if h.title.chars().count() > avail_w && avail_w > 3 {
             let byte_end = h
                 .title
@@ -56,11 +66,22 @@ pub fn render_toc_modal(
             h.title.clone()
         };
 
-        toc_lines.push(Line::from(vec![
+        let num_style = if is_selected {
+            Style::default().fg(theme::LIME)
+        } else {
+            Style::default().fg(theme::GREY)
+        };
+
+        let mut spans = vec![
             Span::styled(prefix, style),
             Span::raw(indent),
-            Span::styled(truncated_title, style),
-        ]));
+        ];
+        if !num_str.is_empty() {
+            spans.push(Span::styled(num_str.to_string(), num_style));
+        }
+        spans.push(Span::styled(truncated_title, style));
+
+        toc_lines.push(Line::from(spans));
     }
 
     let visible_rows = (toc_area.height.saturating_sub(2)) as usize;
@@ -70,4 +91,35 @@ pub fn render_toc_modal(
         .block(toc_block)
         .scroll((toc_scroll as u16, 0));
     f.render_widget(toc_p, toc_area);
+}
+
+fn compute_section_numbers(headings: &[crate::parser::Heading]) -> Vec<String> {
+    if headings.is_empty() {
+        return Vec::new();
+    }
+    let min_level = headings.iter().map(|h| h.level).min().unwrap_or(1);
+    let mut counters: Vec<usize> = Vec::new();
+    let mut results = Vec::new();
+
+    for h in headings {
+        let depth = (h.level.saturating_sub(min_level)) as usize;
+        if depth >= counters.len() {
+            counters.resize(depth + 1, 0);
+        } else {
+            counters.truncate(depth + 1);
+        }
+        counters[depth] += 1;
+
+        if depth == 0 {
+            results.push(format!("{}. ", counters[0]));
+        } else {
+            let s = counters
+                .iter()
+                .map(|c| c.to_string())
+                .collect::<Vec<_>>()
+                .join(".");
+            results.push(format!("{} ", s));
+        }
+    }
+    results
 }
