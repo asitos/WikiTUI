@@ -9,10 +9,17 @@ use ratatui::{
     Frame,
 };
 
-pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect) {
+pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect, rounded: bool) {
     f.render_widget(Clear, area);
 
+    let border_type = if rounded {
+        ratatui::widgets::BorderType::Rounded
+    } else {
+        ratatui::widgets::BorderType::Plain
+    };
+
     let main_block = Block::bordered()
+        .border_type(border_type)
         .border_style(Style::default().fg(theme::VIOLET))
         .title(Title::from(" wikipedia feed ").alignment(Alignment::Center));
 
@@ -75,6 +82,7 @@ pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect) {
     };
 
     let card_block = Block::bordered()
+        .border_type(border_type)
         .border_style(Style::default().fg(card_border_color))
         .title(Title::from(format!(" {} ", item.title.to_lowercase())).alignment(Alignment::Center))
         .title(

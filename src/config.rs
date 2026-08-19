@@ -7,6 +7,7 @@ use std::path::PathBuf;
 pub struct Config {
     pub general: GeneralConfig,
     pub reader: ReaderConfig,
+    pub ui: UiConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,6 +24,12 @@ impl Default for GeneralConfig {
             auto_restore_session: false,
         }
     }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct UiConfig {
+    pub rounded_borders: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

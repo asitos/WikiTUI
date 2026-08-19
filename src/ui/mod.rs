@@ -34,7 +34,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         let feed_area = chunks[0];
         let status_area = chunks[1];
 
-        feed::render_feed_view(f, &app.feed, feed_area);
+        feed::render_feed_view(f, &app.feed, feed_area, app.config.ui.rounded_borders);
         status_bar::render(f, app, status_area);
     } else if app.zen_mode {
         let zen_area = modals::centered_rect(80, 90, size);
@@ -59,7 +59,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     if app.input_mode == InputMode::Help {
-        modals::render_help_modal(f, size);
+        modals::render_help_modal(f, app, size);
     }
 
     if app.input_mode == InputMode::Search {

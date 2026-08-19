@@ -80,10 +80,17 @@ fn render_pane_at(
         PaneContent::Error(_) => " error ".to_string(),
     };
 
+    let border_type = if app.config.ui.rounded_borders {
+        ratatui::widgets::BorderType::Rounded
+    } else {
+        ratatui::widgets::BorderType::Plain
+    };
+
     let block = if app.zen_mode {
         Block::default().padding(Padding::horizontal(1))
     } else {
         Block::bordered()
+            .border_type(border_type)
             .border_style(Style::default().fg(border_color))
             .title(title)
             .padding(Padding::horizontal(1))
@@ -367,6 +374,7 @@ fn render_pane_at(
                     parsed_doc,
                     rect,
                     app.config.reader.toc_section_numbers,
+                    app.config.ui.rounded_borders,
                 );
             }
         }

@@ -3,7 +3,7 @@ use crate::app::{App, SettingItem};
 use crate::theme;
 use ratatui::{
     layout::Rect,
-    style::{Modifier, Style, Stylize},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Clear, Paragraph},
     Frame,
@@ -13,7 +13,12 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(64, 50, size);
     f.render_widget(Clear, area);
 
-    let modal_block = create_modal_block("󰒓", "settings (config.toml)", theme::ORANGE);
+    let modal_block = create_modal_block(
+        "󰒓",
+        "settings (config.toml)",
+        theme::ORANGE,
+        app.config.ui.rounded_borders,
+    );
 
     let inner = modal_block.inner(area);
     f.render_widget(modal_block, area);
@@ -24,36 +29,32 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     for (idx, item) in SettingItem::ALL.iter().enumerate() {
         let section = item.section();
         if section != current_section {
-            if !lines.is_empty() {
+            if !current_section.is_empty() {
                 lines.push(Line::from(""));
             }
             lines.push(Line::from(vec![
-                Span::styled(" ", Style::default()),
-                Span::styled(
-                    format!("[{}]", section),
-                    Style::default()
-                        .fg(theme::VIOLET)
-                        .add_modifier(Modifier::BOLD),
-                ),
+                Span::styled(" [", Style::default().fg(theme::GREY)),
+                Span::styled(section, Style::default().fg(theme::ORANGE).bold()),
+                Span::styled("]", Style::default().fg(theme::GREY)),
             ]));
             current_section = section;
         }
 
-        let is_selected = idx == app.settings_cursor_idx;
-        let prefix = if is_selected { " ▸ " } else { "   " };
-        let prefix_style = if is_selected {
-            Style::default().fg(theme::RED).add_modifier(Modifier::BOLD)
+        let is_focused = idx == app.settings_cursor_idx;
+        let prefix = if is_focused { " ▶ " } else { "   " };
+        let prefix_style = if is_focused {
+            Style::default().fg(theme::YELLOW).bold()
         } else {
-            Style::default().fg(theme::DARK_GREY)
+            Style::default().fg(theme::GREY)
         };
 
-        let label_style = if is_selected {
-            Style::default().fg(theme::FG).add_modifier(Modifier::BOLD)
+        let label = item.label();
+        let label_style = if is_focused {
+            Style::default().fg(theme::YELLOW).bold()
         } else {
             Style::default().fg(theme::FG)
         };
 
-        let label = item.label();
         let value_span = match item {
             SettingItem::LikedReadonly => {
                 let val = app.config.general.liked_readonly;
@@ -61,6 +62,10 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
             }
             SettingItem::AutoRestoreSession => {
                 let val = app.config.general.auto_restore_session;
+                bool_span(val)
+            }
+            SettingItem::RoundedBorders => {
+                let val = app.config.ui.rounded_borders;
                 bool_span(val)
             }
             SettingItem::ScrollLines => {

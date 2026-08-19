@@ -30,7 +30,12 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
 
     f.render_widget(Clear, area);
 
-    let search_block = create_modal_block("󰍉", "search wikipedia", theme::BEIGE);
+    let search_block = create_modal_block(
+        "󰍉",
+        "search wikipedia",
+        theme::BEIGE,
+        app.config.ui.rounded_borders,
+    );
 
     let visible_width = (area.width as usize).saturating_sub(6);
     let chars: Vec<char> = app.search_input.chars().collect();

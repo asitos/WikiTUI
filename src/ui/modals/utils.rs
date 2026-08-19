@@ -26,14 +26,26 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
-pub fn create_modal_block(icon: &str, title: &str, border_color: Color) -> Block<'static> {
+pub fn create_modal_block(
+    icon: &str,
+    title: &str,
+    border_color: Color,
+    rounded: bool,
+) -> Block<'static> {
     let top_title = if icon.is_empty() {
         format!(" {} ", title)
     } else {
         format!(" {} {} ", icon, title)
     };
 
+    let border_type = if rounded {
+        ratatui::widgets::BorderType::Rounded
+    } else {
+        ratatui::widgets::BorderType::Plain
+    };
+
     Block::bordered()
+        .border_type(border_type)
         .border_style(Style::default().fg(border_color))
         .style(Style::default().bg(theme::BG))
         .title(

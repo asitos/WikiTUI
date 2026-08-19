@@ -13,7 +13,12 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(55, 60, size);
     f.render_widget(Clear, area);
 
-    let block = create_modal_block("★", "save to list", theme::VIOLET);
+    let block = create_modal_block(
+        "★",
+        "save to list",
+        theme::VIOLET,
+        app.config.ui.rounded_borders,
+    );
 
     let mut lines = vec![
         Line::from(vec![
@@ -94,7 +99,12 @@ pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(45, 25, size);
     f.render_widget(Clear, area);
 
-    let block = create_modal_block("★", "create new list", theme::VIOLET);
+    let block = create_modal_block(
+        "★",
+        "create new list",
+        theme::VIOLET,
+        app.config.ui.rounded_borders,
+    );
 
     let lines = vec![
         Line::from(" enter name for your new list:"),
@@ -117,7 +127,12 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(80, 80, size);
     f.render_widget(Clear, area);
 
-    let outer_block = create_modal_block("★", "saved lists & articles", theme::VIOLET);
+    let outer_block = create_modal_block(
+        "★",
+        "saved lists & articles",
+        theme::VIOLET,
+        app.config.ui.rounded_borders,
+    );
 
     let inner_area = outer_block.inner(area);
     f.render_widget(outer_block, area);
@@ -135,15 +150,21 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     } else {
         theme::GREY
     };
+    let border_type = if app.config.ui.rounded_borders {
+        ratatui::widgets::BorderType::Rounded
+    } else {
+        ratatui::widgets::BorderType::Plain
+    };
     let left_block = Block::bordered()
+        .border_type(border_type)
         .title(" custom lists ")
         .border_style(Style::default().fg(left_border_color));
 
     let mut list_lines = Vec::new();
     if app.saved_lists.lists.is_empty() {
         list_lines.push(Line::from(Span::styled(
-            " no lists created yet",
-            Style::default().fg(theme::GREY),
+            " no lists created yet.",
+            Style::default().fg(theme::GREY).italic(),
         )));
     } else {
         for (idx, list) in app.saved_lists.lists.iter().enumerate() {
@@ -172,7 +193,7 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     f.render_widget(left_p, left_area);
 
     let right_border_color = if app.viewer_focus_right {
-        theme::VIOLET
+        theme::YELLOW
     } else {
         theme::GREY
     };
@@ -183,6 +204,7 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
         .unwrap_or_else(|| " Articles ".to_string());
 
     let right_block = Block::bordered()
+        .border_type(border_type)
         .title(right_title)
         .border_style(Style::default().fg(right_border_color));
 
@@ -226,7 +248,12 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
         _ => "confirm deletion",
     };
 
-    let block = create_modal_block("󰅚", modal_title, theme::RED);
+    let block = create_modal_block(
+        "󰅚",
+        modal_title,
+        theme::RED,
+        app.config.ui.rounded_borders,
+    );
 
     let lines = match &app.confirm_action {
         Some(crate::app::ConfirmAction::DeleteList { title, .. }) => {

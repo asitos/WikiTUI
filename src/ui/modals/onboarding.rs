@@ -13,7 +13,12 @@ pub fn render_category_onboarding_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = centered_rect(60, 80, size);
     f.render_widget(Clear, area);
 
-    let block = create_modal_block("󰠱", "welcome to wikid feed", theme::VIOLET);
+    let block = create_modal_block(
+        "󰠱",
+        "welcome to wikid feed",
+        theme::VIOLET,
+        app.config.ui.rounded_borders,
+    );
 
     let mut lines = vec![
         Line::from(Span::styled(

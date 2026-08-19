@@ -22,6 +22,7 @@ pub enum ConfirmAction {
 pub enum SettingItem {
     LikedReadonly,
     AutoRestoreSession,
+    RoundedBorders,
     ScrollLines,
     UnderlineLinks,
     ShowFootnotes,
@@ -33,6 +34,7 @@ impl SettingItem {
     pub const ALL: &'static [SettingItem] = &[
         SettingItem::LikedReadonly,
         SettingItem::AutoRestoreSession,
+        SettingItem::RoundedBorders,
         SettingItem::ScrollLines,
         SettingItem::UnderlineLinks,
         SettingItem::ShowFootnotes,
@@ -43,6 +45,7 @@ impl SettingItem {
     pub fn section(&self) -> &'static str {
         match self {
             SettingItem::LikedReadonly | SettingItem::AutoRestoreSession => "general",
+            SettingItem::RoundedBorders => "ui",
             SettingItem::ScrollLines
             | SettingItem::UnderlineLinks
             | SettingItem::ShowFootnotes
@@ -55,6 +58,7 @@ impl SettingItem {
         match self {
             SettingItem::LikedReadonly => "liked list read-only",
             SettingItem::AutoRestoreSession => "auto-restore last session",
+            SettingItem::RoundedBorders => "rounded borders",
             SettingItem::ScrollLines => "scroll lines per step",
             SettingItem::UnderlineLinks => "underline links",
             SettingItem::ShowFootnotes => "show footnotes & citations",
@@ -67,6 +71,7 @@ impl SettingItem {
         match self {
             SettingItem::LikedReadonly => "prevent manual deletion of articles from liked list",
             SettingItem::AutoRestoreSession => "automatically restore last session on startup",
+            SettingItem::RoundedBorders => "use rounded border corners (╭╮╯╰) instead of sharp (┌┐┘└)",
             SettingItem::ScrollLines => "number of lines to scroll per j/k press (1-20)",
             SettingItem::UnderlineLinks => "display underlined modifier on article links",
             SettingItem::ShowFootnotes => "show inline reference numbers and references section",
@@ -529,6 +534,9 @@ impl App {
                     self.config.general.auto_restore_session =
                         !self.config.general.auto_restore_session;
                 }
+                SettingItem::RoundedBorders => {
+                    self.config.ui.rounded_borders = !self.config.ui.rounded_borders;
+                }
                 SettingItem::UnderlineLinks => {
                     self.config.reader.underline_links = !self.config.reader.underline_links;
                 }
@@ -559,6 +567,9 @@ impl App {
                 SettingItem::AutoRestoreSession => {
                     self.config.general.auto_restore_session =
                         default_config.general.auto_restore_session;
+                }
+                SettingItem::RoundedBorders => {
+                    self.config.ui.rounded_borders = default_config.ui.rounded_borders;
                 }
                 SettingItem::ScrollLines => {
                     self.config.reader.scroll_lines = default_config.reader.scroll_lines;

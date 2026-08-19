@@ -9,14 +9,14 @@ use ratatui::{
 };
 
 #[rustfmt::skip]
-pub fn render_help_modal(f: &mut Frame, size: Rect) {
+pub fn render_help_modal(f: &mut Frame, app: &crate::app::App, size: Rect) {
     let area = centered_rect(70, 80, size);
     f.render_widget(Clear, area);
 
     let is_macos = cfg!(target_os = "macos");
     let opt_label = if is_macos { "opt" } else { "alt" };
 
-    let help_block = create_modal_block("󰘥", "keybindings", theme::PINK);
+    let help_block = create_modal_block("󰘥", "keybindings", theme::PINK, app.config.ui.rounded_borders);
 
     let inner = help_block.inner(area);
     f.render_widget(help_block, area);
