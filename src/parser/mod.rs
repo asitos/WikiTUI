@@ -182,7 +182,7 @@ fn process_node<'a>(
 
             if matches!(
                 tag_name,
-                "style" | "script" | "noscript" | "head" | "template" | "link" | "meta"
+                "style" | "script" | "noscript" | "head" | "template" | "link" | "meta" | "annotation"
             ) {
                 return;
             }
@@ -576,6 +576,11 @@ fn process_node<'a>(
                     });
                 }
                 "img" => {
+                    let is_math_fallback = class_attr
+                        .as_deref()
+                        .map(|c| c.contains("mwe-math"))
+                        .unwrap_or(false);
+
                     let alt_text = tag
                         .attributes()
                         .get("alt")
@@ -585,6 +590,14 @@ fn process_node<'a>(
                         .unwrap_or_else(|| "image".to_string());
 
                     let clean_alt = alt_text.trim();
+                    let is_latex = clean_alt.contains("\\displaystyle")
+                        || clean_alt.contains("\\textstyle")
+                        || clean_alt.starts_with("{\\");
+
+                    if is_math_fallback || is_latex {
+                        return;
+                    }
+
                     let label = if clean_alt.is_empty() {
                         "[image]".to_string()
                     } else {
