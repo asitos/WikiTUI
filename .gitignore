@@ -1,4 +1,5 @@
 /target
+/tests
 release-artifacts/
 *.tar.gz
 *.zip
