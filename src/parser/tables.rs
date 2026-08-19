@@ -1,7 +1,9 @@
 #![allow(clippy::needless_range_loop)]
 
 use super::types::{Link, ParsedDocument, StyledToken};
-use super::utils::{decode_html_entities, extract_title_from_href};
+use super::utils::{
+    decode_html_entities, extract_title_from_href, to_subscript_str, to_superscript_str,
+};
 use crate::theme;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -626,6 +628,8 @@ fn parse_table_into_grid<'a>(
                         None,
                         &mut tokens,
                         show_footnotes,
+                        false,
+                        false,
                     );
 
                     while c < grid[r].len() && grid[r][c].is_some() {
@@ -698,6 +702,7 @@ fn parse_table_into_grid<'a>(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn collect_cell_tokens<'a>(
     tag: &'a tl::HTMLTag<'a>,
     parser: &'a tl::Parser<'a>,
@@ -705,10 +710,12 @@ fn collect_cell_tokens<'a>(
     link: Option<String>,
     tokens: &mut Vec<StyledToken>,
     show_footnotes: bool,
+    is_sup: bool,
+    is_sub: bool,
 ) {
     let tag_name = tag.name().as_utf8_str();
     let tag_name_str = tag_name.as_ref();
-    if matches!(tag_name_str, "style" | "script" | "noscript") {
+    if matches!(tag_name_str, "style" | "script" | "noscript" | "annotation") {
         return;
     }
     if let Some(cls) = tag
@@ -724,6 +731,8 @@ fn collect_cell_tokens<'a>(
 
     let mut current_style = style;
     let mut current_link = link;
+    let current_is_sup = is_sup || tag_name_str == "sup";
+    let current_is_sub = is_sub || tag_name_str == "sub";
 
     match tag_name_str {
         "b" | "strong" | "th" => current_style = current_style.add_modifier(Modifier::BOLD),
@@ -764,7 +773,14 @@ fn collect_cell_tokens<'a>(
                 tl::Node::Raw(bytes) => {
                     let raw_text = bytes.as_utf8_str();
                     let decoded_text = decode_html_entities(&raw_text);
-                    let cleaned = decoded_text.replace(['\r', '\t', '\n'], " ");
+                    let transformed = if current_is_sup {
+                        to_superscript_str(&decoded_text)
+                    } else if current_is_sub {
+                        to_subscript_str(&decoded_text)
+                    } else {
+                        decoded_text
+                    };
+                    let cleaned = transformed.replace(['\r', '\t', '\n'], " ");
                     if !cleaned.trim().is_empty() || cleaned == " " {
                         tokens.push(StyledToken {
                             text: cleaned,
@@ -781,6 +797,8 @@ fn collect_cell_tokens<'a>(
                         current_link.clone(),
                         tokens,
                         show_footnotes,
+                        current_is_sup,
+                        current_is_sub,
                     );
                 }
                 _ => {}

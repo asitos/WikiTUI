@@ -14,7 +14,7 @@ use blocks::wrap_and_append_block;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use types::StyledToken;
-use utils::{decode_html_entities, extract_title_from_href};
+use utils::{decode_html_entities, extract_title_from_href, to_subscript_str, to_superscript_str};
 
 fn is_references_heading(title: &str) -> bool {
     let lower = title.to_lowercase();
@@ -134,6 +134,8 @@ pub fn parse_wikipedia_html(
                 show_external_links,
                 &mut skipping_external_section,
                 &mut skipping_references_section,
+                false,
+                false,
             );
         }
     }
@@ -159,6 +161,8 @@ fn process_node<'a>(
     show_external_links: bool,
     skipping_external_section: &mut bool,
     skipping_references_section: &mut bool,
+    is_sup: bool,
+    is_sub: bool,
 ) {
     match node {
         tl::Node::Raw(bytes) => {
@@ -167,7 +171,14 @@ fn process_node<'a>(
             }
             let raw_text = bytes.as_utf8_str();
             let decoded_text = decode_html_entities(&raw_text);
-            let cleaned_text = decoded_text.replace(['\n', '\r', '\t'], " ");
+            let transformed = if is_sup {
+                to_superscript_str(&decoded_text)
+            } else if is_sub {
+                to_subscript_str(&decoded_text)
+            } else {
+                decoded_text
+            };
+            let cleaned_text = transformed.replace(['\n', '\r', '\t'], " ");
             if !cleaned_text.trim().is_empty() {
                 current_tokens.push(StyledToken {
                     text: cleaned_text,
@@ -633,6 +644,8 @@ fn process_node<'a>(
 
             let is_ordered_list = tag_name == "ol";
             let mut item_counter = 1;
+            let current_is_sup = is_sup || tag_name == "sup";
+            let current_is_sub = is_sub || tag_name == "sub";
 
             for child_handle in tag.children().top().iter() {
                 if let Some(child_node) = child_handle.get(parser) {
@@ -665,6 +678,8 @@ fn process_node<'a>(
                         show_external_links,
                         skipping_external_section,
                         skipping_references_section,
+                        current_is_sup,
+                        current_is_sub,
                     );
                 }
             }
