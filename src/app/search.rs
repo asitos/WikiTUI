@@ -171,9 +171,10 @@ impl App {
             let pane_id = active_pane.id;
             active_pane.is_loading = true;
             active_pane.selected_idx = 0;
-            active_pane.scroll_offset = 0;
-
-            let _ = self.cmd_tx.send(NetworkCommand::Search { pane_id, query });
+            let limit = self.config.search.limit;
+            let _ = self
+                .cmd_tx
+                .send(NetworkCommand::Search { pane_id, query, limit });
         }
     }
 

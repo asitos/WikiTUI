@@ -8,6 +8,7 @@ pub struct Config {
     pub general: GeneralConfig,
     pub reader: ReaderConfig,
     pub ui: UiConfig,
+    pub search: SearchConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,6 +69,20 @@ impl Default for ReaderConfig {
             toc_section_numbers: true,
             heading_marker: true,
             code_line_numbers: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SearchConfig {
+    pub limit: usize,
+}
+
+impl Default for SearchConfig {
+    fn default() -> Self {
+        Self {
+            limit: 20,
         }
     }
 }

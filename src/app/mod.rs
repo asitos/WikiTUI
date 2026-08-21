@@ -34,6 +34,7 @@ pub enum SettingItem {
     ShowExternalLinks,
     TocSectionNumbers,
     CodeLineNumbers,
+    SearchLimit,
 }
 
 impl SettingItem {
@@ -51,6 +52,7 @@ impl SettingItem {
         SettingItem::ShowExternalLinks,
         SettingItem::TocSectionNumbers,
         SettingItem::CodeLineNumbers,
+        SettingItem::SearchLimit,
     ];
 
     pub fn section(&self) -> &'static str {
@@ -66,6 +68,7 @@ impl SettingItem {
             | SettingItem::ShowExternalLinks
             | SettingItem::TocSectionNumbers
             | SettingItem::CodeLineNumbers => "reader",
+            SettingItem::SearchLimit => "search",
         }
     }
 
@@ -84,6 +87,7 @@ impl SettingItem {
             SettingItem::ShowExternalLinks => "show external links section",
             SettingItem::TocSectionNumbers => "toc section numbers",
             SettingItem::CodeLineNumbers => "code line numbers",
+            SettingItem::SearchLimit => "search results limit",
         }
     }
 
@@ -102,6 +106,7 @@ impl SettingItem {
             SettingItem::ShowExternalLinks => "show the external links section at the bottom",
             SettingItem::TocSectionNumbers => "display hierarchical numbers in table of contents",
             SettingItem::CodeLineNumbers => "display line numbers in code blocks",
+            SettingItem::SearchLimit => "maximum number of search results to fetch (5-50)",
         }
     }
 }
@@ -642,6 +647,20 @@ impl App {
                 SettingItem::CodeLineNumbers => {
                     self.config.reader.code_line_numbers = !self.config.reader.code_line_numbers;
                 }
+                SettingItem::SearchLimit => {
+                    let cur = self.config.search.limit as i32;
+                    let step = 5;
+                    let new_val = if delta == 0 {
+                        if cur >= 50 {
+                            5
+                        } else {
+                            cur + step
+                        }
+                    } else {
+                        (cur + delta * step).clamp(5, 50)
+                    };
+                    self.config.search.limit = new_val as usize;
+                }
             }
             self.config.save();
             self.config_last_mtime = crate::config::Config::get_modified_time();
@@ -693,6 +712,9 @@ impl App {
                 }
                 SettingItem::CodeLineNumbers => {
                     self.config.reader.code_line_numbers = default_config.reader.code_line_numbers;
+                }
+                SettingItem::SearchLimit => {
+                    self.config.search.limit = default_config.search.limit;
                 }
             }
             self.config.save();

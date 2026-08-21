@@ -16,9 +16,18 @@ pub struct SearchResultItem {
 }
 
 pub enum NetworkCommand {
-    Search { pane_id: usize, query: String },
-    FetchArticle { pane_id: usize, title: String },
-    FetchRandomArticle { pane_id: usize },
+    Search {
+        pane_id: usize,
+        query: String,
+        limit: usize,
+    },
+    FetchArticle {
+        pane_id: usize,
+        title: String,
+    },
+    FetchRandomArticle {
+        pane_id: usize,
+    },
     FetchFeedBatch,
     FetchStats,
 }
@@ -59,8 +68,12 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
         let ev_tx = ev_tx.clone();
 
         std::thread::spawn(move || match cmd {
-            NetworkCommand::Search { pane_id, query } => {
-                match search::search_wikipedia(&agent, &query) {
+            NetworkCommand::Search {
+                pane_id,
+                query,
+                limit,
+            } => {
+                match search::search_wikipedia(&agent, &query, limit) {
                     Ok(results) => {
                         let _ = ev_tx.send(NetworkEvent::SearchResult {
                             pane_id,

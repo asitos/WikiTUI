@@ -14,8 +14,8 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     let inner = render_modal_container(
         f,
         size,
-        64,
         50,
+        75,
         icon,
         "settings (config.toml)",
         theme::ORANGE,
@@ -109,6 +109,13 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
             SettingItem::CodeLineNumbers => {
                 let val = app.config.reader.code_line_numbers;
                 bool_span(val)
+            }
+            SettingItem::SearchLimit => {
+                let val = app.config.search.limit;
+                Span::styled(
+                    format!("◄  {:>2} items  ►", val),
+                    Style::default().fg(theme::TEAL).bold(),
+                )
             }
         };
 

@@ -18,14 +18,19 @@ struct WikiGenSearchResponse {
     query: Option<WikiGenSearchQuery>,
 }
 
-pub fn search_wikipedia(agent: &ureq::Agent, query: &str) -> Result<Vec<SearchResultItem>, String> {
+pub fn search_wikipedia(
+    agent: &ureq::Agent,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<SearchResultItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
+    let limit_str = limit.clamp(1, 50).to_string();
     let res = agent
         .get(url)
         .query("action", "query")
         .query("generator", "search")
         .query("gsrsearch", query)
-        .query("gsrlimit", "30")
+        .query("gsrlimit", &limit_str)
         .query("prop", "description")
         .query("format", "json")
         .call()
