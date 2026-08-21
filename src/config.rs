@@ -93,6 +93,7 @@ impl Default for SearchConfig {
 pub struct NetworkConfig {
     pub timeout: u64,
     pub offline_cache: bool,
+    pub cache_lifetime: u64,
 }
 
 impl Default for NetworkConfig {
@@ -100,6 +101,7 @@ impl Default for NetworkConfig {
         Self {
             timeout: 10,
             offline_cache: true,
+            cache_lifetime: 24,
         }
     }
 }

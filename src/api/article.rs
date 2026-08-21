@@ -46,9 +46,20 @@ pub fn cache_file_path(title: &str) -> PathBuf {
     cache_dir().join(format!("{}_{:016x}.html", safe_name, hash))
 }
 
-pub fn get_cached_article(title: &str) -> Option<String> {
+pub fn get_cached_article(title: &str, lifetime_hours: u64) -> Option<String> {
     let path = cache_file_path(title);
-    std::fs::read_to_string(&path).ok()
+    if let Ok(metadata) = std::fs::metadata(&path) {
+        if let Ok(modified) = metadata.modified() {
+            if let Ok(elapsed) = modified.elapsed() {
+                if elapsed.as_secs() <= lifetime_hours.saturating_mul(3600) {
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        return Some(content);
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 pub fn save_cached_article(title: &str, html: &str) {
@@ -63,9 +74,10 @@ pub fn fetch_article_wikipedia(
     title: &str,
     timeout_secs: u64,
     offline_cache: bool,
+    cache_lifetime: u64,
 ) -> Result<String, String> {
     if offline_cache {
-        if let Some(cached_html) = get_cached_article(title) {
+        if let Some(cached_html) = get_cached_article(title, cache_lifetime) {
             return Ok(cached_html);
         }
     }
@@ -106,8 +118,9 @@ pub fn fetch_article_wikipedia(
         }
         Err(err) => {
             if offline_cache {
-                if let Some(cached) = get_cached_article(title) {
-                    return Ok(cached);
+                let path = cache_file_path(title);
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    return Ok(content);
                 }
             }
             Err(format!("network error: {}", err))

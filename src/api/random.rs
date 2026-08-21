@@ -20,6 +20,7 @@ pub fn fetch_random_article(
     agent: &ureq::Agent,
     timeout_secs: u64,
     offline_cache: bool,
+    cache_lifetime: u64,
 ) -> Result<(String, String), String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let res = agent
@@ -42,6 +43,12 @@ pub fn fetch_random_article(
         .map(|r| r.title)
         .ok_or_else(|| "no random article returned".to_string())?;
 
-    let content = fetch_article_wikipedia(agent, &title, timeout_secs, offline_cache)?;
+    let content = fetch_article_wikipedia(
+        agent,
+        &title,
+        timeout_secs,
+        offline_cache,
+        cache_lifetime,
+    )?;
     Ok((title, content))
 }

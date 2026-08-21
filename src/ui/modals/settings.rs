@@ -128,6 +128,13 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                 let val = app.config.network.offline_cache;
                 bool_span(val)
             }
+            SettingItem::CacheLifetime => {
+                let val = app.config.network.cache_lifetime;
+                Span::styled(
+                    format!("◄  {:>3}h  ►", val),
+                    Style::default().fg(theme::TEAL).bold(),
+                )
+            }
         };
 
         let pad_len = 34_usize.saturating_sub(label.len());
