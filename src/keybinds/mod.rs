@@ -1,3 +1,4 @@
+pub mod confirm;
 pub mod lists;
 pub mod normal;
 pub mod onboarding;
@@ -13,7 +14,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
         InputMode::SaveToList => lists::handle_save_to_list_mode(app, key),
         InputMode::CreateNewList => lists::handle_create_new_list_mode(app, key),
         InputMode::SavedListsViewer => lists::handle_saved_lists_viewer_mode(app, key),
-        InputMode::Confirm => lists::handle_confirm_mode(app, key),
+        InputMode::Confirm => confirm::handle_confirm_mode(app, key),
         InputMode::Settings => settings::handle_settings_mode(app, key),
         InputMode::Help => match key.code {
             KeyCode::Char('?') | KeyCode::Esc | KeyCode::Char('q') => {
