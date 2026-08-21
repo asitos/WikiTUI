@@ -106,11 +106,20 @@ show_footnotes = true # enable/disable inline citation markers and references
 show_external_links = true # enable/disable external links section
 toc_section_numbers = true # enable/disable table of contents section markers
 heading_marker = true # enable/disable colored heading marker in section headings
+code_line_numbers = true # enable/disable line numbers in code blocks
 
 [ui]
 rounded_borders = false # enable/disable rounded borders
 icons = true # enable/disable icons
 scroll_indicator = true # enable/disable scroll indicator on the right edge
+
+[search]
+limit = 20 # maximum number of search results returned from wikipedia (5-50)
+
+[network]
+timeout = 10 # network request timeout in seconds
+offline_cache = true # enable/disable caching downloaded articles
+cache_lifetime = 24 # cache expiration lifetime in hours
 ```
 
 ## acknowledgements
