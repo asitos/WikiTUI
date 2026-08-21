@@ -33,6 +33,7 @@ pub enum SettingItem {
     ShowFootnotes,
     ShowExternalLinks,
     TocSectionNumbers,
+    CodeLineNumbers,
 }
 
 impl SettingItem {
@@ -49,6 +50,7 @@ impl SettingItem {
         SettingItem::ShowFootnotes,
         SettingItem::ShowExternalLinks,
         SettingItem::TocSectionNumbers,
+        SettingItem::CodeLineNumbers,
     ];
 
     pub fn section(&self) -> &'static str {
@@ -62,7 +64,8 @@ impl SettingItem {
             | SettingItem::UnderlineLinks
             | SettingItem::ShowFootnotes
             | SettingItem::ShowExternalLinks
-            | SettingItem::TocSectionNumbers => "reader",
+            | SettingItem::TocSectionNumbers
+            | SettingItem::CodeLineNumbers => "reader",
         }
     }
 
@@ -80,6 +83,7 @@ impl SettingItem {
             SettingItem::ShowFootnotes => "show footnotes & citations",
             SettingItem::ShowExternalLinks => "show external links section",
             SettingItem::TocSectionNumbers => "toc section numbers",
+            SettingItem::CodeLineNumbers => "code line numbers",
         }
     }
 
@@ -97,6 +101,7 @@ impl SettingItem {
             SettingItem::ShowFootnotes => "show inline reference numbers and references section",
             SettingItem::ShowExternalLinks => "show the external links section at the bottom",
             SettingItem::TocSectionNumbers => "display hierarchical numbers in table of contents",
+            SettingItem::CodeLineNumbers => "display line numbers in code blocks",
         }
     }
 }
@@ -523,6 +528,7 @@ impl App {
                 let show_footnotes = self.config.reader.show_footnotes;
                 let show_external_links = self.config.reader.show_external_links;
                 let heading_marker = self.config.reader.heading_marker;
+                let code_line_numbers = self.config.reader.code_line_numbers;
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     pane.is_loading = false;
                     pane.scroll_offset = 0;
@@ -534,6 +540,7 @@ impl App {
                         show_footnotes,
                         show_external_links,
                         heading_marker,
+                        code_line_numbers,
                     );
                     let initial_link_idx = if !parsed_doc.links.is_empty() {
                         Some(0)
@@ -548,6 +555,7 @@ impl App {
                         last_show_footnotes: show_footnotes,
                         last_show_external_links: show_external_links,
                         last_heading_marker: heading_marker,
+                        last_code_line_numbers: code_line_numbers,
                     };
                     pane.selected_link_idx = initial_link_idx;
                 }
@@ -584,7 +592,16 @@ impl App {
             match item {
                 SettingItem::ScrollLines => {
                     let cur = self.config.reader.scroll_lines as i32;
-                    self.config.reader.scroll_lines = (cur + delta).clamp(1, 20) as usize;
+                    let new_val = if delta == 0 {
+                        if cur >= 20 {
+                            1
+                        } else {
+                            cur + 1
+                        }
+                    } else {
+                        (cur + delta).clamp(1, 20)
+                    };
+                    self.config.reader.scroll_lines = new_val as usize;
                 }
                 SettingItem::LikedReadonly => {
                     self.config.general.liked_readonly = !self.config.general.liked_readonly;
@@ -621,6 +638,9 @@ impl App {
                 SettingItem::TocSectionNumbers => {
                     self.config.reader.toc_section_numbers =
                         !self.config.reader.toc_section_numbers;
+                }
+                SettingItem::CodeLineNumbers => {
+                    self.config.reader.code_line_numbers = !self.config.reader.code_line_numbers;
                 }
             }
             self.config.save();
@@ -670,6 +690,9 @@ impl App {
                 SettingItem::TocSectionNumbers => {
                     self.config.reader.toc_section_numbers =
                         default_config.reader.toc_section_numbers;
+                }
+                SettingItem::CodeLineNumbers => {
+                    self.config.reader.code_line_numbers = default_config.reader.code_line_numbers;
                 }
             }
             self.config.save();

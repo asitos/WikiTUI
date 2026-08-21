@@ -117,6 +117,7 @@ pub(crate) fn render_code_block<'a>(
     doc: &mut ParsedDocument,
     max_width: usize,
     lang_opt: Option<String>,
+    code_line_numbers: bool,
 ) {
     let mut raw_lines: Vec<Vec<Span<'static>>> = Vec::new();
     collect_code_lines(
@@ -140,12 +141,16 @@ pub(crate) fn render_code_block<'a>(
 
     let border_color = theme::DARK_GREY;
     let effective_width = max_width.max(20);
-    let gutter_digits = if raw_lines.len() < 100 {
-        2
+    let (prefix_width, gutter_digits) = if code_line_numbers {
+        let digits = if raw_lines.len() < 100 {
+            2
+        } else {
+            raw_lines.len().to_string().len()
+        };
+        (2 + digits + 1, Some(digits))
     } else {
-        raw_lines.len().to_string().len()
+        (2, None)
     };
-    let prefix_width = 2 + gutter_digits + 1;
     let code_width = effective_width.saturating_sub(prefix_width);
 
     if let Some(ref lang) = lang_opt {
@@ -173,23 +178,22 @@ pub(crate) fn render_code_block<'a>(
     }
 
     for (line_idx, spans) in raw_lines.into_iter().enumerate() {
-        let line_num_str = format!("{:0width$} ", line_idx + 1, width = gutter_digits);
+        let mut prefix_spans = vec![Span::styled("│ ", Style::default().fg(border_color))];
+        if let Some(digits) = gutter_digits {
+            let line_num_str = format!("{:0width$} ", line_idx + 1, width = digits);
+            prefix_spans.push(Span::styled(line_num_str, Style::default().fg(theme::DARK_GREY)));
+        }
+
         let line_len: usize = spans
             .iter()
             .map(|s| unicode_width::UnicodeWidthStr::width(s.content.as_ref()))
             .sum();
         if line_len <= code_width {
-            let mut line_spans = vec![
-                Span::styled("│ ", Style::default().fg(border_color)),
-                Span::styled(line_num_str, Style::default().fg(theme::DARK_GREY)),
-            ];
+            let mut line_spans = prefix_spans;
             line_spans.extend(spans);
             doc.lines.push(Line::from(line_spans));
         } else {
-            let mut cur_spans = vec![
-                Span::styled("│ ", Style::default().fg(border_color)),
-                Span::styled(line_num_str, Style::default().fg(theme::DARK_GREY)),
-            ];
+            let mut cur_spans = prefix_spans;
             let mut cur_len = 0;
             for span in spans {
                 let s_content = span.content;
@@ -203,15 +207,17 @@ pub(crate) fn render_code_block<'a>(
                         let ch_len = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(1);
                         if cur_len + ch_len > code_width && cur_len > 0 {
                             doc.lines.push(Line::from(cur_spans));
-                            let continuation_gutter =
-                                format!("{:width$}↪ ", "", width = gutter_digits.saturating_sub(1));
-                            cur_spans = vec![
-                                Span::styled("│ ", Style::default().fg(border_color)),
-                                Span::styled(
+                            let mut cont_spans =
+                                vec![Span::styled("│ ", Style::default().fg(border_color))];
+                            if let Some(digits) = gutter_digits {
+                                let continuation_gutter =
+                                    format!("{:width$}↪ ", "", width = digits.saturating_sub(1));
+                                cont_spans.push(Span::styled(
                                     continuation_gutter,
                                     Style::default().fg(theme::DARK_GREY),
-                                ),
-                            ];
+                                ));
+                            }
+                            cur_spans = cont_spans;
                             cur_len = 0;
                         }
                         cur_spans.push(Span::styled(ch.to_string(), s_style));

@@ -45,12 +45,14 @@ fn render_pane_at(
     let show_footnotes = app.config.reader.show_footnotes;
     let show_external_links = app.config.reader.show_external_links;
     let heading_marker = app.config.reader.heading_marker;
+    let code_line_numbers = app.config.reader.code_line_numbers;
     let pane = &mut app.tabs[tab_idx].panes[pane_idx];
     pane.ensure_parsed_width(
         content_width,
         show_footnotes,
         show_external_links,
         heading_marker,
+        code_line_numbers,
     );
     pane.viewport_height = if app.zen_mode {
         rect.height as usize

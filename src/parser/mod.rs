@@ -108,6 +108,7 @@ pub fn parse_wikipedia_html(
     show_footnotes: bool,
     show_external_links: bool,
     heading_marker: bool,
+    code_line_numbers: bool,
 ) -> ParsedDocument {
     let mut doc = ParsedDocument::default();
     let effective_width = max_width.max(10);
@@ -138,6 +139,7 @@ pub fn parse_wikipedia_html(
                 false,
                 false,
                 heading_marker,
+                code_line_numbers,
             );
         }
     }
@@ -166,6 +168,7 @@ fn process_node<'a>(
     is_sup: bool,
     is_sub: bool,
     heading_marker: bool,
+    code_line_numbers: bool,
 ) {
     match node {
         tl::Node::Raw(bytes) => {
@@ -461,7 +464,14 @@ fn process_node<'a>(
                     current_tokens.clear();
                 }
                 let lang = codeblocks::extract_language(tag);
-                codeblocks::render_code_block(tag, parser, doc, max_width, lang);
+                codeblocks::render_code_block(
+                    tag,
+                    parser,
+                    doc,
+                    max_width,
+                    lang,
+                    code_line_numbers,
+                );
                 return;
             }
 
@@ -476,7 +486,12 @@ fn process_node<'a>(
                         if let Some(tl::Node::Tag(pre_tag)) = child_handle.get(parser) {
                             if pre_tag.name().as_utf8_str() == "pre" {
                                 codeblocks::render_code_block(
-                                    pre_tag, parser, doc, max_width, lang,
+                                    pre_tag,
+                                    parser,
+                                    doc,
+                                    max_width,
+                                    lang,
+                                    code_line_numbers,
                                 );
                                 return;
                             }
@@ -693,6 +708,7 @@ fn process_node<'a>(
                         current_is_sup,
                         current_is_sub,
                         heading_marker,
+                        code_line_numbers,
                     );
                 }
             }

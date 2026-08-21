@@ -16,6 +16,7 @@ pub enum PaneContent {
         last_show_footnotes: bool,
         last_show_external_links: bool,
         last_heading_marker: bool,
+        last_code_line_numbers: bool,
     },
     Error(String),
 }
@@ -79,6 +80,7 @@ impl Pane {
         show_footnotes: bool,
         show_external_links: bool,
         heading_marker: bool,
+        code_line_numbers: bool,
     ) {
         if let PaneContent::ArticleText {
             raw_html,
@@ -87,6 +89,7 @@ impl Pane {
             last_show_footnotes,
             last_show_external_links,
             last_heading_marker,
+            last_code_line_numbers,
             ..
         } = &mut self.content
         {
@@ -94,6 +97,7 @@ impl Pane {
                 && *last_show_footnotes == show_footnotes
                 && *last_show_external_links == show_external_links
                 && *last_heading_marker == heading_marker
+                && *last_code_line_numbers == code_line_numbers
             {
                 return;
             }
@@ -103,11 +107,13 @@ impl Pane {
                 show_footnotes,
                 show_external_links,
                 heading_marker,
+                code_line_numbers,
             );
             *last_width = width;
             *last_show_footnotes = show_footnotes;
             *last_show_external_links = show_external_links;
             *last_heading_marker = heading_marker;
+            *last_code_line_numbers = code_line_numbers;
         }
     }
 

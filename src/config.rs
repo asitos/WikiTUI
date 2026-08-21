@@ -55,6 +55,7 @@ pub struct ReaderConfig {
     pub show_external_links: bool,
     pub toc_section_numbers: bool,
     pub heading_marker: bool,
+    pub code_line_numbers: bool,
 }
 
 impl Default for ReaderConfig {
@@ -66,6 +67,7 @@ impl Default for ReaderConfig {
             show_external_links: true,
             toc_section_numbers: true,
             heading_marker: true,
+            code_line_numbers: true,
         }
     }
 }
