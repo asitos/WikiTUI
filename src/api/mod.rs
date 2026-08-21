@@ -26,10 +26,12 @@ pub enum NetworkCommand {
         pane_id: usize,
         title: String,
         timeout: u64,
+        offline_cache: bool,
     },
     FetchRandomArticle {
         pane_id: usize,
         timeout: u64,
+        offline_cache: bool,
     },
     FetchFeedBatch {
         timeout: u64,
@@ -100,8 +102,14 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 pane_id,
                 title,
                 timeout,
+                offline_cache,
             } => {
-                match article::fetch_article_wikipedia(&agent, &title, timeout) {
+                match article::fetch_article_wikipedia(
+                    &agent,
+                    &title,
+                    timeout,
+                    offline_cache,
+                ) {
                     Ok(content) => {
                         let _ = ev_tx.send(NetworkEvent::ArticleResult {
                             pane_id,
@@ -117,8 +125,12 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                     }
                 }
             }
-            NetworkCommand::FetchRandomArticle { pane_id, timeout } => {
-                match random::fetch_random_article(&agent, timeout) {
+            NetworkCommand::FetchRandomArticle {
+                pane_id,
+                timeout,
+                offline_cache,
+            } => {
+                match random::fetch_random_article(&agent, timeout, offline_cache) {
                     Ok((title, content)) => {
                         let _ = ev_tx.send(NetworkEvent::ArticleResult {
                             pane_id,

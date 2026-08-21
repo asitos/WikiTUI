@@ -62,9 +62,12 @@ pub fn fetch_article_wikipedia(
     agent: &ureq::Agent,
     title: &str,
     timeout_secs: u64,
+    offline_cache: bool,
 ) -> Result<String, String> {
-    if let Some(cached_html) = get_cached_article(title) {
-        return Ok(cached_html);
+    if offline_cache {
+        if let Some(cached_html) = get_cached_article(title) {
+            return Ok(cached_html);
+        }
     }
 
     let decoded_title = crate::parser::url_decode(title).replace('_', " ");
@@ -93,15 +96,19 @@ pub fn fetch_article_wikipedia(
                 .filter(|h| !h.trim().is_empty());
 
             if let Some(h) = html {
-                save_cached_article(title, &h);
+                if offline_cache {
+                    save_cached_article(title, &h);
+                }
                 Ok(h)
             } else {
                 Err("article HTML content not found".to_string())
             }
         }
         Err(err) => {
-            if let Some(cached) = get_cached_article(title) {
-                return Ok(cached);
+            if offline_cache {
+                if let Some(cached) = get_cached_article(title) {
+                    return Ok(cached);
+                }
             }
             Err(format!("network error: {}", err))
         }

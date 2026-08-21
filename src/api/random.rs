@@ -16,7 +16,11 @@ struct WikiRandomResponse {
     query: Option<WikiRandomQuery>,
 }
 
-pub fn fetch_random_article(agent: &ureq::Agent, timeout_secs: u64) -> Result<(String, String), String> {
+pub fn fetch_random_article(
+    agent: &ureq::Agent,
+    timeout_secs: u64,
+    offline_cache: bool,
+) -> Result<(String, String), String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let res = agent
         .get(url)
@@ -38,6 +42,6 @@ pub fn fetch_random_article(agent: &ureq::Agent, timeout_secs: u64) -> Result<(S
         .map(|r| r.title)
         .ok_or_else(|| "no random article returned".to_string())?;
 
-    let content = fetch_article_wikipedia(agent, &title, timeout_secs)?;
+    let content = fetch_article_wikipedia(agent, &title, timeout_secs, offline_cache)?;
     Ok((title, content))
 }

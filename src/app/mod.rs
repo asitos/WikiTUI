@@ -36,6 +36,7 @@ pub enum SettingItem {
     CodeLineNumbers,
     SearchLimit,
     NetworkTimeout,
+    OfflineCache,
 }
 
 impl SettingItem {
@@ -55,6 +56,7 @@ impl SettingItem {
         SettingItem::CodeLineNumbers,
         SettingItem::SearchLimit,
         SettingItem::NetworkTimeout,
+        SettingItem::OfflineCache,
     ];
 
     pub fn section(&self) -> &'static str {
@@ -71,7 +73,7 @@ impl SettingItem {
             | SettingItem::TocSectionNumbers
             | SettingItem::CodeLineNumbers => "reader",
             SettingItem::SearchLimit => "search",
-            SettingItem::NetworkTimeout => "network",
+            SettingItem::NetworkTimeout | SettingItem::OfflineCache => "network",
         }
     }
 
@@ -92,6 +94,7 @@ impl SettingItem {
             SettingItem::CodeLineNumbers => "code line numbers",
             SettingItem::SearchLimit => "search results limit",
             SettingItem::NetworkTimeout => "request timeout",
+            SettingItem::OfflineCache => "offline article cache",
         }
     }
 
@@ -112,6 +115,9 @@ impl SettingItem {
             SettingItem::CodeLineNumbers => "display line numbers in code blocks",
             SettingItem::SearchLimit => "maximum number of search results to fetch (5-50)",
             SettingItem::NetworkTimeout => "network request timeout in seconds (2-60s)",
+            SettingItem::OfflineCache => {
+                "cache downloaded articles in ~/.cache/wikid for offline reading"
+            }
         }
     }
 }
@@ -299,6 +305,7 @@ impl App {
             pane_id,
             title,
             timeout: self.config.network.timeout,
+            offline_cache: self.config.network.offline_cache,
         });
     }
 
@@ -306,6 +313,7 @@ impl App {
         let _ = self.cmd_tx.send(NetworkCommand::FetchRandomArticle {
             pane_id,
             timeout: self.config.network.timeout,
+            offline_cache: self.config.network.offline_cache,
         });
     }
 
@@ -710,6 +718,9 @@ impl App {
                     };
                     self.config.network.timeout = new_val as u64;
                 }
+                SettingItem::OfflineCache => {
+                    self.config.network.offline_cache = !self.config.network.offline_cache;
+                }
             }
             self.config.save();
             self.config_last_mtime = crate::config::Config::get_modified_time();
@@ -767,6 +778,9 @@ impl App {
                 }
                 SettingItem::NetworkTimeout => {
                     self.config.network.timeout = default_config.network.timeout;
+                }
+                SettingItem::OfflineCache => {
+                    self.config.network.offline_cache = default_config.network.offline_cache;
                 }
             }
             self.config.save();

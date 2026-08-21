@@ -124,6 +124,10 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                     Style::default().fg(theme::TEAL).bold(),
                 )
             }
+            SettingItem::OfflineCache => {
+                let val = app.config.network.offline_cache;
+                bool_span(val)
+            }
         };
 
         let pad_len = 34_usize.saturating_sub(label.len());

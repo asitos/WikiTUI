@@ -92,12 +92,14 @@ impl Default for SearchConfig {
 #[serde(default)]
 pub struct NetworkConfig {
     pub timeout: u64,
+    pub offline_cache: bool,
 }
 
 impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
             timeout: 10,
+            offline_cache: true,
         }
     }
 }
