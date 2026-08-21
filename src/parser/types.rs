@@ -23,6 +23,13 @@ impl Link {
             || self.title.starts_with("https://")
             || self.title.starts_with("//")
     }
+
+    pub fn is_citation(&self) -> bool {
+        self.title.starts_with("#cite_note")
+            || self.title.starts_with("#cite_ref")
+            || self.title.starts_with("cite_note")
+            || self.title.starts_with("cite_ref")
+    }
 }
 
 #[derive(Debug, Clone, Default)]

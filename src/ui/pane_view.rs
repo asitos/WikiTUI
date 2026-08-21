@@ -262,6 +262,9 @@ fn render_pane_at(
                     if first_line >= view_end {
                         break;
                     }
+                    if link.is_citation() {
+                        continue;
+                    }
                     for &(line_idx, span_idx) in &link.span_indices {
                         if line_idx >= view_start && line_idx < view_end {
                             if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
