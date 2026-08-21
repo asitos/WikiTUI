@@ -260,19 +260,19 @@ impl App {
     }
 
     pub fn get_continue_reading_articles(&self) -> Vec<String> {
-        let mut list = self.recent_articles.clone();
-        if list.is_empty() {
-            for l in &self.saved_lists.lists {
-                for a in l.articles.iter().rev() {
-                    if !list.contains(a) {
-                        list.push(a.clone());
-                    }
+        if !self.recent_articles.is_empty() {
+            return self.recent_articles.clone();
+        }
+
+        let mut seen = std::collections::HashSet::new();
+        let mut list = Vec::with_capacity(10);
+        for l in &self.saved_lists.lists {
+            for a in l.articles.iter().rev() {
+                if seen.insert(a.as_str()) {
+                    list.push(a.clone());
                     if list.len() >= 10 {
-                        break;
+                        return list;
                     }
-                }
-                if list.len() >= 10 {
-                    break;
                 }
             }
         }
