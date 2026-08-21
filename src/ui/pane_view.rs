@@ -418,8 +418,9 @@ fn render_scroll_indicator(
     show_indicator: bool,
 ) {
     if show_indicator && !zen_mode && total_lines > viewport_height {
-        let total_scrollable = total_lines.saturating_sub(viewport_height);
-        let mut scrollbar_state = ScrollbarState::new(total_scrollable).position(scroll_offset);
+        let mut scrollbar_state = ScrollbarState::new(total_lines)
+            .position(scroll_offset)
+            .viewport_content_length(viewport_height);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(None)
             .end_symbol(None)
