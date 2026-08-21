@@ -248,7 +248,20 @@ fn render_pane_at(
                 .collect();
 
             if app.config.reader.underline_links {
-                for link in &parsed_doc.links {
+                let first_link_idx = parsed_doc.links.partition_point(|link| {
+                    link.span_indices
+                        .last()
+                        .map(|&(l, _)| l < view_start)
+                        .unwrap_or(true)
+                });
+
+                for link in &parsed_doc.links[first_link_idx..] {
+                    let Some(&(first_line, _)) = link.span_indices.first() else {
+                        continue;
+                    };
+                    if first_line >= view_end {
+                        break;
+                    }
                     for &(line_idx, span_idx) in &link.span_indices {
                         if line_idx >= view_start && line_idx < view_end {
                             if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
