@@ -1,4 +1,6 @@
-use super::utils::{centered_rect, create_modal_block};
+use super::utils::{
+    centered_rect, create_checkbox_line, create_modal_block, create_selectable_line,
+};
 use crate::app::App;
 use crate::theme;
 use ratatui::{
@@ -49,34 +51,15 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
         let is_in_list = app
             .saved_lists
             .is_article_in_list(&list.id, &app.save_modal_target_title);
+        let suffix = format!(" ({} articles)", list.articles.len());
 
-        let cursor_str = if is_focused { " ▶ " } else { "   " };
-        let check_str = if is_in_list { "[x] " } else { "[ ] " };
-
-        let item_style = if is_focused {
-            Style::default().fg(theme::YELLOW).bold()
-        } else if is_in_list {
-            Style::default().fg(theme::LIME)
-        } else {
-            Style::default().fg(theme::FG)
-        };
-
-        lines.push(Line::from(vec![
-            Span::styled(cursor_str, Style::default().fg(theme::VIOLET).bold()),
-            Span::styled(
-                check_str,
-                if is_in_list {
-                    Style::default().fg(theme::LIME).bold()
-                } else {
-                    Style::default().fg(theme::GREY)
-                },
-            ),
-            Span::styled(&list.name, item_style),
-            Span::styled(
-                format!(" ({} articles)", list.articles.len()),
-                Style::default().fg(theme::GREY),
-            ),
-        ]));
+        lines.push(create_checkbox_line(
+            &list.name,
+            is_focused,
+            is_in_list,
+            Some(&suffix),
+            theme::VIOLET,
+        ));
     }
 
     let is_create_focused = app.save_modal_cursor_idx == list_count;
@@ -172,23 +155,16 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     } else {
         for (idx, list) in app.saved_lists.lists.iter().enumerate() {
             let is_selected = idx == app.viewer_list_idx;
-            let prefix = if is_selected { " ▶ " } else { "   " };
-            let style = if is_selected && !app.viewer_focus_right {
-                Style::default().fg(theme::YELLOW).bold()
-            } else if is_selected {
-                Style::default().fg(theme::VIOLET).bold()
-            } else {
-                Style::default().fg(theme::FG)
-            };
+            let is_active = !app.viewer_focus_right;
+            let suffix = format!(" ({})", list.articles.len());
 
-            list_lines.push(Line::from(vec![
-                Span::styled(prefix, Style::default().fg(theme::VIOLET)),
-                Span::styled(&list.name, style),
-                Span::styled(
-                    format!(" ({})", list.articles.len()),
-                    Style::default().fg(theme::GREY),
-                ),
-            ]));
+            list_lines.push(create_selectable_line(
+                &list.name,
+                is_selected,
+                is_active,
+                theme::VIOLET,
+                Some(&suffix),
+            ));
         }
     }
 
@@ -221,19 +197,15 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
         } else {
             for (idx, article) in list.articles.iter().enumerate() {
                 let is_selected = idx == app.viewer_article_idx;
-                let prefix = if is_selected { " ▶ " } else { "   " };
-                let style = if is_selected && app.viewer_focus_right {
-                    Style::default().fg(theme::YELLOW).bold()
-                } else if is_selected {
-                    Style::default().fg(theme::VIOLET).bold()
-                } else {
-                    Style::default().fg(theme::FG)
-                };
+                let is_active = app.viewer_focus_right;
 
-                article_lines.push(Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(theme::VIOLET)),
-                    Span::styled(article, style),
-                ]));
+                article_lines.push(create_selectable_line(
+                    article,
+                    is_selected,
+                    is_active,
+                    theme::VIOLET,
+                    None,
+                ));
             }
         }
     }
