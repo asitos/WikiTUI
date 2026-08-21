@@ -39,21 +39,17 @@ impl App {
         });
 
         if !is_visible {
-            let first_in_view = parsed_doc.links.iter().position(|link| {
+            let candidate_idx = parsed_doc.links.partition_point(|link| {
                 link.span_indices
-                    .iter()
-                    .any(|(l, _)| *l >= view_start && *l < view_end)
+                    .last()
+                    .map(|&(l, _)| l < view_start)
+                    .unwrap_or(true)
             });
 
-            if let Some(idx) = first_in_view {
-                pane.selected_link_idx = Some(idx);
+            if candidate_idx < parsed_doc.links.len() {
+                pane.selected_link_idx = Some(candidate_idx);
             } else {
-                let closest = parsed_doc
-                    .links
-                    .iter()
-                    .position(|link| link.span_indices.iter().any(|(l, _)| *l >= view_start))
-                    .unwrap_or(parsed_doc.links.len() - 1);
-                pane.selected_link_idx = Some(closest);
+                pane.selected_link_idx = Some(parsed_doc.links.len() - 1);
             }
         }
     }
