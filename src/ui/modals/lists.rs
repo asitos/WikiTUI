@@ -28,7 +28,7 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
         Line::from(vec![
             Span::styled(" article: ", Style::default().fg(theme::GREY)),
             Span::styled(
-                &app.save_modal_target_title,
+                &app.lists_modal.target_title,
                 Style::default().fg(theme::YELLOW).bold(),
             ),
         ]),
@@ -48,10 +48,10 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
         .collect();
     let list_count = custom_lists.len();
     for (idx, list) in custom_lists.iter().enumerate() {
-        let is_focused = idx == app.save_modal_cursor_idx;
+        let is_focused = idx == app.lists_modal.save_cursor_idx;
         let is_in_list = app
             .saved_lists
-            .is_article_in_list(&list.id, &app.save_modal_target_title);
+            .is_article_in_list(&list.id, &app.lists_modal.target_title);
         let suffix = format!(" ({} articles)", list.articles.len());
 
         lines.push(create_checkbox_line(
@@ -63,7 +63,7 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
         ));
     }
 
-    let is_create_focused = app.save_modal_cursor_idx == list_count;
+    let is_create_focused = app.lists_modal.save_cursor_idx == list_count;
     let create_cursor = if is_create_focused { " ▶ " } else { "   " };
     let create_style = if is_create_focused {
         Style::default().fg(theme::YELLOW).bold()
@@ -99,7 +99,7 @@ pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
         Line::from(vec![
             Span::styled(" > ", Style::default().fg(theme::VIOLET).bold()),
             Span::styled(
-                &app.create_list_input,
+                &app.lists_modal.create_input,
                 Style::default().fg(theme::YELLOW).bold(),
             ),
             Span::styled("█", Style::default().fg(theme::VIOLET)),
@@ -131,7 +131,7 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let left_area = chunks[0];
     let right_area = chunks[1];
 
-    let left_border_color = if !app.viewer_focus_right {
+    let left_border_color = if !app.lists_modal.viewer_focus_right {
         theme::VIOLET
     } else {
         theme::GREY
@@ -154,8 +154,8 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
         )));
     } else {
         for (idx, list) in app.saved_lists.lists.iter().enumerate() {
-            let is_selected = idx == app.viewer_list_idx;
-            let is_active = !app.viewer_focus_right;
+            let is_selected = idx == app.lists_modal.viewer_list_idx;
+            let is_active = !app.lists_modal.viewer_focus_right;
             let suffix = format!(" ({})", list.articles.len());
 
             list_lines.push(create_selectable_line(
@@ -171,13 +171,13 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let left_p = Paragraph::new(list_lines).block(left_block);
     f.render_widget(left_p, left_area);
 
-    let right_border_color = if app.viewer_focus_right {
+    let right_border_color = if app.lists_modal.viewer_focus_right {
         theme::YELLOW
     } else {
         theme::GREY
     };
 
-    let selected_list = app.saved_lists.lists.get(app.viewer_list_idx);
+    let selected_list = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx);
     let right_title = selected_list
         .map(|l| format!(" articles in '{}' ", l.name))
         .unwrap_or_else(|| " Articles ".to_string());
@@ -196,8 +196,8 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
             )));
         } else {
             for (idx, article) in list.articles.iter().enumerate() {
-                let is_selected = idx == app.viewer_article_idx;
-                let is_active = app.viewer_focus_right;
+                let is_selected = idx == app.lists_modal.viewer_article_idx;
+                let is_active = app.lists_modal.viewer_focus_right;
 
                 article_lines.push(create_selectable_line(
                     article,

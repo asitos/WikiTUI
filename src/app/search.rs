@@ -5,30 +5,30 @@ use crate::app::App;
 impl App {
     pub fn enter_search_mode(&mut self) {
         self.input_mode = crate::app::InputMode::Search;
-        self.search_opens_new_tab = true;
-        self.search_input.clear();
-        self.search_cursor_pos = 0;
+        self.search_modal.opens_new_tab = true;
+        self.search_modal.input.clear();
+        self.search_modal.cursor_pos = 0;
     }
 
     pub fn edit_search_mode(&mut self) {
         self.input_mode = crate::app::InputMode::Search;
-        self.search_opens_new_tab = false;
+        self.search_modal.opens_new_tab = false;
         let existing_query = match &self.active_pane().content {
             PaneContent::SearchResults { query, .. } => Some(query.clone()),
             _ => None,
         };
         if let Some(query) = existing_query {
-            self.search_input = query;
+            self.search_modal.input = query;
         } else {
-            self.search_input.clear();
+            self.search_modal.input.clear();
         }
-        self.search_cursor_pos = self.search_input.chars().count();
+        self.search_modal.cursor_pos = self.search_modal.input.chars().count();
     }
 
     pub fn exit_search_mode(&mut self) {
         self.input_mode = crate::app::InputMode::Normal;
-        self.search_input.clear();
-        self.search_cursor_pos = 0;
+        self.search_modal.input.clear();
+        self.search_modal.cursor_pos = 0;
     }
 
     pub fn fetch_random_article(&mut self) {
@@ -59,31 +59,42 @@ impl App {
 
     pub fn type_search_char(&mut self, c: char) {
         if self.input_mode == crate::app::InputMode::Search {
-            if let Some((byte_idx, _)) = self.search_input.char_indices().nth(self.search_cursor_pos) {
-                self.search_input.insert(byte_idx, c);
+            if let Some((byte_idx, _)) = self
+                .search_modal
+                .input
+                .char_indices()
+                .nth(self.search_modal.cursor_pos)
+            {
+                self.search_modal.input.insert(byte_idx, c);
             } else {
-                self.search_input.push(c);
+                self.search_modal.input.push(c);
             }
-            self.search_cursor_pos += 1;
+            self.search_modal.cursor_pos += 1;
         }
     }
 
     pub fn backspace_search_char(&mut self) {
-        if self.input_mode == crate::app::InputMode::Search && self.search_cursor_pos > 0 {
-            let target_char = self.search_cursor_pos - 1;
-            if let Some((byte_idx, _)) = self.search_input.char_indices().nth(target_char) {
-                self.search_input.remove(byte_idx);
+        if self.input_mode == crate::app::InputMode::Search && self.search_modal.cursor_pos > 0 {
+            let target_char = self.search_modal.cursor_pos - 1;
+            if let Some((byte_idx, _)) = self
+                .search_modal
+                .input
+                .char_indices()
+                .nth(target_char)
+            {
+                self.search_modal.input.remove(byte_idx);
             } else {
-                self.search_input.pop();
+                self.search_modal.input.pop();
             }
-            self.search_cursor_pos -= 1;
+            self.search_modal.cursor_pos -= 1;
         }
     }
 
     pub fn delete_word_left(&mut self) {
-        if self.input_mode == crate::app::InputMode::Search && self.search_cursor_pos > 0 {
-            let char_indices: Vec<(usize, char)> = self.search_input.char_indices().collect();
-            let end_char = self.search_cursor_pos.min(char_indices.len());
+        if self.input_mode == crate::app::InputMode::Search && self.search_modal.cursor_pos > 0 {
+            let char_indices: Vec<(usize, char)> =
+                self.search_modal.input.char_indices().collect();
+            let end_char = self.search_modal.cursor_pos.min(char_indices.len());
             let mut start_char = end_char;
 
             while start_char > 0 && char_indices[start_char - 1].1.is_whitespace() {
@@ -97,51 +108,56 @@ impl App {
             let end_byte = char_indices
                 .get(end_char)
                 .map(|(b, _)| *b)
-                .unwrap_or(self.search_input.len());
+                .unwrap_or(self.search_modal.input.len());
 
-            self.search_input.drain(start_byte..end_byte);
-            self.search_cursor_pos = start_char;
+            self.search_modal.input.drain(start_byte..end_byte);
+            self.search_modal.cursor_pos = start_char;
         }
     }
 
     pub fn delete_search_char(&mut self) {
         if self.input_mode == crate::app::InputMode::Search {
-            if let Some((byte_idx, _)) = self.search_input.char_indices().nth(self.search_cursor_pos) {
-                self.search_input.remove(byte_idx);
+            if let Some((byte_idx, _)) = self
+                .search_modal
+                .input
+                .char_indices()
+                .nth(self.search_modal.cursor_pos)
+            {
+                self.search_modal.input.remove(byte_idx);
             }
         }
     }
 
     pub fn move_search_cursor_left(&mut self) {
         if self.input_mode == crate::app::InputMode::Search {
-            self.search_cursor_pos = self.search_cursor_pos.saturating_sub(1);
+            self.search_modal.cursor_pos = self.search_modal.cursor_pos.saturating_sub(1);
         }
     }
 
     pub fn move_search_cursor_right(&mut self) {
         if self.input_mode == crate::app::InputMode::Search {
-            let char_count = self.search_input.chars().count();
-            if self.search_cursor_pos < char_count {
-                self.search_cursor_pos += 1;
+            let char_count = self.search_modal.input.chars().count();
+            if self.search_modal.cursor_pos < char_count {
+                self.search_modal.cursor_pos += 1;
             }
         }
     }
 
     pub fn move_search_cursor_home(&mut self) {
         if self.input_mode == crate::app::InputMode::Search {
-            self.search_cursor_pos = 0;
+            self.search_modal.cursor_pos = 0;
         }
     }
 
     pub fn move_search_cursor_end(&mut self) {
         if self.input_mode == crate::app::InputMode::Search {
-            self.search_cursor_pos = self.search_input.chars().count();
+            self.search_modal.cursor_pos = self.search_modal.input.chars().count();
         }
     }
 
     pub fn submit_search(&mut self) {
-        let query = self.search_input.trim().to_string();
-        let open_new_tab = self.search_opens_new_tab;
+        let query = self.search_modal.input.trim().to_string();
+        let open_new_tab = self.search_modal.opens_new_tab;
         self.exit_search_mode();
 
         if !query.is_empty() {

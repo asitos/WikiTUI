@@ -13,30 +13,30 @@ pub fn handle_save_to_list_mode(app: &mut App, key: KeyEvent) {
 
     match key.code {
         KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab => {
-            app.save_modal_cursor_idx = (app.save_modal_cursor_idx + 1) % total;
+            app.lists_modal.save_cursor_idx = (app.lists_modal.save_cursor_idx + 1) % total;
         }
         KeyCode::Up | KeyCode::Char('k') | KeyCode::BackTab => {
-            if app.save_modal_cursor_idx == 0 {
-                app.save_modal_cursor_idx = total.saturating_sub(1);
+            if app.lists_modal.save_cursor_idx == 0 {
+                app.lists_modal.save_cursor_idx = total.saturating_sub(1);
             } else {
-                app.save_modal_cursor_idx -= 1;
+                app.lists_modal.save_cursor_idx -= 1;
             }
         }
         KeyCode::Char(' ') | KeyCode::Enter => {
-            if app.save_modal_cursor_idx < custom_lists.len() {
-                let list_id = custom_lists[app.save_modal_cursor_idx].id.clone();
-                let target_title = app.save_modal_target_title.clone();
+            if app.lists_modal.save_cursor_idx < custom_lists.len() {
+                let list_id = custom_lists[app.lists_modal.save_cursor_idx].id.clone();
+                let target_title = app.lists_modal.target_title.clone();
                 app.saved_lists
                     .toggle_article_in_list(&list_id, &target_title);
             } else {
-                app.create_list_input.clear();
-                app.create_list_return_mode = InputMode::SaveToList;
+                app.lists_modal.create_input.clear();
+                app.lists_modal.create_return_mode = InputMode::SaveToList;
                 app.input_mode = InputMode::CreateNewList;
             }
         }
         KeyCode::Char('n') => {
-            app.create_list_input.clear();
-            app.create_list_return_mode = InputMode::SaveToList;
+            app.lists_modal.create_input.clear();
+            app.lists_modal.create_return_mode = InputMode::SaveToList;
             app.input_mode = InputMode::CreateNewList;
         }
         KeyCode::Esc => {
@@ -49,25 +49,25 @@ pub fn handle_save_to_list_mode(app: &mut App, key: KeyEvent) {
 pub fn handle_create_new_list_mode(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Enter => {
-            let name = app.create_list_input.trim().to_string();
+            let name = app.lists_modal.create_input.trim().to_string();
             if !name.is_empty() {
                 let list_id = app.saved_lists.create_list(&name);
-                if !app.save_modal_target_title.is_empty() {
-                    let target_title = app.save_modal_target_title.clone();
+                if !app.lists_modal.target_title.is_empty() {
+                    let target_title = app.lists_modal.target_title.clone();
                     app.saved_lists
                         .toggle_article_in_list(&list_id, &target_title);
                 }
             }
-            app.input_mode = app.create_list_return_mode.clone();
+            app.input_mode = app.lists_modal.create_return_mode.clone();
         }
         KeyCode::Esc => {
-            app.input_mode = app.create_list_return_mode.clone();
+            app.input_mode = app.lists_modal.create_return_mode.clone();
         }
         KeyCode::Backspace => {
-            app.create_list_input.pop();
+            app.lists_modal.create_input.pop();
         }
         KeyCode::Char(c) => {
-            app.create_list_input.push(c);
+            app.lists_modal.create_input.push(c);
         }
         _ => {}
     }
@@ -78,54 +78,57 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
     let current_articles_count = app
         .saved_lists
         .lists
-        .get(app.viewer_list_idx)
+        .get(app.lists_modal.viewer_list_idx)
         .map(|l| l.articles.len())
         .unwrap_or(0);
 
     match key.code {
         KeyCode::Left | KeyCode::Char('h') => {
-            app.viewer_focus_right = false;
+            app.lists_modal.viewer_focus_right = false;
         }
         KeyCode::Right | KeyCode::Char('l') => {
             if current_articles_count > 0 {
-                app.viewer_focus_right = true;
+                app.lists_modal.viewer_focus_right = true;
             }
         }
         KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab => {
-            if app.viewer_focus_right {
+            if app.lists_modal.viewer_focus_right {
                 if current_articles_count > 0 {
-                    app.viewer_article_idx = (app.viewer_article_idx + 1) % current_articles_count;
+                    app.lists_modal.viewer_article_idx =
+                        (app.lists_modal.viewer_article_idx + 1) % current_articles_count;
                 }
             } else if lists_count > 0 {
-                app.viewer_list_idx = (app.viewer_list_idx + 1) % lists_count;
-                app.viewer_article_idx = 0;
+                app.lists_modal.viewer_list_idx =
+                    (app.lists_modal.viewer_list_idx + 1) % lists_count;
+                app.lists_modal.viewer_article_idx = 0;
             }
         }
         KeyCode::Up | KeyCode::Char('k') | KeyCode::BackTab => {
-            if app.viewer_focus_right {
+            if app.lists_modal.viewer_focus_right {
                 if current_articles_count > 0 {
-                    if app.viewer_article_idx == 0 {
-                        app.viewer_article_idx = current_articles_count.saturating_sub(1);
+                    if app.lists_modal.viewer_article_idx == 0 {
+                        app.lists_modal.viewer_article_idx =
+                            current_articles_count.saturating_sub(1);
                     } else {
-                        app.viewer_article_idx -= 1;
+                        app.lists_modal.viewer_article_idx -= 1;
                     }
                 }
             } else if lists_count > 0 {
-                if app.viewer_list_idx == 0 {
-                    app.viewer_list_idx = lists_count.saturating_sub(1);
+                if app.lists_modal.viewer_list_idx == 0 {
+                    app.lists_modal.viewer_list_idx = lists_count.saturating_sub(1);
                 } else {
-                    app.viewer_list_idx -= 1;
+                    app.lists_modal.viewer_list_idx -= 1;
                 }
-                app.viewer_article_idx = 0;
+                app.lists_modal.viewer_article_idx = 0;
             }
         }
         KeyCode::Enter => {
-            if app.viewer_focus_right {
+            if app.lists_modal.viewer_focus_right {
                 if let Some(title) = app
                     .saved_lists
                     .lists
-                    .get(app.viewer_list_idx)
-                    .and_then(|l| l.articles.get(app.viewer_article_idx))
+                    .get(app.lists_modal.viewer_list_idx)
+                    .and_then(|l| l.articles.get(app.lists_modal.viewer_article_idx))
                     .cloned()
                 {
                     app.input_mode = InputMode::Normal;
@@ -134,10 +137,10 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('d') | KeyCode::Delete => {
-            if app.viewer_focus_right {
-                if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {
+            if app.lists_modal.viewer_focus_right {
+                if let Some(list) = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx) {
                     if !app.config.general.liked_readonly || list.id != "liked" {
-                        if let Some(art) = list.articles.get(app.viewer_article_idx) {
+                        if let Some(art) = list.articles.get(app.lists_modal.viewer_article_idx) {
                             app.confirm_action = Some(crate::app::ConfirmAction::DeleteArticle {
                                 list_id: list.id.clone(),
                                 title: art.clone(),
@@ -146,7 +149,7 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
                         }
                     }
                 }
-            } else if let Some(list) = app.saved_lists.lists.get(app.viewer_list_idx) {
+            } else if let Some(list) = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx) {
                 if list.id != "liked" {
                     app.confirm_action = Some(crate::app::ConfirmAction::DeleteList {
                         list_id: list.id.clone(),
@@ -157,9 +160,9 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('n') => {
-            app.save_modal_target_title.clear();
-            app.create_list_input.clear();
-            app.create_list_return_mode = InputMode::SavedListsViewer;
+            app.lists_modal.target_title.clear();
+            app.lists_modal.create_input.clear();
+            app.lists_modal.create_return_mode = InputMode::SavedListsViewer;
             app.input_mode = InputMode::CreateNewList;
         }
         KeyCode::Char('M') | KeyCode::Esc | KeyCode::Char('q') => {
@@ -174,10 +177,10 @@ pub fn handle_confirm_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('y') | KeyCode::Enter => match app.confirm_action.take() {
             Some(crate::app::ConfirmAction::DeleteList { list_id, .. }) => {
                 app.saved_lists.delete_list(&list_id);
-                if app.viewer_list_idx > 0 {
-                    app.viewer_list_idx -= 1;
+                if app.lists_modal.viewer_list_idx > 0 {
+                    app.lists_modal.viewer_list_idx -= 1;
                 }
-                app.viewer_article_idx = 0;
+                app.lists_modal.viewer_article_idx = 0;
                 app.input_mode = InputMode::SavedListsViewer;
             }
             Some(crate::app::ConfirmAction::DeleteArticle { list_id, title }) => {
@@ -194,8 +197,8 @@ pub fn handle_confirm_mode(app: &mut App, key: KeyEvent) {
                         }
                     }
                 }
-                if app.viewer_article_idx > 0 {
-                    app.viewer_article_idx -= 1;
+                if app.lists_modal.viewer_article_idx > 0 {
+                    app.lists_modal.viewer_article_idx -= 1;
                 }
                 app.input_mode = InputMode::SavedListsViewer;
             }

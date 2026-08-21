@@ -101,8 +101,9 @@ impl SettingItem {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum InputMode {
+    #[default]
     Normal,
     Search,
     LocalSearch,
@@ -135,30 +136,71 @@ pub struct ClosedTabState {
     pub history_forward: Vec<String>,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct SearchModalState {
+    pub input: String,
+    pub cursor_pos: usize,
+    pub opens_new_tab: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct OnboardingModalState {
+    pub cursor_idx: usize,
+    pub selected: Vec<bool>,
+}
+
+impl Default for OnboardingModalState {
+    fn default() -> Self {
+        Self {
+            cursor_idx: 0,
+            selected: vec![
+                false, false, false, false, true, false, false, true, true, false, false, true,
+            ],
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ListsModalState {
+    pub target_title: String,
+    pub target_snippet: Option<String>,
+    pub save_cursor_idx: usize,
+    pub create_input: String,
+    pub create_return_mode: InputMode,
+    pub viewer_list_idx: usize,
+    pub viewer_article_idx: usize,
+    pub viewer_focus_right: bool,
+}
+
+impl Default for ListsModalState {
+    fn default() -> Self {
+        Self {
+            target_title: String::new(),
+            target_snippet: None,
+            save_cursor_idx: 0,
+            create_input: String::new(),
+            create_return_mode: InputMode::SaveToList,
+            viewer_list_idx: 0,
+            viewer_article_idx: 0,
+            viewer_focus_right: false,
+        }
+    }
+}
+
 pub struct App {
     pub running: bool,
     pub tabs: Vec<Tab>,
     pub active_tab_idx: usize,
     pub input_mode: InputMode,
-    pub search_input: String,
-    pub search_cursor_pos: usize,
-    pub search_opens_new_tab: bool,
+    pub search_modal: SearchModalState,
     pub waiting_for_split_cmd: bool,
     pub zen_mode: bool,
 
     pub feed: crate::feed::FeedState,
-    pub onboarding_cursor_idx: usize,
-    pub onboarding_selected: Vec<bool>,
+    pub onboarding: OnboardingModalState,
 
     pub saved_lists: crate::saved_lists::SavedListsStore,
-    pub save_modal_target_title: String,
-    pub save_modal_target_snippet: Option<String>,
-    pub save_modal_cursor_idx: usize,
-    pub create_list_input: String,
-    pub create_list_return_mode: InputMode,
-    pub viewer_list_idx: usize,
-    pub viewer_article_idx: usize,
-    pub viewer_focus_right: bool,
+    pub lists_modal: ListsModalState,
     pub confirm_action: Option<ConfirmAction>,
     pub config: crate::config::Config,
     pub config_last_mtime: Option<std::time::SystemTime>,
@@ -248,26 +290,14 @@ impl App {
             tabs: Vec::new(),
             active_tab_idx: 0,
             input_mode: InputMode::Normal,
-            search_input: String::new(),
-            search_cursor_pos: 0,
-            search_opens_new_tab: true,
+            search_modal: SearchModalState::default(),
             waiting_for_split_cmd: false,
             zen_mode: false,
             feed: crate::feed::FeedState::new(),
-            onboarding_cursor_idx: 0,
-            onboarding_selected: vec![
-                false, false, false, false, true, false, false, true, true, false, false, true,
-            ],
+            onboarding: OnboardingModalState::default(),
 
             saved_lists: crate::saved_lists::SavedListsStore::load(),
-            save_modal_target_title: String::new(),
-            save_modal_target_snippet: None,
-            save_modal_cursor_idx: 0,
-            create_list_input: String::new(),
-            create_list_return_mode: InputMode::SaveToList,
-            viewer_list_idx: 0,
-            viewer_article_idx: 0,
-            viewer_focus_right: false,
+            lists_modal: ListsModalState::default(),
             confirm_action: None,
             config: crate::config::Config::load(),
             config_last_mtime: crate::config::Config::get_modified_time(),
@@ -346,31 +376,31 @@ impl App {
         }
 
         self.saved_lists = crate::saved_lists::SavedListsStore::load();
-        self.save_modal_target_title = title;
-        self.save_modal_target_snippet = snippet;
-        self.save_modal_cursor_idx = 0;
+        self.lists_modal.target_title = title;
+        self.lists_modal.target_snippet = snippet;
+        self.lists_modal.save_cursor_idx = 0;
         self.input_mode = InputMode::SaveToList;
     }
 
     pub fn open_saved_lists_viewer(&mut self) {
         self.saved_lists = crate::saved_lists::SavedListsStore::load();
-        self.viewer_list_idx = 0;
-        self.viewer_article_idx = 0;
-        self.viewer_focus_right = false;
+        self.lists_modal.viewer_list_idx = 0;
+        self.lists_modal.viewer_article_idx = 0;
+        self.lists_modal.viewer_focus_right = false;
         self.input_mode = InputMode::SavedListsViewer;
     }
 
     pub fn submit_create_new_list(&mut self) {
-        let name = self.create_list_input.trim().to_string();
+        let name = self.lists_modal.create_input.trim().to_string();
         if !name.is_empty() {
             let list_id = self.saved_lists.create_list(&name);
-            if !self.save_modal_target_title.is_empty() {
+            if !self.lists_modal.target_title.is_empty() {
                 self.saved_lists
-                    .toggle_article_in_list(&list_id, &self.save_modal_target_title);
+                    .toggle_article_in_list(&list_id, &self.lists_modal.target_title);
             }
         }
-        self.create_list_input.clear();
-        self.input_mode = self.create_list_return_mode.clone();
+        self.lists_modal.create_input.clear();
+        self.input_mode = self.lists_modal.create_return_mode.clone();
     }
 
     pub fn toggle_zen_mode(&mut self) {
@@ -397,7 +427,8 @@ impl App {
 
     pub fn submit_category_onboarding(&mut self) {
         let chosen_indices: Vec<usize> = self
-            .onboarding_selected
+            .onboarding
+            .selected
             .iter()
             .enumerate()
             .filter_map(|(idx, &sel)| if sel { Some(idx) } else { None })
@@ -416,8 +447,8 @@ impl App {
             liked_list.articles.clear();
             self.saved_lists.save();
         }
-        self.onboarding_cursor_idx = 0;
-        self.onboarding_selected = vec![
+        self.onboarding.cursor_idx = 0;
+        self.onboarding.selected = vec![
             false, false, false, false, true, false, false, true, true, false, false, true,
         ];
         self.input_mode = InputMode::CategoryOnboarding;

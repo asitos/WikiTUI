@@ -39,9 +39,9 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
     );
 
     let visible_width = (area.width as usize).saturating_sub(6);
-    let chars: Vec<char> = app.search_input.chars().collect();
+    let chars: Vec<char> = app.search_modal.input.chars().collect();
     let total_len = chars.len();
-    let cursor_pos = app.search_cursor_pos.min(total_len);
+    let cursor_pos = app.search_modal.cursor_pos.min(total_len);
 
     let mut scroll_offset = 0;
     if cursor_pos >= visible_width && visible_width > 0 {

@@ -31,8 +31,8 @@ pub fn render_category_onboarding_modal(f: &mut Frame, app: &App, size: Rect) {
     ];
 
     for (idx, (display_name, _, _)) in crate::feed::profile::POPULAR_CATEGORIES.iter().enumerate() {
-        let is_focused = idx == app.onboarding_cursor_idx;
-        let is_checked = app.onboarding_selected.get(idx).copied().unwrap_or(false);
+        let is_focused = idx == app.onboarding.cursor_idx;
+        let is_checked = app.onboarding.selected.get(idx).copied().unwrap_or(false);
 
         lines.push(create_checkbox_line(
             display_name,
