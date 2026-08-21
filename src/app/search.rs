@@ -74,12 +74,7 @@ impl App {
     pub fn backspace_search_char(&mut self) {
         if self.input_mode == crate::app::InputMode::Search && self.search_modal.cursor_pos > 0 {
             let target_char = self.search_modal.cursor_pos - 1;
-            if let Some((byte_idx, _)) = self
-                .search_modal
-                .input
-                .char_indices()
-                .nth(target_char)
-            {
+            if let Some((byte_idx, _)) = self.search_modal.input.char_indices().nth(target_char) {
                 self.search_modal.input.remove(byte_idx);
             } else {
                 self.search_modal.input.pop();
@@ -90,8 +85,7 @@ impl App {
 
     pub fn delete_word_left(&mut self) {
         if self.input_mode == crate::app::InputMode::Search && self.search_modal.cursor_pos > 0 {
-            let char_indices: Vec<(usize, char)> =
-                self.search_modal.input.char_indices().collect();
+            let char_indices: Vec<(usize, char)> = self.search_modal.input.char_indices().collect();
             let end_char = self.search_modal.cursor_pos.min(char_indices.len());
             let mut start_char = end_char;
 
@@ -171,14 +165,12 @@ impl App {
             active_pane.selected_idx = 0;
             let limit = self.config.search.limit;
             let timeout = self.config.network.timeout;
-            let _ = self
-                .cmd_tx
-                .send(NetworkCommand::Search {
-                    pane_id,
-                    query,
-                    limit,
-                    timeout,
-                });
+            let _ = self.cmd_tx.send(NetworkCommand::Search {
+                pane_id,
+                query,
+                limit,
+                timeout,
+            });
         }
     }
 

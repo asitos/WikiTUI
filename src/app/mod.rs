@@ -75,9 +75,9 @@ impl SettingItem {
             | SettingItem::TocSectionNumbers
             | SettingItem::CodeLineNumbers => "reader",
             SettingItem::SearchLimit => "search",
-            SettingItem::NetworkTimeout | SettingItem::OfflineCache | SettingItem::CacheLifetime => {
-                "network"
-            }
+            SettingItem::NetworkTimeout
+            | SettingItem::OfflineCache
+            | SettingItem::CacheLifetime => "network",
         }
     }
 
@@ -110,7 +110,9 @@ impl SettingItem {
             SettingItem::ConfirmQuit => "prompt for confirmation when exiting wikid",
             SettingItem::RoundedBorders => "use rounded border corners instead of sharp",
             SettingItem::Icons => "display nerd fonts",
-            SettingItem::ScrollIndicator => "display scrollbar track on right edge of content panes",
+            SettingItem::ScrollIndicator => {
+                "display scrollbar track on right edge of content panes"
+            }
             SettingItem::HeadingMarker => "display colored bar marker (▍) before section headings",
             SettingItem::ScrollLines => "number of lines to scroll per j/k press (1-20)",
             SettingItem::UnderlineLinks => "display underlined modifier on article links",

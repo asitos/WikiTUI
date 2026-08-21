@@ -82,9 +82,7 @@ pub struct SearchConfig {
 
 impl Default for SearchConfig {
     fn default() -> Self {
-        Self {
-            limit: 20,
-        }
+        Self { limit: 20 }
     }
 }
 

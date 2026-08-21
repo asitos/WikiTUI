@@ -41,7 +41,10 @@ pub fn format_metric(n: u64) -> String {
     }
 }
 
-pub fn fetch_wiki_statistics(agent: &ureq::Agent, timeout_secs: u64) -> Result<WikiStatistics, String> {
+pub fn fetch_wiki_statistics(
+    agent: &ureq::Agent,
+    timeout_secs: u64,
+) -> Result<WikiStatistics, String> {
     let url = "https://en.wikipedia.org/w/api.php?action=query&meta=siteinfo&siprop=statistics&format=json";
     let resp = agent
         .get(url)

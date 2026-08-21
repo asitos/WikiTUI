@@ -464,14 +464,7 @@ fn process_node<'a>(
                     current_tokens.clear();
                 }
                 let lang = codeblocks::extract_language(tag);
-                codeblocks::render_code_block(
-                    tag,
-                    parser,
-                    doc,
-                    max_width,
-                    lang,
-                    code_line_numbers,
-                );
+                codeblocks::render_code_block(tag, parser, doc, max_width, lang, code_line_numbers);
                 return;
             }
 

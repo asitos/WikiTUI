@@ -43,12 +43,7 @@ pub fn fetch_random_article(
         .map(|r| r.title)
         .ok_or_else(|| "no random article returned".to_string())?;
 
-    let content = fetch_article_wikipedia(
-        agent,
-        &title,
-        timeout_secs,
-        offline_cache,
-        cache_lifetime,
-    )?;
+    let content =
+        fetch_article_wikipedia(agent, &title, timeout_secs, offline_cache, cache_lifetime)?;
     Ok((title, content))
 }

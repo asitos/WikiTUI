@@ -81,10 +81,7 @@ pub fn render_toc_modal(
             Style::default().fg(theme::GREY)
         };
 
-        let mut spans = vec![
-            Span::styled(prefix, style),
-            Span::raw(indent),
-        ];
+        let mut spans = vec![Span::styled(prefix, style), Span::raw(indent)];
         if !num_str.is_empty() {
             spans.push(Span::styled(num_str.to_string(), num_style));
         }

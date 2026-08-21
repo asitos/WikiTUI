@@ -38,7 +38,13 @@ pub fn cache_dir() -> PathBuf {
 pub fn cache_file_path(title: &str) -> PathBuf {
     let safe_name: String = title
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     title.hash(&mut hasher);
@@ -98,8 +104,9 @@ pub fn fetch_article_wikipedia(
 
     match res {
         Ok(response) => {
-            let parse_resp: WikiParseResponse =
-                response.into_json().map_err(|e| format!("parse error: {}", e))?;
+            let parse_resp: WikiParseResponse = response
+                .into_json()
+                .map_err(|e| format!("parse error: {}", e))?;
 
             let html = parse_resp
                 .parse

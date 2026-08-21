@@ -295,10 +295,7 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
             vec![
                 Line::from("are you sure you want to quit wikid?"),
                 Line::from(""),
-                Line::from(Span::styled(
-                    subtext,
-                    Style::default().fg(theme::YELLOW),
-                )),
+                Line::from(Span::styled(subtext, Style::default().fg(theme::YELLOW))),
                 Line::from(""),
                 Line::from(vec![
                     Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),

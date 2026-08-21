@@ -61,7 +61,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             };
 
             let star = if is_saved {
-                if show_icons { " ★" } else { " *" }
+                if show_icons {
+                    " ★"
+                } else {
+                    " *"
+                }
             } else {
                 ""
             };

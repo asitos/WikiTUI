@@ -83,23 +83,21 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 query,
                 limit,
                 timeout,
-            } => {
-                match search::search_wikipedia(&agent, &query, limit, timeout) {
-                    Ok(results) => {
-                        let _ = ev_tx.send(NetworkEvent::SearchResult {
-                            pane_id,
-                            query,
-                            results,
-                        });
-                    }
-                    Err(err) => {
-                        let _ = ev_tx.send(NetworkEvent::Error {
-                            pane_id,
-                            message: err,
-                        });
-                    }
+            } => match search::search_wikipedia(&agent, &query, limit, timeout) {
+                Ok(results) => {
+                    let _ = ev_tx.send(NetworkEvent::SearchResult {
+                        pane_id,
+                        query,
+                        results,
+                    });
                 }
-            }
+                Err(err) => {
+                    let _ = ev_tx.send(NetworkEvent::Error {
+                        pane_id,
+                        message: err,
+                    });
+                }
+            },
             NetworkCommand::FetchArticle {
                 pane_id,
                 title,
@@ -135,12 +133,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 offline_cache,
                 cache_lifetime,
             } => {
-                match random::fetch_random_article(
-                    &agent,
-                    timeout,
-                    offline_cache,
-                    cache_lifetime,
-                ) {
+                match random::fetch_random_article(&agent, timeout, offline_cache, cache_lifetime) {
                     Ok((title, content)) => {
                         let _ = ev_tx.send(NetworkEvent::ArticleResult {
                             pane_id,

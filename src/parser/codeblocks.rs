@@ -181,7 +181,10 @@ pub(crate) fn render_code_block<'a>(
         let mut prefix_spans = vec![Span::styled("│ ", Style::default().fg(border_color))];
         if let Some(digits) = gutter_digits {
             let line_num_str = format!("{:0width$} ", line_idx + 1, width = digits);
-            prefix_spans.push(Span::styled(line_num_str, Style::default().fg(theme::DARK_GREY)));
+            prefix_spans.push(Span::styled(
+                line_num_str,
+                Style::default().fg(theme::DARK_GREY),
+            ));
         }
 
         let line_len: usize = spans
