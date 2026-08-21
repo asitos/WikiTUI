@@ -1,20 +1,21 @@
-use super::utils::{centered_rect, create_checkbox_line, create_modal_block};
+use super::utils::{create_checkbox_line, render_modal_frame};
 use crate::app::App;
 use crate::theme;
 use ratatui::{
     layout::Rect,
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Clear, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
 pub fn render_category_onboarding_modal(f: &mut Frame, app: &App, size: Rect) {
-    let area = centered_rect(60, 80, size);
-    f.render_widget(Clear, area);
-
     let icon = if app.config.ui.icons { "󰠱" } else { "" };
-    let block = create_modal_block(
+    let (area, block) = render_modal_frame(
+        f,
+        size,
+        60,
+        80,
         icon,
         "welcome to wikid feed",
         theme::VIOLET,

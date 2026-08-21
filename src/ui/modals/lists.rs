@@ -1,5 +1,5 @@
 use super::utils::{
-    centered_rect, create_checkbox_line, create_modal_block, create_selectable_line,
+    create_checkbox_line, create_selectable_line, render_modal_container, render_modal_frame,
 };
 use crate::app::App;
 use crate::theme;
@@ -7,16 +7,17 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Clear, Paragraph},
+    widgets::{Block, Paragraph},
     Frame,
 };
 
 pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
-    let area = centered_rect(55, 60, size);
-    f.render_widget(Clear, area);
-
     let icon = if app.config.ui.icons { "★" } else { "" };
-    let block = create_modal_block(
+    let (area, block) = render_modal_frame(
+        f,
+        size,
+        55,
+        60,
         icon,
         "save to list",
         theme::VIOLET,
@@ -80,11 +81,12 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
 }
 
 pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
-    let area = centered_rect(45, 25, size);
-    f.render_widget(Clear, area);
-
     let icon = if app.config.ui.icons { "★" } else { "" };
-    let block = create_modal_block(
+    let (area, block) = render_modal_frame(
+        f,
+        size,
+        45,
+        25,
         icon,
         "create new list",
         theme::VIOLET,
@@ -109,19 +111,17 @@ pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
 }
 
 pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
-    let area = centered_rect(80, 80, size);
-    f.render_widget(Clear, area);
-
     let icon = if app.config.ui.icons { "★" } else { "" };
-    let outer_block = create_modal_block(
+    let inner_area = render_modal_container(
+        f,
+        size,
+        80,
+        80,
         icon,
         "saved lists & articles",
         theme::VIOLET,
         app.config.ui.rounded_borders,
     );
-
-    let inner_area = outer_block.inner(area);
-    f.render_widget(outer_block, area);
 
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -215,9 +215,6 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
 }
 
 pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
-    let area = centered_rect(50, 30, size);
-    f.render_widget(Clear, area);
-
     let modal_title = match &app.confirm_action {
         Some(crate::app::ConfirmAction::ResetFeed) => "confirm feed reset",
         Some(crate::app::ConfirmAction::Quit) => "confirm quit",
@@ -225,7 +222,11 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
     };
 
     let icon = if app.config.ui.icons { "󰅚" } else { "" };
-    let block = create_modal_block(
+    let (area, block) = render_modal_frame(
+        f,
+        size,
+        50,
+        30,
         icon,
         modal_title,
         theme::RED,

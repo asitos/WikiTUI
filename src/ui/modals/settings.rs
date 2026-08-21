@@ -1,28 +1,26 @@
-use super::utils::{centered_rect, create_modal_block};
+use super::utils::render_modal_container;
 use crate::app::{App, SettingItem};
 use crate::theme;
 use ratatui::{
     layout::Rect,
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Clear, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
 pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
-    let area = centered_rect(64, 50, size);
-    f.render_widget(Clear, area);
-
     let icon = if app.config.ui.icons { "󰒓" } else { "" };
-    let modal_block = create_modal_block(
+    let inner = render_modal_container(
+        f,
+        size,
+        64,
+        50,
         icon,
         "settings (config.toml)",
         theme::ORANGE,
         app.config.ui.rounded_borders,
     );
-
-    let inner = modal_block.inner(area);
-    f.render_widget(modal_block, area);
 
     let mut lines: Vec<Line> = Vec::new();
     let mut current_section = "";

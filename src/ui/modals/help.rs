@@ -1,26 +1,29 @@
-use super::utils::{centered_rect, create_modal_block};
+use super::utils::render_modal_container;
 use crate::theme;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Clear, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
 #[rustfmt::skip]
 pub fn render_help_modal(f: &mut Frame, app: &crate::app::App, size: Rect) {
-    let area = centered_rect(70, 80, size);
-    f.render_widget(Clear, area);
-
     let is_macos = cfg!(target_os = "macos");
     let opt_label = if is_macos { "opt" } else { "alt" };
 
     let icon = if app.config.ui.icons { "󰘥" } else { "" };
-    let help_block = create_modal_block(icon, "keybindings", theme::PINK, app.config.ui.rounded_borders);
-
-    let inner = help_block.inner(area);
-    f.render_widget(help_block, area);
+    let inner = render_modal_container(
+        f,
+        size,
+        70,
+        80,
+        icon,
+        "keybindings",
+        theme::PINK,
+        app.config.ui.rounded_borders,
+    );
 
     if inner.width < 70 {
         let help_text = vec![

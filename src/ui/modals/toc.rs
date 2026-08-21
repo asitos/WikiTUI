@@ -1,4 +1,4 @@
-use super::utils::{centered_rect, create_modal_block};
+use super::utils::render_modal_frame;
 use crate::app::Pane;
 use crate::parser::ParsedDocument;
 use crate::theme;
@@ -6,7 +6,7 @@ use ratatui::{
     layout::Rect,
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Clear, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
@@ -19,11 +19,17 @@ pub fn render_toc_modal(
     rounded: bool,
     show_icons: bool,
 ) {
-    let toc_area = centered_rect(60, 60, container_rect);
-    f.render_widget(Clear, toc_area);
-
     let icon = if show_icons { "≡" } else { "" };
-    let toc_block = create_modal_block(icon, "contents", theme::LIME, rounded);
+    let (toc_area, toc_block) = render_modal_frame(
+        f,
+        container_rect,
+        60,
+        60,
+        icon,
+        "contents",
+        theme::LIME,
+        rounded,
+    );
 
     let current_scroll = pane.scroll_offset;
     let active_heading_idx = parsed_doc
