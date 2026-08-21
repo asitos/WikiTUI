@@ -16,10 +16,11 @@ struct WikiRandomResponse {
     query: Option<WikiRandomQuery>,
 }
 
-pub fn fetch_random_article(agent: &ureq::Agent) -> Result<(String, String), String> {
+pub fn fetch_random_article(agent: &ureq::Agent, timeout_secs: u64) -> Result<(String, String), String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let res = agent
         .get(url)
+        .timeout(std::time::Duration::from_secs(timeout_secs.max(1)))
         .query("action", "query")
         .query("list", "random")
         .query("rnnamespace", "0")
@@ -37,6 +38,6 @@ pub fn fetch_random_article(agent: &ureq::Agent) -> Result<(String, String), Str
         .map(|r| r.title)
         .ok_or_else(|| "no random article returned".to_string())?;
 
-    let content = fetch_article_wikipedia(agent, &title)?;
+    let content = fetch_article_wikipedia(agent, &title, timeout_secs)?;
     Ok((title, content))
 }

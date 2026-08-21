@@ -74,11 +74,16 @@ fn parse_feed_items(query: WikiFeedQuery) -> Vec<FeedItem> {
     items
 }
 
-fn fetch_category_items(agent: &ureq::Agent, category: &str) -> Result<Vec<FeedItem>, String> {
+fn fetch_category_items(
+    agent: &ureq::Agent,
+    category: &str,
+    timeout_secs: u64,
+) -> Result<Vec<FeedItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let category_title = format!("Category:{}", category);
     let res = agent
         .get(url)
+        .timeout(std::time::Duration::from_secs(timeout_secs.max(1)))
         .query("action", "query")
         .query("generator", "categorymembers")
         .query("gcmtitle", &category_title)
@@ -97,10 +102,11 @@ fn fetch_category_items(agent: &ureq::Agent, category: &str) -> Result<Vec<FeedI
     Ok(feed_resp.query.map(parse_feed_items).unwrap_or_default())
 }
 
-fn fetch_random_items(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
+fn fetch_random_items(agent: &ureq::Agent, timeout_secs: u64) -> Result<Vec<FeedItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let res = agent
         .get(url)
+        .timeout(std::time::Duration::from_secs(timeout_secs.max(1)))
         .query("action", "query")
         .query("generator", "random")
         .query("grnnamespace", "0")
@@ -118,7 +124,7 @@ fn fetch_random_items(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
     Ok(feed_resp.query.map(parse_feed_items).unwrap_or_default())
 }
 
-pub fn fetch_feed_batch(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
+pub fn fetch_feed_batch(agent: &ureq::Agent, timeout_secs: u64) -> Result<Vec<FeedItem>, String> {
     let profile = crate::feed::profile::FeedProfile::load();
     let active_subcats = profile.get_active_subcategories();
 
@@ -135,12 +141,14 @@ pub fn fetch_feed_batch(agent: &ureq::Agent) -> Result<Vec<FeedItem>, String> {
     for cat in chosen_cats {
         let agent = agent.clone();
         handles.push(std::thread::spawn(move || {
-            fetch_category_items(&agent, &cat)
+            fetch_category_items(&agent, &cat, timeout_secs)
         }));
     }
 
     let agent_rand = agent.clone();
-    handles.push(std::thread::spawn(move || fetch_random_items(&agent_rand)));
+    handles.push(std::thread::spawn(move || {
+        fetch_random_items(&agent_rand, timeout_secs)
+    }));
 
     for handle in handles {
         if let Ok(Ok(batch)) = handle.join() {

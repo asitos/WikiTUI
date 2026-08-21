@@ -58,7 +58,11 @@ pub fn save_cached_article(title: &str, html: &str) {
     let _ = std::fs::write(&path, html);
 }
 
-pub fn fetch_article_wikipedia(agent: &ureq::Agent, title: &str) -> Result<String, String> {
+pub fn fetch_article_wikipedia(
+    agent: &ureq::Agent,
+    title: &str,
+    timeout_secs: u64,
+) -> Result<String, String> {
     if let Some(cached_html) = get_cached_article(title) {
         return Ok(cached_html);
     }
@@ -67,6 +71,7 @@ pub fn fetch_article_wikipedia(agent: &ureq::Agent, title: &str) -> Result<Strin
     let url = "https://en.wikipedia.org/w/api.php";
     let res = agent
         .get(url)
+        .timeout(std::time::Duration::from_secs(timeout_secs.max(1)))
         .query("action", "parse")
         .query("page", &decoded_title)
         .query("prop", "text")

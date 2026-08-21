@@ -22,11 +22,13 @@ pub fn search_wikipedia(
     agent: &ureq::Agent,
     query: &str,
     limit: usize,
+    timeout_secs: u64,
 ) -> Result<Vec<SearchResultItem>, String> {
     let url = "https://en.wikipedia.org/w/api.php";
     let limit_str = limit.clamp(1, 50).to_string();
     let res = agent
         .get(url)
+        .timeout(std::time::Duration::from_secs(timeout_secs.max(1)))
         .query("action", "query")
         .query("generator", "search")
         .query("gsrsearch", query)

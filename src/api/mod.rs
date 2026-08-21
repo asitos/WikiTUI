@@ -20,16 +20,23 @@ pub enum NetworkCommand {
         pane_id: usize,
         query: String,
         limit: usize,
+        timeout: u64,
     },
     FetchArticle {
         pane_id: usize,
         title: String,
+        timeout: u64,
     },
     FetchRandomArticle {
         pane_id: usize,
+        timeout: u64,
     },
-    FetchFeedBatch,
-    FetchStats,
+    FetchFeedBatch {
+        timeout: u64,
+    },
+    FetchStats {
+        timeout: u64,
+    },
 }
 
 pub enum NetworkEvent {
@@ -55,7 +62,6 @@ pub enum NetworkEvent {
 
 pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>) {
     let agent: ureq::Agent = ureq::builder()
-        .timeout(std::time::Duration::from_secs(10))
         .user_agent(concat!(
             "wikid/",
             env!("CARGO_PKG_VERSION"),
@@ -72,8 +78,9 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 pane_id,
                 query,
                 limit,
+                timeout,
             } => {
-                match search::search_wikipedia(&agent, &query, limit) {
+                match search::search_wikipedia(&agent, &query, limit, timeout) {
                     Ok(results) => {
                         let _ = ev_tx.send(NetworkEvent::SearchResult {
                             pane_id,
@@ -89,8 +96,12 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                     }
                 }
             }
-            NetworkCommand::FetchArticle { pane_id, title } => {
-                match article::fetch_article_wikipedia(&agent, &title) {
+            NetworkCommand::FetchArticle {
+                pane_id,
+                title,
+                timeout,
+            } => {
+                match article::fetch_article_wikipedia(&agent, &title, timeout) {
                     Ok(content) => {
                         let _ = ev_tx.send(NetworkEvent::ArticleResult {
                             pane_id,
@@ -106,8 +117,8 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                     }
                 }
             }
-            NetworkCommand::FetchRandomArticle { pane_id } => {
-                match random::fetch_random_article(&agent) {
+            NetworkCommand::FetchRandomArticle { pane_id, timeout } => {
+                match random::fetch_random_article(&agent, timeout) {
                     Ok((title, content)) => {
                         let _ = ev_tx.send(NetworkEvent::ArticleResult {
                             pane_id,
@@ -123,13 +134,13 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                     }
                 }
             }
-            NetworkCommand::FetchFeedBatch => {
-                if let Ok(items) = feed::fetch_feed_batch(&agent) {
+            NetworkCommand::FetchFeedBatch { timeout } => {
+                if let Ok(items) = feed::fetch_feed_batch(&agent, timeout) {
                     let _ = ev_tx.send(NetworkEvent::FeedBatchLoaded { items });
                 }
             }
-            NetworkCommand::FetchStats => {
-                if let Ok(statistics) = stats::fetch_wiki_statistics(&agent) {
+            NetworkCommand::FetchStats { timeout } => {
+                if let Ok(statistics) = stats::fetch_wiki_statistics(&agent, timeout) {
                     let _ = ev_tx.send(NetworkEvent::StatsLoaded(statistics));
                 }
             }

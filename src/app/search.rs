@@ -170,9 +170,15 @@ impl App {
             active_pane.is_loading = true;
             active_pane.selected_idx = 0;
             let limit = self.config.search.limit;
+            let timeout = self.config.network.timeout;
             let _ = self
                 .cmd_tx
-                .send(NetworkCommand::Search { pane_id, query, limit });
+                .send(NetworkCommand::Search {
+                    pane_id,
+                    query,
+                    limit,
+                    timeout,
+                });
         }
     }
 

@@ -117,6 +117,13 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                     Style::default().fg(theme::TEAL).bold(),
                 )
             }
+            SettingItem::NetworkTimeout => {
+                let val = app.config.network.timeout;
+                Span::styled(
+                    format!("◄  {:>2}s  ►", val),
+                    Style::default().fg(theme::TEAL).bold(),
+                )
+            }
         };
 
         let pad_len = 34_usize.saturating_sub(label.len());

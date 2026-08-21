@@ -35,6 +35,7 @@ pub enum SettingItem {
     TocSectionNumbers,
     CodeLineNumbers,
     SearchLimit,
+    NetworkTimeout,
 }
 
 impl SettingItem {
@@ -53,6 +54,7 @@ impl SettingItem {
         SettingItem::TocSectionNumbers,
         SettingItem::CodeLineNumbers,
         SettingItem::SearchLimit,
+        SettingItem::NetworkTimeout,
     ];
 
     pub fn section(&self) -> &'static str {
@@ -69,6 +71,7 @@ impl SettingItem {
             | SettingItem::TocSectionNumbers
             | SettingItem::CodeLineNumbers => "reader",
             SettingItem::SearchLimit => "search",
+            SettingItem::NetworkTimeout => "network",
         }
     }
 
@@ -88,6 +91,7 @@ impl SettingItem {
             SettingItem::TocSectionNumbers => "toc section numbers",
             SettingItem::CodeLineNumbers => "code line numbers",
             SettingItem::SearchLimit => "search results limit",
+            SettingItem::NetworkTimeout => "request timeout",
         }
     }
 
@@ -107,6 +111,7 @@ impl SettingItem {
             SettingItem::TocSectionNumbers => "display hierarchical numbers in table of contents",
             SettingItem::CodeLineNumbers => "display line numbers in code blocks",
             SettingItem::SearchLimit => "maximum number of search results to fetch (5-50)",
+            SettingItem::NetworkTimeout => "network request timeout in seconds (2-60s)",
         }
     }
 }
@@ -290,27 +295,37 @@ impl App {
     }
 
     pub fn send_fetch_article(&self, pane_id: usize, title: String) {
-        let _ = self
-            .cmd_tx
-            .send(NetworkCommand::FetchArticle { pane_id, title });
+        let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
+            pane_id,
+            title,
+            timeout: self.config.network.timeout,
+        });
     }
 
     pub fn send_fetch_random_article(&self, pane_id: usize) {
-        let _ = self
-            .cmd_tx
-            .send(NetworkCommand::FetchRandomArticle { pane_id });
+        let _ = self.cmd_tx.send(NetworkCommand::FetchRandomArticle {
+            pane_id,
+            timeout: self.config.network.timeout,
+        });
     }
 
     pub fn send_fetch_feed_batch(&self) {
-        let _ = self.cmd_tx.send(NetworkCommand::FetchFeedBatch);
+        let _ = self.cmd_tx.send(NetworkCommand::FetchFeedBatch {
+            timeout: self.config.network.timeout,
+        });
     }
 
     pub fn send_fetch_stats(&self) {
-        let _ = self.cmd_tx.send(NetworkCommand::FetchStats);
+        let _ = self.cmd_tx.send(NetworkCommand::FetchStats {
+            timeout: self.config.network.timeout,
+        });
     }
 
     pub fn new(cmd_tx: Sender<NetworkCommand>) -> Self {
-        let _ = cmd_tx.send(NetworkCommand::FetchStats);
+        let config = crate::config::Config::load();
+        let _ = cmd_tx.send(NetworkCommand::FetchStats {
+            timeout: config.network.timeout,
+        });
         let quote_idx = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as usize)
@@ -329,7 +344,7 @@ impl App {
             saved_lists: crate::saved_lists::SavedListsStore::load(),
             lists_modal: ListsModalState::default(),
             confirm_action: None,
-            config: crate::config::Config::load(),
+            config,
             config_last_mtime: crate::config::Config::get_modified_time(),
             last_config_check: std::time::Instant::now(),
             settings_cursor_idx: 0,
@@ -681,6 +696,20 @@ impl App {
                     };
                     self.config.search.limit = new_val as usize;
                 }
+                SettingItem::NetworkTimeout => {
+                    let cur = self.config.network.timeout as i32;
+                    let step = 2;
+                    let new_val = if delta == 0 {
+                        if cur >= 60 {
+                            2
+                        } else {
+                            cur + step
+                        }
+                    } else {
+                        (cur + delta * step).clamp(2, 60)
+                    };
+                    self.config.network.timeout = new_val as u64;
+                }
             }
             self.config.save();
             self.config_last_mtime = crate::config::Config::get_modified_time();
@@ -735,6 +764,9 @@ impl App {
                 }
                 SettingItem::SearchLimit => {
                     self.config.search.limit = default_config.search.limit;
+                }
+                SettingItem::NetworkTimeout => {
+                    self.config.network.timeout = default_config.network.timeout;
                 }
             }
             self.config.save();

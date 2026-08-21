@@ -9,6 +9,7 @@ pub struct Config {
     pub reader: ReaderConfig,
     pub ui: UiConfig,
     pub search: SearchConfig,
+    pub network: NetworkConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,6 +84,20 @@ impl Default for SearchConfig {
     fn default() -> Self {
         Self {
             limit: 20,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NetworkConfig {
+    pub timeout: u64,
+}
+
+impl Default for NetworkConfig {
+    fn default() -> Self {
+        Self {
+            timeout: 10,
         }
     }
 }
