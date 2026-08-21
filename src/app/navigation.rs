@@ -1,4 +1,3 @@
-use crate::api::NetworkCommand;
 use crate::app::pane::PaneContent;
 use crate::app::{is_article_link, App};
 use crate::layout::SplitDirection;
@@ -241,10 +240,7 @@ impl App {
         active_pane.selected_link_idx = None;
         active_pane.intra_jump_back.clear();
         active_pane.intra_jump_forward.clear();
-        let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
-            pane_id,
-            title: title.to_string(),
-        });
+        self.send_fetch_article(pane_id, title.to_string());
     }
 
     pub fn intra_jump_back(&mut self, term_height: u16) {
@@ -279,10 +275,7 @@ impl App {
             active_pane.selected_link_idx = None;
             active_pane.intra_jump_back.clear();
             active_pane.intra_jump_forward.clear();
-            let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
-                pane_id,
-                title: target_title,
-            });
+            self.send_fetch_article(pane_id, target_title);
         }
     }
 
@@ -298,10 +291,7 @@ impl App {
             active_pane.selected_link_idx = None;
             active_pane.intra_jump_back.clear();
             active_pane.intra_jump_forward.clear();
-            let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
-                pane_id,
-                title: target_title,
-            });
+            self.send_fetch_article(pane_id, target_title);
         }
     }
 
@@ -330,9 +320,7 @@ impl App {
             let active_pane = self.active_pane_mut();
             active_pane.is_loading = true;
             active_pane.selected_link_idx = None;
-            let _ = self
-                .cmd_tx
-                .send(NetworkCommand::FetchArticle { pane_id, title });
+            self.send_fetch_article(pane_id, title);
         }
     }
 
@@ -361,9 +349,7 @@ impl App {
             let active_pane = self.active_pane_mut();
             active_pane.is_loading = true;
             active_pane.selected_link_idx = None;
-            let _ = self
-                .cmd_tx
-                .send(NetworkCommand::FetchArticle { pane_id, title });
+            self.send_fetch_article(pane_id, title);
         }
     }
 

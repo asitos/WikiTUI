@@ -289,6 +289,26 @@ impl App {
         list
     }
 
+    pub fn send_fetch_article(&self, pane_id: usize, title: String) {
+        let _ = self
+            .cmd_tx
+            .send(NetworkCommand::FetchArticle { pane_id, title });
+    }
+
+    pub fn send_fetch_random_article(&self, pane_id: usize) {
+        let _ = self
+            .cmd_tx
+            .send(NetworkCommand::FetchRandomArticle { pane_id });
+    }
+
+    pub fn send_fetch_feed_batch(&self) {
+        let _ = self.cmd_tx.send(NetworkCommand::FetchFeedBatch);
+    }
+
+    pub fn send_fetch_stats(&self) {
+        let _ = self.cmd_tx.send(NetworkCommand::FetchStats);
+    }
+
     pub fn new(cmd_tx: Sender<NetworkCommand>) -> Self {
         let _ = cmd_tx.send(NetworkCommand::FetchStats);
         let quote_idx = std::time::SystemTime::now()
@@ -420,7 +440,7 @@ impl App {
     pub fn maybe_fetch_feed_batch(&mut self) {
         if !self.feed.is_fetching && self.feed.active_idx + 3 >= self.feed.items.len() {
             self.feed.is_fetching = true;
-            let _ = self.cmd_tx.send(NetworkCommand::FetchFeedBatch);
+            self.send_fetch_feed_batch();
         }
     }
 

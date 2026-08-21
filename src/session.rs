@@ -1,4 +1,3 @@
-use crate::api::NetworkCommand;
 use crate::app::{App, Pane, Tab};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -115,10 +114,7 @@ impl SessionState {
                 pane.history_forward = saved_pane.history_forward;
                 if let Some(title) = saved_pane.title {
                     pane.is_loading = true;
-                    let _ = app.cmd_tx.send(NetworkCommand::FetchArticle {
-                        pane_id,
-                        title: title.clone(),
-                    });
+                    app.send_fetch_article(pane_id, title.clone());
                 }
                 panes.push(pane);
             }

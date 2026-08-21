@@ -27,10 +27,7 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                     app.feed.active = false;
                     let pane_id = app.active_pane().id;
                     app.active_pane_mut().is_loading = true;
-                    let _ = app.cmd_tx.send(crate::api::NetworkCommand::FetchArticle {
-                        pane_id,
-                        title: item.title,
-                    });
+                    app.send_fetch_article(pane_id, item.title);
                 }
             }
             KeyCode::Char('t') => {
@@ -39,10 +36,7 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                     app.new_tab();
                     let pane_id = app.active_pane().id;
                     app.active_pane_mut().is_loading = true;
-                    let _ = app.cmd_tx.send(crate::api::NetworkCommand::FetchArticle {
-                        pane_id,
-                        title: item.title,
-                    });
+                    app.send_fetch_article(pane_id, item.title);
                 }
             }
             _ => {}

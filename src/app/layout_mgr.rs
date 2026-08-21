@@ -1,4 +1,3 @@
-use crate::api::NetworkCommand;
 use crate::app::pane::Pane;
 use crate::app::tab::Tab;
 use crate::app::App;
@@ -149,10 +148,7 @@ impl App {
             pane.history_forward = closed.history_forward;
             pane.is_loading = true;
 
-            let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
-                pane_id,
-                title: closed.title.clone(),
-            });
+            self.send_fetch_article(pane_id, closed.title.clone());
 
             let tab = Tab {
                 name: closed.title,
