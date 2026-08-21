@@ -59,13 +59,10 @@ impl App {
 
     pub fn type_search_char(&mut self, c: char) {
         if self.input_mode == crate::app::InputMode::Search {
-            let char_count = self.search_input.chars().count();
-            if self.search_cursor_pos >= char_count {
-                self.search_input.push(c);
+            if let Some((byte_idx, _)) = self.search_input.char_indices().nth(self.search_cursor_pos) {
+                self.search_input.insert(byte_idx, c);
             } else {
-                let mut chars: Vec<char> = self.search_input.chars().collect();
-                chars.insert(self.search_cursor_pos, c);
-                self.search_input = chars.into_iter().collect();
+                self.search_input.push(c);
             }
             self.search_cursor_pos += 1;
         }
@@ -73,38 +70,44 @@ impl App {
 
     pub fn backspace_search_char(&mut self) {
         if self.input_mode == crate::app::InputMode::Search && self.search_cursor_pos > 0 {
-            let mut chars: Vec<char> = self.search_input.chars().collect();
-            chars.remove(self.search_cursor_pos - 1);
-            self.search_input = chars.into_iter().collect();
+            let target_char = self.search_cursor_pos - 1;
+            if let Some((byte_idx, _)) = self.search_input.char_indices().nth(target_char) {
+                self.search_input.remove(byte_idx);
+            } else {
+                self.search_input.pop();
+            }
             self.search_cursor_pos -= 1;
         }
     }
 
     pub fn delete_word_left(&mut self) {
         if self.input_mode == crate::app::InputMode::Search && self.search_cursor_pos > 0 {
-            let mut chars: Vec<char> = self.search_input.chars().collect();
-            let mut end_idx = self.search_cursor_pos;
+            let char_indices: Vec<(usize, char)> = self.search_input.char_indices().collect();
+            let end_char = self.search_cursor_pos.min(char_indices.len());
+            let mut start_char = end_char;
 
-            while end_idx > 0 && chars[end_idx - 1].is_whitespace() {
-                end_idx -= 1;
+            while start_char > 0 && char_indices[start_char - 1].1.is_whitespace() {
+                start_char -= 1;
             }
-            while end_idx > 0 && !chars[end_idx - 1].is_whitespace() {
-                end_idx -= 1;
+            while start_char > 0 && !char_indices[start_char - 1].1.is_whitespace() {
+                start_char -= 1;
             }
 
-            chars.drain(end_idx..self.search_cursor_pos);
-            self.search_input = chars.into_iter().collect();
-            self.search_cursor_pos = end_idx;
+            let start_byte = char_indices.get(start_char).map(|(b, _)| *b).unwrap_or(0);
+            let end_byte = char_indices
+                .get(end_char)
+                .map(|(b, _)| *b)
+                .unwrap_or(self.search_input.len());
+
+            self.search_input.drain(start_byte..end_byte);
+            self.search_cursor_pos = start_char;
         }
     }
 
     pub fn delete_search_char(&mut self) {
         if self.input_mode == crate::app::InputMode::Search {
-            let char_count = self.search_input.chars().count();
-            if self.search_cursor_pos < char_count {
-                let mut chars: Vec<char> = self.search_input.chars().collect();
-                chars.remove(self.search_cursor_pos);
-                self.search_input = chars.into_iter().collect();
+            if let Some((byte_idx, _)) = self.search_input.char_indices().nth(self.search_cursor_pos) {
+                self.search_input.remove(byte_idx);
             }
         }
     }
