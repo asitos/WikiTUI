@@ -459,7 +459,7 @@ fn render_scroll_indicator(
     }
 }
 
-fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
+pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current_line = String::new();
     let mut current_width = 0;
