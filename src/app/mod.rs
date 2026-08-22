@@ -240,6 +240,7 @@ pub struct App {
     pub wiki_stats: crate::api::WikiStatistics,
     pub recent_articles: Vec<String>,
     pub launch_quote_idx: usize,
+    pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
 
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: Sender<NetworkCommand>,
@@ -371,6 +372,7 @@ impl App {
             wiki_stats: crate::api::WikiStatistics::default(),
             recent_articles: Self::load_recent_articles(),
             launch_quote_idx: quote_idx,
+            scroll_drag: None,
 
             next_pane_id: 1,
             cmd_tx,
