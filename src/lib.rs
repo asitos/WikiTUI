@@ -10,3 +10,4 @@ pub mod saved_lists;
 pub mod session;
 pub mod theme;
 pub mod ui;
+pub mod mouse;

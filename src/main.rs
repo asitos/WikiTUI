@@ -16,6 +16,7 @@ use std::{
 use wikid::api::{self, NetworkCommand, NetworkEvent};
 use wikid::app::App;
 use wikid::keybinds;
+use wikid::mouse;
 use wikid::ui;
 
 fn restore_terminal() {
@@ -101,11 +102,15 @@ fn run_app(
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if event::poll(timeout)? {
-            if let Ok(Event::Key(key)) = event::read() {
-                if key.kind == event::KeyEventKind::Press {
-                    let size = terminal.size()?;
+            let size = terminal.size()?;
+            match event::read()? {
+                Event::Key(key) if key.kind == event::KeyEventKind::Press => {
                     keybinds::handle_key_event(app, key, size.width, size.height);
                 }
+                Event::Mouse(mouse_event) => {
+                    mouse::handle_mouse_event(app, mouse_event, size.width, size.height);
+                }
+                _ => {}
             }
         }
 

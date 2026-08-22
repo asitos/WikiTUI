@@ -53,10 +53,10 @@ impl App {
         }
     }
 
-    pub fn select_next_item(&mut self, term_height: u16) {
+    pub fn scroll_down_lines(&mut self, lines: usize, term_height: u16) {
         let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
         if is_article {
-            let step = self.config.reader.scroll_lines.max(1);
+            let step = lines.max(1);
             let pane = self.active_pane_mut();
             if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                 let max_scroll = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
@@ -69,13 +69,13 @@ impl App {
                 let recent = self.get_continue_reading_articles();
                 if !recent.is_empty() {
                     let pane = self.active_pane_mut();
-                    pane.selected_idx = (pane.selected_idx + 1).min(recent.len() - 1);
+                    pane.selected_idx = (pane.selected_idx + lines).min(recent.len() - 1);
                 }
             } else {
                 let pane = self.active_pane_mut();
                 match &pane.content {
                     PaneContent::SearchResults { items, .. } if !items.is_empty() => {
-                        pane.selected_idx = (pane.selected_idx + 1).min(items.len() - 1);
+                        pane.selected_idx = (pane.selected_idx + lines).min(items.len() - 1);
                         Self::keep_search_selection_visible(pane, term_height);
                     }
                     _ => {}
@@ -84,22 +84,30 @@ impl App {
         }
     }
 
-    pub fn select_prev_item(&mut self, term_height: u16) {
+    pub fn scroll_up_lines(&mut self, lines: usize, term_height: u16) {
         let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
         if is_article {
-            let step = self.config.reader.scroll_lines.max(1);
+            let step = lines.max(1);
             let pane = self.active_pane_mut();
             pane.scroll_offset = pane.scroll_offset.saturating_sub(step);
             self.clamp_link_selection_to_viewport(term_height);
         } else {
             let pane = self.active_pane_mut();
-            if pane.selected_idx > 0 {
-                pane.selected_idx -= 1;
-                if matches!(pane.content, PaneContent::SearchResults { .. }) {
-                    Self::keep_search_selection_visible(pane, term_height);
-                }
+            pane.selected_idx = pane.selected_idx.saturating_sub(lines);
+            if matches!(pane.content, PaneContent::SearchResults { .. }) {
+                Self::keep_search_selection_visible(pane, term_height);
             }
         }
+    }
+
+    pub fn select_next_item(&mut self, term_height: u16) {
+        let step = self.config.reader.scroll_lines.max(1);
+        self.scroll_down_lines(step, term_height);
+    }
+
+    pub fn select_prev_item(&mut self, term_height: u16) {
+        let step = self.config.reader.scroll_lines.max(1);
+        self.scroll_up_lines(step, term_height);
     }
 
     pub fn activate_selected(&mut self, term_height: u16) {
