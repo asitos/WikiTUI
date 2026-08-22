@@ -8,13 +8,8 @@ use ratatui::{
     Frame,
 };
 
-pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    if app.tabs.is_empty() {
-        return;
-    }
-
-    let tab_titles: Vec<String> = app
-        .tabs
+pub fn compute_tab_titles(app: &App) -> Vec<String> {
+    app.tabs
         .iter()
         .enumerate()
         .map(|(i, tab)| {
@@ -82,12 +77,21 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 format!("{} {}{}", icon, raw_title, star)
             }
         })
-        .collect();
+        .collect()
+}
 
-    let total_tabs = app.tabs.len();
-    let active_idx = app.active_tab_idx.min(total_tabs - 1);
+pub fn compute_visible_range(
+    tab_titles: &[String],
+    active_idx: usize,
+    area_width: u16,
+) -> (usize, usize) {
+    let total_tabs = tab_titles.len();
+    if total_tabs == 0 {
+        return (0, 0);
+    }
 
-    let max_available_width = (area.width as usize).saturating_sub(4);
+    let active_idx = active_idx.min(total_tabs - 1);
+    let max_available_width = (area_width as usize).saturating_sub(4);
 
     let mut start_idx = active_idx;
     let mut end_idx = active_idx;
@@ -118,6 +122,58 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             break;
         }
     }
+
+    (start_idx, end_idx)
+}
+
+pub fn get_tab_at_col(app: &App, area_width: u16, target_col: u16) -> Option<usize> {
+    if app.tabs.is_empty() {
+        return None;
+    }
+
+    let tab_titles = compute_tab_titles(app);
+    let total_tabs = tab_titles.len();
+    let (start_idx, end_idx) =
+        compute_visible_range(&tab_titles, app.active_tab_idx, area_width);
+
+    let mut col: u16 = 1;
+    if start_idx > 0 {
+        if target_col >= col && target_col < col + 2 {
+            return Some(start_idx - 1);
+        }
+        col += 2;
+    }
+
+    for (i, title) in tab_titles
+        .iter()
+        .enumerate()
+        .take(end_idx + 1)
+        .skip(start_idx)
+    {
+        let tab_width = (title.chars().count() + 2) as u16;
+        if target_col >= col && target_col < col + tab_width {
+            return Some(i);
+        }
+        col += tab_width + 2;
+    }
+
+    if end_idx + 1 < total_tabs && target_col >= col && target_col < col + 2 {
+        return Some(end_idx + 1);
+    }
+
+    None
+}
+
+pub fn render(f: &mut Frame, app: &App, area: Rect) {
+    if app.tabs.is_empty() {
+        return;
+    }
+
+    let tab_titles = compute_tab_titles(app);
+    let total_tabs = tab_titles.len();
+    let active_idx = app.active_tab_idx.min(total_tabs - 1);
+    let (start_idx, end_idx) =
+        compute_visible_range(&tab_titles, app.active_tab_idx, area.width);
 
     let mut tab_spans = Vec::new();
     tab_spans.push(Span::raw(" "));

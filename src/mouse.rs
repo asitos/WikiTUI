@@ -1,7 +1,7 @@
 use crate::app::{App, InputMode, SettingItem};
-use crossterm::event::{MouseEvent, MouseEventKind};
+use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 
-pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent, _term_width: u16, term_height: u16) {
+pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent, term_width: u16, term_height: u16) {
     match mouse.kind {
         MouseEventKind::ScrollUp => {
             handle_scroll_up(app, term_height);
@@ -9,7 +9,44 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent, _term_width: u16, te
         MouseEventKind::ScrollDown => {
             handle_scroll_down(app, term_height);
         }
+        MouseEventKind::Down(MouseButton::Left) => {
+            handle_left_click(app, mouse.column, mouse.row, term_width, term_height);
+        }
         _ => {}
+    }
+}
+
+fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_height: u16) {
+    if app.zen_mode || app.feed.active {
+        return;
+    }
+
+    if app.input_mode != InputMode::Normal {
+        return;
+    }
+
+    if row == 0 {
+        if let Some(tab_idx) = crate::ui::tab_bar::get_tab_at_col(app, term_width, col) {
+            app.switch_to_tab(tab_idx);
+        }
+        return;
+    }
+
+    if row >= 1 && row < term_height.saturating_sub(1) {
+        let main_rect = ratatui::layout::Rect::new(0, 1, term_width, term_height.saturating_sub(2));
+        let tab = app.active_tab_mut();
+        let rects = tab.layout_root.compute_rects(main_rect);
+
+        for (pane_idx, rect) in rects {
+            if col >= rect.x
+                && col < rect.x + rect.width
+                && row >= rect.y
+                && row < rect.y + rect.height
+            {
+                tab.active_pane_idx = pane_idx;
+                break;
+            }
+        }
     }
 }
 
