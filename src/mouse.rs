@@ -32,7 +32,13 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent, term_width: u16, ter
     }
 }
 
-fn handle_scrollbar_down(app: &mut App, col: u16, row: u16, term_width: u16, term_height: u16) -> bool {
+fn handle_scrollbar_down(
+    app: &mut App,
+    col: u16,
+    row: u16,
+    term_width: u16,
+    term_height: u16,
+) -> bool {
     let size = Rect::new(0, 0, term_width, term_height);
 
     if app.active_pane().toc_focused {
@@ -203,7 +209,8 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
                     if total > visible_rows && visible_rows > 1 {
                         let rel_y = row
                             .saturating_sub(toc_area.y + 1)
-                            .min((visible_rows - 1) as u16) as usize;
+                            .min((visible_rows - 1) as u16)
+                            as usize;
                         let target_idx = (rel_y * (total - 1)) / (visible_rows - 1);
                         pane.selected_toc_idx = Some(target_idx.min(total - 1));
                     }
@@ -221,7 +228,8 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
                         if total > visible_rows && visible_rows > 1 {
                             let rel_y = row
                                 .saturating_sub(right_area.y + 1)
-                                .min((visible_rows - 1) as u16) as usize;
+                                .min((visible_rows - 1) as u16)
+                                as usize;
                             let target_idx = (rel_y * (total - 1)) / (visible_rows - 1);
                             app.lists_modal.viewer_article_idx = target_idx.min(total - 1);
                         }
@@ -232,7 +240,8 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
                     if total > visible_rows && visible_rows > 1 {
                         let rel_y = row
                             .saturating_sub(left_area.y + 1)
-                            .min((visible_rows - 1) as u16) as usize;
+                            .min((visible_rows - 1) as u16)
+                            as usize;
                         let target_idx = (rel_y * (total - 1)) / (visible_rows - 1);
                         app.lists_modal.viewer_list_idx = target_idx.min(total - 1);
                     }
@@ -240,7 +249,10 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
             }
         }
         ScrollDragTarget::Pane(pane_idx) => {
-            if app.input_mode == InputMode::Normal && !app.zen_mode && app.config.ui.scroll_indicator {
+            if app.input_mode == InputMode::Normal
+                && !app.zen_mode
+                && app.config.ui.scroll_indicator
+            {
                 let main_rect = Rect::new(0, 1, term_width, term_height.saturating_sub(2));
                 let tab = app.active_tab_mut();
                 let rects = tab.layout_root.compute_rects(main_rect);
@@ -251,7 +263,8 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
                     if track_height > 1 {
                         let rel_y = row
                             .saturating_sub(rect.y + 1)
-                            .min((track_height - 1) as u16) as usize;
+                            .min((track_height - 1) as u16)
+                            as usize;
 
                         match &pane.content {
                             PaneContent::ArticleText { parsed_doc, .. } => {
@@ -265,11 +278,12 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
                             }
                             PaneContent::SearchResults { items, .. } => {
                                 let inner_width = (rect.width as usize).saturating_sub(4);
-                                let counts = crate::ui::pane_view::compute_search_result_lines_count(
-                                    items,
-                                    pane.selected_idx,
-                                    inner_width,
-                                );
+                                let counts =
+                                    crate::ui::pane_view::compute_search_result_lines_count(
+                                        items,
+                                        pane.selected_idx,
+                                        inner_width,
+                                    );
                                 let total_lines: usize = counts.iter().sum();
                                 let viewport = pane.viewport_height.max(1);
                                 if total_lines > viewport {
@@ -354,7 +368,8 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             area.height.saturating_sub(2),
         );
 
-        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
+        {
             if col >= inner.x
                 && col < inner.x + inner.width
                 && row >= inner.y
@@ -396,7 +411,8 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
 
     if app.input_mode == InputMode::CategoryOnboarding {
         let area = crate::ui::modals::centered_rect(60, 80, size);
-        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
+        {
             match crate::ui::modals::onboarding::get_onboarding_row_at(area, row) {
                 Some(crate::ui::modals::onboarding::OnboardingHit::Category(idx)) => {
                     app.onboarding.cursor_idx = idx;
@@ -417,7 +433,8 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
 
     if app.input_mode == InputMode::SaveToList {
         let area = crate::ui::modals::centered_rect(55, 60, size);
-        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
+        {
             match crate::ui::modals::lists::get_save_to_list_item_at(app, area, row) {
                 Some(crate::ui::modals::lists::SaveToListHit::Toggle(idx)) => {
                     app.lists_modal.save_cursor_idx = idx;
@@ -457,7 +474,8 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
 
     if app.input_mode == InputMode::Confirm {
         let area = crate::ui::modals::centered_rect(50, 30, size);
-        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
+        {
             if let Some(c) = crate::ui::modals::lists::get_confirm_button_at(app, area, col, row) {
                 crate::keybinds::confirm::handle_confirm_mode(
                     app,
@@ -496,9 +514,12 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                     .unwrap_or(0);
                 let selected_idx = pane.selected_toc_idx.unwrap_or(active_heading_idx);
 
-                if let Some(clicked_idx) =
-                    crate::ui::modals::toc::get_toc_heading_at(parsed_doc, selected_idx, toc_area, row)
-                {
+                if let Some(clicked_idx) = crate::ui::modals::toc::get_toc_heading_at(
+                    parsed_doc,
+                    selected_idx,
+                    toc_area,
+                    row,
+                ) {
                     pane.selected_toc_idx = Some(clicked_idx);
                     app.activate_toc_selection(term_height);
                 }
@@ -524,7 +545,9 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                 && row < left_area.y + left_area.height.saturating_sub(1)
             {
                 if let Some(clicked_list_idx) =
-                    crate::ui::modals::lists::get_saved_lists_viewer_item_at(app, false, left_area, row)
+                    crate::ui::modals::lists::get_saved_lists_viewer_item_at(
+                        app, false, left_area, row,
+                    )
                 {
                     app.lists_modal.viewer_list_idx = clicked_list_idx;
                     app.lists_modal.viewer_article_idx = 0;
@@ -539,7 +562,9 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                 && row < right_area.y + right_area.height.saturating_sub(1)
             {
                 if let Some(clicked_art_idx) =
-                    crate::ui::modals::lists::get_saved_lists_viewer_item_at(app, true, right_area, row)
+                    crate::ui::modals::lists::get_saved_lists_viewer_item_at(
+                        app, true, right_area, row,
+                    )
                 {
                     if let Some(list) = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx) {
                         if clicked_art_idx < list.articles.len() {
@@ -591,14 +616,12 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                             let row_in_pane = (row - inner_y) as usize;
                             let clicked_line = pane.scroll_offset + row_in_pane;
                             let inner_width = (rect.width as usize).saturating_sub(4);
-                            if let Some(item_idx) =
-                                crate::ui::pane_view::get_search_result_at_line(
-                                    items,
-                                    pane.selected_idx,
-                                    inner_width,
-                                    clicked_line,
-                                )
-                            {
+                            if let Some(item_idx) = crate::ui::pane_view::get_search_result_at_line(
+                                items,
+                                pane.selected_idx,
+                                inner_width,
+                                clicked_line,
+                            ) {
                                 pane.selected_idx = item_idx;
                                 let title = items[item_idx].title.clone();
                                 app.open_article(&title);
@@ -675,8 +698,13 @@ fn handle_scroll(app: &mut App, delta: i32, term_height: u16) {
             }
         }
         InputMode::SaveToList => {
-            let count =
-                app.saved_lists.lists.iter().filter(|l| l.id != "liked").count() + 1;
+            let count = app
+                .saved_lists
+                .lists
+                .iter()
+                .filter(|l| l.id != "liked")
+                .count()
+                + 1;
             if count > 0 {
                 if delta < 0 {
                     app.lists_modal.save_cursor_idx = if app.lists_modal.save_cursor_idx == 0 {
@@ -685,8 +713,7 @@ fn handle_scroll(app: &mut App, delta: i32, term_height: u16) {
                         app.lists_modal.save_cursor_idx - 1
                     };
                 } else {
-                    app.lists_modal.save_cursor_idx =
-                        (app.lists_modal.save_cursor_idx + 1) % count;
+                    app.lists_modal.save_cursor_idx = (app.lists_modal.save_cursor_idx + 1) % count;
                 }
             }
         }
@@ -705,8 +732,9 @@ fn handle_scroll(app: &mut App, delta: i32, term_height: u16) {
                         app.lists_modal.viewer_article_idx =
                             app.lists_modal.viewer_article_idx.saturating_sub(1);
                     } else {
-                        app.lists_modal.viewer_article_idx =
-                            (app.lists_modal.viewer_article_idx + 1).min(current_articles_count - 1);
+                        app.lists_modal.viewer_article_idx = (app.lists_modal.viewer_article_idx
+                            + 1)
+                        .min(current_articles_count - 1);
                     }
                 }
             } else if lists_count > 0 {

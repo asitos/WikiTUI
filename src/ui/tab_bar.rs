@@ -133,8 +133,7 @@ pub fn get_tab_at_col(app: &App, area_width: u16, target_col: u16) -> Option<usi
 
     let tab_titles = compute_tab_titles(app);
     let total_tabs = tab_titles.len();
-    let (start_idx, end_idx) =
-        compute_visible_range(&tab_titles, app.active_tab_idx, area_width);
+    let (start_idx, end_idx) = compute_visible_range(&tab_titles, app.active_tab_idx, area_width);
 
     let mut col: u16 = 1;
     if start_idx > 0 {
@@ -172,8 +171,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let tab_titles = compute_tab_titles(app);
     let total_tabs = tab_titles.len();
     let active_idx = app.active_tab_idx.min(total_tabs - 1);
-    let (start_idx, end_idx) =
-        compute_visible_range(&tab_titles, app.active_tab_idx, area.width);
+    let (start_idx, end_idx) = compute_visible_range(&tab_titles, app.active_tab_idx, area.width);
 
     let mut tab_spans = Vec::new();
     tab_spans.push(Span::raw(" "));

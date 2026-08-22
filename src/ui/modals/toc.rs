@@ -99,7 +99,11 @@ pub fn render_toc_modal(
     f.render_widget(toc_p, toc_area);
 }
 
-pub fn compute_toc_scroll(selected_idx: usize, visible_rows: usize, total_headings: usize) -> usize {
+pub fn compute_toc_scroll(
+    selected_idx: usize,
+    visible_rows: usize,
+    total_headings: usize,
+) -> usize {
     if total_headings <= visible_rows || visible_rows == 0 {
         0
     } else {

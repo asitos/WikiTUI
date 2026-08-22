@@ -265,11 +265,8 @@ pub fn get_saved_lists_viewer_item_at(
     if is_right {
         let selected_list = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx)?;
         let total = selected_list.articles.len();
-        let scroll = compute_list_viewer_scroll(
-            app.lists_modal.viewer_article_idx,
-            visible_rows,
-            total,
-        );
+        let scroll =
+            compute_list_viewer_scroll(app.lists_modal.viewer_article_idx, visible_rows, total);
         let idx = scroll + row_offset;
         if idx < total {
             Some(idx)
@@ -278,11 +275,8 @@ pub fn get_saved_lists_viewer_item_at(
         }
     } else {
         let total = app.saved_lists.lists.len();
-        let scroll = compute_list_viewer_scroll(
-            app.lists_modal.viewer_list_idx,
-            visible_rows,
-            total,
-        );
+        let scroll =
+            compute_list_viewer_scroll(app.lists_modal.viewer_list_idx, visible_rows, total);
         let idx = scroll + row_offset;
         if idx < total {
             Some(idx)
