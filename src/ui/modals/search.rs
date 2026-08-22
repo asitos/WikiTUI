@@ -9,7 +9,7 @@ use ratatui::{
     Frame,
 };
 
-pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
+pub fn compute_search_modal_area(size: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -19,15 +19,18 @@ pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
         ])
         .split(size);
 
-    let area = Layout::default()
+    Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
             Constraint::Percentage(36),
             Constraint::Percentage(28),
             Constraint::Percentage(36),
         ])
-        .split(popup_layout[1])[1];
+        .split(popup_layout[1])[1]
+}
 
+pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
+    let area = compute_search_modal_area(size);
     f.render_widget(Clear, area);
 
     let icon = if app.config.ui.icons { "󰍉" } else { "" };

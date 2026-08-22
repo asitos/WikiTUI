@@ -1,5 +1,5 @@
 use super::utils::{
-    create_checkbox_line, create_selectable_line, render_modal_container, render_modal_frame,
+    centered_rect, create_checkbox_line, create_selectable_line, render_modal_frame,
 };
 use crate::app::App;
 use crate::theme;
@@ -110,26 +110,32 @@ pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
     f.render_widget(p, area);
 }
 
+pub fn compute_saved_lists_viewer_areas(size: Rect) -> (Rect, Rect, Rect) {
+    let container_area = centered_rect(80, 80, size);
+    let inner_area = Rect::new(
+        container_area.x + 1,
+        container_area.y + 1,
+        container_area.width.saturating_sub(2),
+        container_area.height.saturating_sub(2),
+    );
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
+        .split(inner_area);
+    (container_area, chunks[0], chunks[1])
+}
+
 pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let icon = if app.config.ui.icons { "★" } else { "" };
-    let inner_area = render_modal_container(
-        f,
-        size,
-        80,
-        80,
+    let (container_area, left_area, right_area) = compute_saved_lists_viewer_areas(size);
+    f.render_widget(ratatui::widgets::Clear, container_area);
+    let block = super::utils::create_modal_block(
         icon,
         "saved lists & articles",
         theme::VIOLET,
         app.config.ui.rounded_borders,
     );
-
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
-        .split(inner_area);
-
-    let left_area = chunks[0];
-    let right_area = chunks[1];
+    f.render_widget(block, container_area);
 
     let left_border_color = if !app.lists_modal.viewer_focus_right {
         theme::VIOLET

@@ -39,6 +39,42 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
         return;
     }
 
+    if app.input_mode == InputMode::Help {
+        let help_area = crate::ui::modals::centered_rect(70, 80, size);
+        if col < help_area.x
+            || col >= help_area.x + help_area.width
+            || row < help_area.y
+            || row >= help_area.y + help_area.height
+        {
+            app.input_mode = InputMode::Normal;
+        }
+        return;
+    }
+
+    if app.input_mode == InputMode::Search {
+        let search_area = crate::ui::modals::search::compute_search_modal_area(size);
+        if col < search_area.x
+            || col >= search_area.x + search_area.width
+            || row < search_area.y
+            || row >= search_area.y + search_area.height
+        {
+            app.input_mode = InputMode::Normal;
+        }
+        return;
+    }
+
+    if app.input_mode == InputMode::CreateNewList {
+        let create_area = crate::ui::modals::centered_rect(45, 25, size);
+        if col < create_area.x
+            || col >= create_area.x + create_area.width
+            || row < create_area.y
+            || row >= create_area.y + create_area.height
+        {
+            app.input_mode = app.lists_modal.create_return_mode.clone();
+        }
+        return;
+    }
+
     if app.input_mode == InputMode::Settings {
         let area = crate::ui::modals::centered_rect(50, 75, size);
         let inner = Rect::new(
@@ -48,44 +84,48 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             area.height.saturating_sub(2),
         );
 
-        if col >= inner.x
-            && col < inner.x + inner.width
-            && row >= inner.y
-            && row < inner.y + inner.height
-        {
-            if let Some((idx, item, val_start_x)) =
-                crate::ui::modals::settings::get_setting_row_at(inner, row)
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
+            if col >= inner.x
+                && col < inner.x + inner.width
+                && row >= inner.y
+                && row < inner.y + inner.height
             {
-                app.settings_cursor_idx = idx;
-                let is_numeric = matches!(
-                    item,
-                    SettingItem::ScrollLines
-                        | SettingItem::SearchLimit
-                        | SettingItem::NetworkTimeout
-                        | SettingItem::CacheLifetime
-                );
-                if is_numeric {
-                    if col >= val_start_x {
-                        let rel_col = col - val_start_x;
-                        if rel_col <= 3 {
-                            app.adjust_selected_setting(-1);
-                        } else if rel_col >= 11 {
-                            app.adjust_selected_setting(1);
-                        } else {
-                            app.adjust_selected_setting(0);
+                if let Some((idx, item, val_start_x)) =
+                    crate::ui::modals::settings::get_setting_row_at(inner, row)
+                {
+                    app.settings_cursor_idx = idx;
+                    let is_numeric = matches!(
+                        item,
+                        SettingItem::ScrollLines
+                            | SettingItem::SearchLimit
+                            | SettingItem::NetworkTimeout
+                            | SettingItem::CacheLifetime
+                    );
+                    if is_numeric {
+                        if col >= val_start_x {
+                            let rel_col = col - val_start_x;
+                            if rel_col <= 3 {
+                                app.adjust_selected_setting(-1);
+                            } else if rel_col >= 11 {
+                                app.adjust_selected_setting(1);
+                            } else {
+                                app.adjust_selected_setting(0);
+                            }
                         }
+                    } else {
+                        app.adjust_selected_setting(0);
                     }
-                } else {
-                    app.adjust_selected_setting(0);
                 }
             }
+        } else {
+            app.input_mode = InputMode::Normal;
         }
         return;
     }
 
     if app.input_mode == InputMode::CategoryOnboarding {
         let area = crate::ui::modals::centered_rect(60, 80, size);
-        if col > area.x && col < area.x + area.width.saturating_sub(1) {
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
             match crate::ui::modals::onboarding::get_onboarding_row_at(area, row) {
                 Some(crate::ui::modals::onboarding::OnboardingHit::Category(idx)) => {
                     app.onboarding.cursor_idx = idx;
@@ -98,13 +138,15 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                 }
                 None => {}
             }
+        } else {
+            app.input_mode = InputMode::Normal;
         }
         return;
     }
 
     if app.input_mode == InputMode::SaveToList {
         let area = crate::ui::modals::centered_rect(55, 60, size);
-        if col > area.x && col < area.x + area.width.saturating_sub(1) {
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
             match crate::ui::modals::lists::get_save_to_list_item_at(app, area, row) {
                 Some(crate::ui::modals::lists::SaveToListHit::Toggle(idx)) => {
                     app.lists_modal.save_cursor_idx = idx;
@@ -136,20 +178,27 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                 }
                 None => {}
             }
+        } else {
+            app.input_mode = InputMode::Normal;
         }
         return;
     }
 
     if app.input_mode == InputMode::Confirm {
         let area = crate::ui::modals::centered_rect(50, 30, size);
-        if let Some(c) = crate::ui::modals::lists::get_confirm_button_at(app, area, col, row) {
-            crate::keybinds::confirm::handle_confirm_mode(
-                app,
-                crossterm::event::KeyEvent::new(
-                    crossterm::event::KeyCode::Char(c),
-                    crossterm::event::KeyModifiers::empty(),
-                ),
-            );
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
+            if let Some(c) = crate::ui::modals::lists::get_confirm_button_at(app, area, col, row) {
+                crate::keybinds::confirm::handle_confirm_mode(
+                    app,
+                    crossterm::event::KeyEvent::new(
+                        crossterm::event::KeyCode::Char(c),
+                        crossterm::event::KeyModifiers::empty(),
+                    ),
+                );
+            }
+        } else {
+            app.input_mode = InputMode::Normal;
+            app.confirm_action = None;
         }
         return;
     }
@@ -161,7 +210,11 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             Rect::new(0, 1, term_width, term_height.saturating_sub(2))
         };
         let toc_area = crate::ui::modals::centered_rect(60, 60, container_rect);
-        if col > toc_area.x && col < toc_area.x + toc_area.width.saturating_sub(1) {
+        if col >= toc_area.x
+            && col < toc_area.x + toc_area.width
+            && row >= toc_area.y
+            && row < toc_area.y + toc_area.height
+        {
             let pane = app.active_pane_mut();
             if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                 let current_scroll = pane.scroll_offset;
@@ -179,54 +232,58 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                     app.activate_toc_selection(term_height);
                 }
             }
+        } else {
+            app.active_pane_mut().toc_focused = false;
         }
         return;
     }
 
     if app.input_mode == InputMode::SavedListsViewer {
-        let area = crate::ui::modals::centered_rect(70, 70, size);
-        let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
-            .split(area);
+        let (container_area, left_area, right_area) =
+            crate::ui::modals::lists::compute_saved_lists_viewer_areas(size);
 
-        let left_area = chunks[0];
-        let right_area = chunks[1];
-
-        if col > left_area.x
-            && col < left_area.x + left_area.width.saturating_sub(1)
-            && row > left_area.y
-            && row < left_area.y + left_area.height.saturating_sub(1)
+        if col >= container_area.x
+            && col < container_area.x + container_area.width
+            && row >= container_area.y
+            && row < container_area.y + container_area.height
         {
-            if let Some(clicked_list_idx) =
-                crate::ui::modals::lists::get_saved_lists_viewer_item_at(app, false, left_area, row)
+            if col > left_area.x
+                && col < left_area.x + left_area.width.saturating_sub(1)
+                && row > left_area.y
+                && row < left_area.y + left_area.height.saturating_sub(1)
             {
-                app.lists_modal.viewer_list_idx = clicked_list_idx;
-                app.lists_modal.viewer_article_idx = 0;
-                app.lists_modal.viewer_focus_right = false;
+                if let Some(clicked_list_idx) =
+                    crate::ui::modals::lists::get_saved_lists_viewer_item_at(app, false, left_area, row)
+                {
+                    app.lists_modal.viewer_list_idx = clicked_list_idx;
+                    app.lists_modal.viewer_article_idx = 0;
+                    app.lists_modal.viewer_focus_right = false;
+                }
+                return;
             }
-            return;
-        }
 
-        if col > right_area.x
-            && col < right_area.x + right_area.width.saturating_sub(1)
-            && row > right_area.y
-            && row < right_area.y + right_area.height.saturating_sub(1)
-        {
-            if let Some(clicked_art_idx) =
-                crate::ui::modals::lists::get_saved_lists_viewer_item_at(app, true, right_area, row)
+            if col > right_area.x
+                && col < right_area.x + right_area.width.saturating_sub(1)
+                && row > right_area.y
+                && row < right_area.y + right_area.height.saturating_sub(1)
             {
-                if let Some(list) = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx) {
-                    if clicked_art_idx < list.articles.len() {
-                        app.lists_modal.viewer_article_idx = clicked_art_idx;
-                        app.lists_modal.viewer_focus_right = true;
-                        let title = list.articles[clicked_art_idx].clone();
-                        app.input_mode = InputMode::Normal;
-                        app.open_article(&title);
+                if let Some(clicked_art_idx) =
+                    crate::ui::modals::lists::get_saved_lists_viewer_item_at(app, true, right_area, row)
+                {
+                    if let Some(list) = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx) {
+                        if clicked_art_idx < list.articles.len() {
+                            app.lists_modal.viewer_article_idx = clicked_art_idx;
+                            app.lists_modal.viewer_focus_right = true;
+                            let title = list.articles[clicked_art_idx].clone();
+                            app.input_mode = InputMode::Normal;
+                            app.open_article(&title);
+                        }
                     }
                 }
+                return;
             }
-            return;
+        } else {
+            app.input_mode = InputMode::Normal;
         }
         return;
     }
