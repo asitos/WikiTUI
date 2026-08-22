@@ -10,6 +10,23 @@ pub struct Config {
     pub ui: UiConfig,
     pub search: SearchConfig,
     pub network: NetworkConfig,
+    pub input: InputConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct InputConfig {
+    pub mouse_support: bool,
+    pub scroll_speed: usize,
+}
+
+impl Default for InputConfig {
+    fn default() -> Self {
+        Self {
+            mouse_support: true,
+            scroll_speed: 3,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

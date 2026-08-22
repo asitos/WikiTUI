@@ -14,8 +14,8 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     let inner = render_modal_container(
         f,
         size,
-        50,
-        75,
+        55,
+        80,
         icon,
         "settings (config.toml)",
         theme::ORANGE,
@@ -132,6 +132,17 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                 let val = app.config.network.cache_lifetime;
                 Span::styled(
                     format!("◄  {:>3}h  ►", val),
+                    Style::default().fg(theme::TEAL).bold(),
+                )
+            }
+            SettingItem::MouseSupport => {
+                let val = app.config.input.mouse_support;
+                bool_span(val)
+            }
+            SettingItem::ScrollSpeed => {
+                let val = app.config.input.scroll_speed;
+                Span::styled(
+                    format!("◄  {:>2} lines  ►", val),
                     Style::default().fg(theme::TEAL).bold(),
                 )
             }

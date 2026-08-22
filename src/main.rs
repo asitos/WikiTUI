@@ -35,7 +35,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = execute!(
         stdout,
         EnterAlternateScreen,
-        EnableMouseCapture,
         PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
     );
 
@@ -56,6 +55,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let mut app = App::new(cmd_tx.clone());
+    if app.config.input.mouse_support {
+        let _ = execute!(io::stdout(), EnableMouseCapture);
+    }
     let run_res = run_app(&mut terminal, &mut app, &ev_rx);
 
     restore_terminal();
@@ -75,9 +77,19 @@ fn run_app(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let tick_rate = Duration::from_millis(250);
     let mut last_tick = Instant::now();
+    let mut mouse_capture_enabled = app.config.input.mouse_support;
 
     while app.running {
         app.check_config_sync();
+
+        if app.config.input.mouse_support != mouse_capture_enabled {
+            mouse_capture_enabled = app.config.input.mouse_support;
+            if mouse_capture_enabled {
+                let _ = execute!(io::stdout(), EnableMouseCapture);
+            } else {
+                let _ = execute!(io::stdout(), DisableMouseCapture);
+            }
+        }
 
         while let Ok(ev) = ev_rx.try_recv() {
             app.handle_network_event(ev);
@@ -107,7 +119,7 @@ fn run_app(
                 Event::Key(key) if key.kind == event::KeyEventKind::Press => {
                     keybinds::handle_key_event(app, key, size.width, size.height);
                 }
-                Event::Mouse(mouse_event) => {
+                Event::Mouse(mouse_event) if app.config.input.mouse_support => {
                     mouse::handle_mouse_event(app, mouse_event, size.width, size.height);
                 }
                 _ => {}

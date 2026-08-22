@@ -346,7 +346,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     }
 
     if app.input_mode == InputMode::Settings {
-        let area = crate::ui::modals::centered_rect(50, 75, size);
+        let area = crate::ui::modals::centered_rect(55, 80, size);
         let inner = Rect::new(
             area.x + 1,
             area.y + 1,
@@ -370,6 +370,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                             | SettingItem::SearchLimit
                             | SettingItem::NetworkTimeout
                             | SettingItem::CacheLifetime
+                            | SettingItem::ScrollSpeed
                     );
                     if is_numeric {
                         if col >= val_start_x {
@@ -734,10 +735,11 @@ fn handle_scroll(app: &mut App, delta: i32, term_height: u16) {
             }
         }
         InputMode::Normal | InputMode::LocalSearch => {
+            let speed = app.config.input.scroll_speed.max(1);
             if delta < 0 {
-                app.scroll_up_lines(3, term_height);
+                app.scroll_up_lines(speed, term_height);
             } else {
-                app.scroll_down_lines(3, term_height);
+                app.scroll_down_lines(speed, term_height);
             }
         }
         _ => {}

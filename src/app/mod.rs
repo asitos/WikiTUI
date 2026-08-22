@@ -38,6 +38,8 @@ pub enum SettingItem {
     NetworkTimeout,
     OfflineCache,
     CacheLifetime,
+    MouseSupport,
+    ScrollSpeed,
 }
 
 impl SettingItem {
@@ -59,6 +61,8 @@ impl SettingItem {
         SettingItem::NetworkTimeout,
         SettingItem::OfflineCache,
         SettingItem::CacheLifetime,
+        SettingItem::MouseSupport,
+        SettingItem::ScrollSpeed,
     ];
 
     pub fn section(&self) -> &'static str {
@@ -78,6 +82,7 @@ impl SettingItem {
             SettingItem::NetworkTimeout
             | SettingItem::OfflineCache
             | SettingItem::CacheLifetime => "network",
+            SettingItem::MouseSupport | SettingItem::ScrollSpeed => "input",
         }
     }
 
@@ -100,6 +105,8 @@ impl SettingItem {
             SettingItem::NetworkTimeout => "request timeout",
             SettingItem::OfflineCache => "offline article cache",
             SettingItem::CacheLifetime => "cache lifetime",
+            SettingItem::MouseSupport => "mouse support",
+            SettingItem::ScrollSpeed => "mouse scroll speed",
         }
     }
 
@@ -126,6 +133,8 @@ impl SettingItem {
                 "cache downloaded articles in ~/.cache/wikid for offline reading"
             }
             SettingItem::CacheLifetime => "hours before cached articles are re-downloaded (1-168h)",
+            SettingItem::MouseSupport => "enable mouse clicks, tab switching, and scroll wheel",
+            SettingItem::ScrollSpeed => "number of lines to scroll per mouse wheel tick (1-20)",
         }
     }
 }
@@ -747,6 +756,22 @@ impl App {
                     };
                     self.config.network.cache_lifetime = new_val as u64;
                 }
+                SettingItem::MouseSupport => {
+                    self.config.input.mouse_support = !self.config.input.mouse_support;
+                }
+                SettingItem::ScrollSpeed => {
+                    let cur = self.config.input.scroll_speed as i32;
+                    let new_val = if delta == 0 {
+                        if cur >= 20 {
+                            1
+                        } else {
+                            cur + 1
+                        }
+                    } else {
+                        (cur + delta).clamp(1, 20)
+                    };
+                    self.config.input.scroll_speed = new_val as usize;
+                }
             }
             self.config.save();
             self.config_last_mtime = crate::config::Config::get_modified_time();
@@ -810,6 +835,12 @@ impl App {
                 }
                 SettingItem::CacheLifetime => {
                     self.config.network.cache_lifetime = default_config.network.cache_lifetime;
+                }
+                SettingItem::MouseSupport => {
+                    self.config.input.mouse_support = default_config.input.mouse_support;
+                }
+                SettingItem::ScrollSpeed => {
+                    self.config.input.scroll_speed = default_config.input.scroll_speed;
                 }
             }
             self.config.save();
