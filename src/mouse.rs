@@ -21,9 +21,155 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     let size = Rect::new(0, 0, term_width, term_height);
 
     if app.feed.active {
-        if let Some(item) = app.feed.current_item().cloned() {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
+            .split(size);
+        let inner_area = chunks[0];
+        let card_area = crate::ui::modals::centered_rect(80, 85, inner_area);
+
+        if row == card_area.y + card_area.height.saturating_sub(1)
+            && col >= card_area.x + card_area.width.saturating_sub(14)
+        {
+            app.toggle_feed_like();
+        } else if let Some(item) = app.feed.current_item().cloned() {
             app.feed.active = false;
             app.open_article(&item.title);
+        }
+        return;
+    }
+
+    if app.input_mode == InputMode::Settings {
+        let area = crate::ui::modals::centered_rect(50, 75, size);
+        let inner = Rect::new(
+            area.x + 1,
+            area.y + 1,
+            area.width.saturating_sub(2),
+            area.height.saturating_sub(2),
+        );
+
+        if col >= inner.x
+            && col < inner.x + inner.width
+            && row >= inner.y
+            && row < inner.y + inner.height
+        {
+            let row_in_inner = (row - inner.y) as usize;
+            let mut cur_line = 0;
+            let mut current_section = "";
+
+            for (idx, item) in SettingItem::ALL.iter().enumerate() {
+                let section = item.section();
+                if section != current_section {
+                    if !current_section.is_empty() {
+                        cur_line += 1;
+                    }
+                    cur_line += 1;
+                    current_section = section;
+                }
+                if cur_line == row_in_inner {
+                    app.settings_cursor_idx = idx;
+                    let is_numeric = matches!(
+                        item,
+                        SettingItem::ScrollLines
+                            | SettingItem::SearchLimit
+                            | SettingItem::NetworkTimeout
+                            | SettingItem::CacheLifetime
+                    );
+                    if is_numeric {
+                        let rel_col = col.saturating_sub(inner.x + 36);
+                        if rel_col <= 2 {
+                            app.adjust_selected_setting(-1);
+                        } else if rel_col >= 10 {
+                            app.adjust_selected_setting(1);
+                        } else {
+                            app.adjust_selected_setting(0);
+                        }
+                    } else {
+                        app.adjust_selected_setting(0);
+                    }
+                    break;
+                }
+                cur_line += 1;
+            }
+        }
+        return;
+    }
+
+    if app.input_mode == InputMode::CategoryOnboarding {
+        let area = crate::ui::modals::centered_rect(60, 80, size);
+        let inner_y = area.y + 1;
+        let cats = crate::feed::profile::POPULAR_CATEGORIES;
+        if col > area.x && col < area.x + area.width.saturating_sub(1) {
+            let start_cat_row = inner_y + 2;
+            if row >= start_cat_row && row < start_cat_row + (cats.len() as u16) {
+                let idx = (row - start_cat_row) as usize;
+                if idx < cats.len() {
+                    app.onboarding.cursor_idx = idx;
+                    if let Some(val) = app.onboarding.selected.get_mut(idx) {
+                        *val = !*val;
+                    }
+                }
+            } else if row == start_cat_row + (cats.len() as u16) + 1 {
+                app.submit_category_onboarding();
+            }
+        }
+        return;
+    }
+
+    if app.input_mode == InputMode::SaveToList {
+        let area = crate::ui::modals::centered_rect(55, 60, size);
+        let inner_y = area.y + 1;
+        let custom_lists: Vec<_> = app
+            .saved_lists
+            .lists
+            .iter()
+            .filter(|l| l.id != "liked")
+            .cloned()
+            .collect();
+        let list_count = custom_lists.len();
+        let start_row = inner_y + 4;
+
+        if col > area.x && col < area.x + area.width.saturating_sub(1) {
+            if row >= start_row && row < start_row + (list_count as u16) {
+                let idx = (row - start_row) as usize;
+                if idx < list_count {
+                    app.lists_modal.save_cursor_idx = idx;
+                    let list_id = custom_lists[idx].id.clone();
+                    let target_title = app.lists_modal.target_title.clone();
+                    app.saved_lists
+                        .toggle_article_in_list(&list_id, &target_title);
+                }
+            } else if row == start_row + (list_count as u16) + 1 {
+                app.lists_modal.save_cursor_idx = list_count;
+                app.lists_modal.create_input.clear();
+                app.lists_modal.create_return_mode = InputMode::SaveToList;
+                app.input_mode = InputMode::CreateNewList;
+            }
+        }
+        return;
+    }
+
+    if app.input_mode == InputMode::Confirm {
+        let area = crate::ui::modals::centered_rect(50, 30, size);
+        if col > area.x && col < area.x + area.width && row > area.y && row < area.y + area.height {
+            let mid_x = area.x + area.width / 2;
+            if col < mid_x {
+                crate::keybinds::confirm::handle_confirm_mode(
+                    app,
+                    crossterm::event::KeyEvent::new(
+                        crossterm::event::KeyCode::Char('y'),
+                        crossterm::event::KeyModifiers::empty(),
+                    ),
+                );
+            } else {
+                crate::keybinds::confirm::handle_confirm_mode(
+                    app,
+                    crossterm::event::KeyEvent::new(
+                        crossterm::event::KeyCode::Char('n'),
+                        crossterm::event::KeyModifiers::empty(),
+                    ),
+                );
+            }
         }
         return;
     }
