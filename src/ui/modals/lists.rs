@@ -168,7 +168,15 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
         }
     }
 
-    let left_p = Paragraph::new(list_lines).block(left_block);
+    let left_visible_rows = (left_area.height.saturating_sub(2)) as usize;
+    let left_scroll = compute_list_viewer_scroll(
+        app.lists_modal.viewer_list_idx,
+        left_visible_rows,
+        app.saved_lists.lists.len(),
+    );
+    let left_p = Paragraph::new(list_lines)
+        .block(left_block)
+        .scroll((left_scroll as u16, 0));
     f.render_widget(left_p, left_area);
 
     let right_border_color = if app.lists_modal.viewer_focus_right {
@@ -188,6 +196,7 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
         .border_style(Style::default().fg(right_border_color));
 
     let mut article_lines = Vec::new();
+    let right_total = selected_list.map(|l| l.articles.len()).unwrap_or(0);
     if let Some(list) = selected_list {
         if list.articles.is_empty() {
             article_lines.push(Line::from(Span::styled(
@@ -210,8 +219,129 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
         }
     }
 
-    let right_p = Paragraph::new(article_lines).block(right_block);
+    let right_visible_rows = (right_area.height.saturating_sub(2)) as usize;
+    let right_scroll = compute_list_viewer_scroll(
+        app.lists_modal.viewer_article_idx,
+        right_visible_rows,
+        right_total,
+    );
+    let right_p = Paragraph::new(article_lines)
+        .block(right_block)
+        .scroll((right_scroll as u16, 0));
     f.render_widget(right_p, right_area);
+}
+
+pub fn compute_list_viewer_scroll(
+    cursor_idx: usize,
+    visible_rows: usize,
+    total_items: usize,
+) -> usize {
+    if total_items <= visible_rows || visible_rows == 0 {
+        0
+    } else {
+        cursor_idx
+            .saturating_sub(visible_rows / 2)
+            .min(total_items.saturating_sub(visible_rows))
+    }
+}
+
+pub fn get_saved_lists_viewer_item_at(
+    app: &App,
+    is_right: bool,
+    area: Rect,
+    target_y: u16,
+) -> Option<usize> {
+    if target_y <= area.y || target_y >= area.y + area.height.saturating_sub(1) {
+        return None;
+    }
+    let row_offset = (target_y - (area.y + 1)) as usize;
+    let visible_rows = (area.height.saturating_sub(2)) as usize;
+    if is_right {
+        let selected_list = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx)?;
+        let total = selected_list.articles.len();
+        let scroll = compute_list_viewer_scroll(
+            app.lists_modal.viewer_article_idx,
+            visible_rows,
+            total,
+        );
+        let idx = scroll + row_offset;
+        if idx < total {
+            Some(idx)
+        } else {
+            None
+        }
+    } else {
+        let total = app.saved_lists.lists.len();
+        let scroll = compute_list_viewer_scroll(
+            app.lists_modal.viewer_list_idx,
+            visible_rows,
+            total,
+        );
+        let idx = scroll + row_offset;
+        if idx < total {
+            Some(idx)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SaveToListHit {
+    Toggle(usize),
+    CreateNew,
+}
+
+pub fn get_save_to_list_item_at(app: &App, area: Rect, target_y: u16) -> Option<SaveToListHit> {
+    if target_y <= area.y || target_y >= area.y + area.height.saturating_sub(1) {
+        return None;
+    }
+    let inner_y = area.y + 1;
+    let custom_lists_count = app
+        .saved_lists
+        .lists
+        .iter()
+        .filter(|l| l.id != "liked")
+        .count();
+    let start_row = inner_y + 4;
+    if target_y >= start_row && target_y < start_row + (custom_lists_count as u16) {
+        Some(SaveToListHit::Toggle((target_y - start_row) as usize))
+    } else if target_y == start_row + (custom_lists_count as u16) + 1 {
+        Some(SaveToListHit::CreateNew)
+    } else {
+        None
+    }
+}
+
+pub fn get_confirm_button_at(app: &App, area: Rect, col: u16, row: u16) -> Option<char> {
+    let btn_row = area.y + 5;
+    if row != btn_row {
+        return None;
+    }
+    let action_str = match &app.confirm_action {
+        Some(crate::app::ConfirmAction::DeleteList { .. }) => "delete",
+        Some(crate::app::ConfirmAction::DeleteArticle { .. }) => "delete",
+        Some(crate::app::ConfirmAction::ResetFeed) => "delete",
+        Some(crate::app::ConfirmAction::Quit) => "quit",
+        None => return None,
+    };
+    let yes_str = format!("[y/enter] {}", action_str);
+    let no_str = "[n/esc] cancel";
+    let gap = "   ";
+    let total_len = yes_str.len() + gap.len() + no_str.len();
+    let inner_width = (area.width.saturating_sub(2)) as usize;
+    let start_x = area.x + 1 + (inner_width.saturating_sub(total_len) / 2) as u16;
+    let yes_end_x = start_x + yes_str.len() as u16;
+    let no_start_x = yes_end_x + gap.len() as u16;
+    let no_end_x = no_start_x + no_str.len() as u16;
+
+    if col >= start_x && col < yes_end_x {
+        Some('y')
+    } else if col >= no_start_x && col < no_end_x {
+        Some('n')
+    } else {
+        None
+    }
 }
 
 pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {

@@ -53,43 +53,31 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             && row >= inner.y
             && row < inner.y + inner.height
         {
-            let row_in_inner = (row - inner.y) as usize;
-            let mut cur_line = 0;
-            let mut current_section = "";
-
-            for (idx, item) in SettingItem::ALL.iter().enumerate() {
-                let section = item.section();
-                if section != current_section {
-                    if !current_section.is_empty() {
-                        cur_line += 1;
-                    }
-                    cur_line += 1;
-                    current_section = section;
-                }
-                if cur_line == row_in_inner {
-                    app.settings_cursor_idx = idx;
-                    let is_numeric = matches!(
-                        item,
-                        SettingItem::ScrollLines
-                            | SettingItem::SearchLimit
-                            | SettingItem::NetworkTimeout
-                            | SettingItem::CacheLifetime
-                    );
-                    if is_numeric {
-                        let rel_col = col.saturating_sub(inner.x + 36);
-                        if rel_col <= 2 {
+            if let Some((idx, item, val_start_x)) =
+                crate::ui::modals::settings::get_setting_row_at(inner, row)
+            {
+                app.settings_cursor_idx = idx;
+                let is_numeric = matches!(
+                    item,
+                    SettingItem::ScrollLines
+                        | SettingItem::SearchLimit
+                        | SettingItem::NetworkTimeout
+                        | SettingItem::CacheLifetime
+                );
+                if is_numeric {
+                    if col >= val_start_x {
+                        let rel_col = col - val_start_x;
+                        if rel_col <= 3 {
                             app.adjust_selected_setting(-1);
-                        } else if rel_col >= 10 {
+                        } else if rel_col >= 11 {
                             app.adjust_selected_setting(1);
                         } else {
                             app.adjust_selected_setting(0);
                         }
-                    } else {
-                        app.adjust_selected_setting(0);
                     }
-                    break;
+                } else {
+                    app.adjust_selected_setting(0);
                 }
-                cur_line += 1;
             }
         }
         return;
@@ -97,20 +85,18 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
 
     if app.input_mode == InputMode::CategoryOnboarding {
         let area = crate::ui::modals::centered_rect(60, 80, size);
-        let inner_y = area.y + 1;
-        let cats = crate::feed::profile::POPULAR_CATEGORIES;
         if col > area.x && col < area.x + area.width.saturating_sub(1) {
-            let start_cat_row = inner_y + 2;
-            if row >= start_cat_row && row < start_cat_row + (cats.len() as u16) {
-                let idx = (row - start_cat_row) as usize;
-                if idx < cats.len() {
+            match crate::ui::modals::onboarding::get_onboarding_row_at(area, row) {
+                Some(crate::ui::modals::onboarding::OnboardingHit::Category(idx)) => {
                     app.onboarding.cursor_idx = idx;
                     if let Some(val) = app.onboarding.selected.get_mut(idx) {
                         *val = !*val;
                     }
                 }
-            } else if row == start_cat_row + (cats.len() as u16) + 1 {
-                app.submit_category_onboarding();
+                Some(crate::ui::modals::onboarding::OnboardingHit::Submit) => {
+                    app.submit_category_onboarding();
+                }
+                None => {}
             }
         }
         return;
@@ -118,32 +104,37 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
 
     if app.input_mode == InputMode::SaveToList {
         let area = crate::ui::modals::centered_rect(55, 60, size);
-        let inner_y = area.y + 1;
-        let custom_lists: Vec<_> = app
-            .saved_lists
-            .lists
-            .iter()
-            .filter(|l| l.id != "liked")
-            .cloned()
-            .collect();
-        let list_count = custom_lists.len();
-        let start_row = inner_y + 4;
-
         if col > area.x && col < area.x + area.width.saturating_sub(1) {
-            if row >= start_row && row < start_row + (list_count as u16) {
-                let idx = (row - start_row) as usize;
-                if idx < list_count {
+            match crate::ui::modals::lists::get_save_to_list_item_at(app, area, row) {
+                Some(crate::ui::modals::lists::SaveToListHit::Toggle(idx)) => {
                     app.lists_modal.save_cursor_idx = idx;
-                    let list_id = custom_lists[idx].id.clone();
-                    let target_title = app.lists_modal.target_title.clone();
-                    app.saved_lists
-                        .toggle_article_in_list(&list_id, &target_title);
+                    let custom_lists: Vec<_> = app
+                        .saved_lists
+                        .lists
+                        .iter()
+                        .filter(|l| l.id != "liked")
+                        .cloned()
+                        .collect();
+                    if let Some(list) = custom_lists.get(idx) {
+                        let list_id = list.id.clone();
+                        let target_title = app.lists_modal.target_title.clone();
+                        app.saved_lists
+                            .toggle_article_in_list(&list_id, &target_title);
+                    }
                 }
-            } else if row == start_row + (list_count as u16) + 1 {
-                app.lists_modal.save_cursor_idx = list_count;
-                app.lists_modal.create_input.clear();
-                app.lists_modal.create_return_mode = InputMode::SaveToList;
-                app.input_mode = InputMode::CreateNewList;
+                Some(crate::ui::modals::lists::SaveToListHit::CreateNew) => {
+                    let custom_lists_count = app
+                        .saved_lists
+                        .lists
+                        .iter()
+                        .filter(|l| l.id != "liked")
+                        .count();
+                    app.lists_modal.save_cursor_idx = custom_lists_count;
+                    app.lists_modal.create_input.clear();
+                    app.lists_modal.create_return_mode = InputMode::SaveToList;
+                    app.input_mode = InputMode::CreateNewList;
+                }
+                None => {}
             }
         }
         return;
@@ -151,25 +142,14 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
 
     if app.input_mode == InputMode::Confirm {
         let area = crate::ui::modals::centered_rect(50, 30, size);
-        if col > area.x && col < area.x + area.width && row > area.y && row < area.y + area.height {
-            let mid_x = area.x + area.width / 2;
-            if col < mid_x {
-                crate::keybinds::confirm::handle_confirm_mode(
-                    app,
-                    crossterm::event::KeyEvent::new(
-                        crossterm::event::KeyCode::Char('y'),
-                        crossterm::event::KeyModifiers::empty(),
-                    ),
-                );
-            } else {
-                crate::keybinds::confirm::handle_confirm_mode(
-                    app,
-                    crossterm::event::KeyEvent::new(
-                        crossterm::event::KeyCode::Char('n'),
-                        crossterm::event::KeyModifiers::empty(),
-                    ),
-                );
-            }
+        if let Some(c) = crate::ui::modals::lists::get_confirm_button_at(app, area, col, row) {
+            crate::keybinds::confirm::handle_confirm_mode(
+                app,
+                crossterm::event::KeyEvent::new(
+                    crossterm::event::KeyCode::Char(c),
+                    crossterm::event::KeyModifiers::empty(),
+                ),
+            );
         }
         return;
     }
@@ -181,12 +161,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             Rect::new(0, 1, term_width, term_height.saturating_sub(2))
         };
         let toc_area = crate::ui::modals::centered_rect(60, 60, container_rect);
-        if col > toc_area.x
-            && col < toc_area.x + toc_area.width.saturating_sub(1)
-            && row > toc_area.y
-            && row < toc_area.y + toc_area.height.saturating_sub(1)
-        {
-            let row_offset = (row - (toc_area.y + 1)) as usize;
+        if col > toc_area.x && col < toc_area.x + toc_area.width.saturating_sub(1) {
             let pane = app.active_pane_mut();
             if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                 let current_scroll = pane.scroll_offset;
@@ -196,11 +171,10 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                     .rposition(|h| h.line_idx <= current_scroll)
                     .unwrap_or(0);
                 let selected_idx = pane.selected_toc_idx.unwrap_or(active_heading_idx);
-                let visible_rows = (toc_area.height.saturating_sub(2)) as usize;
-                let toc_scroll = selected_idx.saturating_sub(visible_rows / 2);
-                let clicked_idx = toc_scroll + row_offset;
 
-                if clicked_idx < parsed_doc.headings.len() {
+                if let Some(clicked_idx) =
+                    crate::ui::modals::toc::get_toc_heading_at(parsed_doc, selected_idx, toc_area, row)
+                {
                     pane.selected_toc_idx = Some(clicked_idx);
                     app.activate_toc_selection(term_height);
                 }
@@ -224,8 +198,9 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             && row > left_area.y
             && row < left_area.y + left_area.height.saturating_sub(1)
         {
-            let clicked_list_idx = (row - (left_area.y + 1)) as usize;
-            if clicked_list_idx < app.saved_lists.lists.len() {
+            if let Some(clicked_list_idx) =
+                crate::ui::modals::lists::get_saved_lists_viewer_item_at(app, false, left_area, row)
+            {
                 app.lists_modal.viewer_list_idx = clicked_list_idx;
                 app.lists_modal.viewer_article_idx = 0;
                 app.lists_modal.viewer_focus_right = false;
@@ -238,14 +213,17 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             && row > right_area.y
             && row < right_area.y + right_area.height.saturating_sub(1)
         {
-            let clicked_art_idx = (row - (right_area.y + 1)) as usize;
-            if let Some(list) = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx) {
-                if clicked_art_idx < list.articles.len() {
-                    app.lists_modal.viewer_article_idx = clicked_art_idx;
-                    app.lists_modal.viewer_focus_right = true;
-                    let title = list.articles[clicked_art_idx].clone();
-                    app.input_mode = InputMode::Normal;
-                    app.open_article(&title);
+            if let Some(clicked_art_idx) =
+                crate::ui::modals::lists::get_saved_lists_viewer_item_at(app, true, right_area, row)
+            {
+                if let Some(list) = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx) {
+                    if clicked_art_idx < list.articles.len() {
+                        app.lists_modal.viewer_article_idx = clicked_art_idx;
+                        app.lists_modal.viewer_focus_right = true;
+                        let title = list.articles[clicked_art_idx].clone();
+                        app.input_mode = InputMode::Normal;
+                        app.open_article(&title);
+                    }
                 }
             }
             return;
@@ -285,28 +263,17 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                             let row_in_pane = (row - inner_y) as usize;
                             let clicked_line = pane.scroll_offset + row_in_pane;
                             let inner_width = (rect.width as usize).saturating_sub(4);
-                            let wrap_w = inner_width.saturating_sub(4).max(10);
-                            let mut cur_line = 0;
-
-                            for (i, item) in items.iter().enumerate() {
-                                let snippet_lines = if !item.snippet.is_empty() {
-                                    crate::ui::pane_view::wrap_text(
-                                        &item.snippet.to_lowercase(),
-                                        wrap_w,
-                                    )
-                                    .len()
-                                } else {
-                                    0
-                                };
-                                let item_height = 1 + snippet_lines + 1;
-                                if clicked_line >= cur_line && clicked_line < cur_line + item_height
-                                {
-                                    pane.selected_idx = i;
-                                    let title = item.title.clone();
-                                    app.open_article(&title);
-                                    break;
-                                }
-                                cur_line += item_height;
+                            if let Some(item_idx) =
+                                crate::ui::pane_view::get_search_result_at_line(
+                                    items,
+                                    pane.selected_idx,
+                                    inner_width,
+                                    clicked_line,
+                                )
+                            {
+                                pane.selected_idx = item_idx;
+                                let title = items[item_idx].title.clone();
+                                app.open_article(&title);
                             }
                         }
                     }

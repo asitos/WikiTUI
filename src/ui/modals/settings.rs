@@ -180,3 +180,29 @@ fn bool_span(val: bool) -> Span<'static> {
         Span::styled("[✖ OFF]", Style::default().fg(theme::GREY))
     }
 }
+
+pub fn get_setting_row_at(inner: Rect, target_y: u16) -> Option<(usize, SettingItem, u16)> {
+    if target_y < inner.y || target_y >= inner.y + inner.height {
+        return None;
+    }
+    let row_in_inner = (target_y - inner.y) as usize;
+    let mut cur_line = 0;
+    let mut current_section = "";
+
+    for (idx, item) in SettingItem::ALL.iter().enumerate() {
+        let section = item.section();
+        if section != current_section {
+            if !current_section.is_empty() {
+                cur_line += 1;
+            }
+            cur_line += 1;
+            current_section = section;
+        }
+        if cur_line == row_in_inner {
+            let value_start_x = inner.x + 36;
+            return Some((idx, *item, value_start_x));
+        }
+        cur_line += 1;
+    }
+    None
+}

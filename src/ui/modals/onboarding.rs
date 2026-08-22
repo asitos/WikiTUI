@@ -52,3 +52,25 @@ pub fn render_category_onboarding_modal(f: &mut Frame, app: &App, size: Rect) {
     let p = Paragraph::new(lines).block(block);
     f.render_widget(p, area);
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OnboardingHit {
+    Category(usize),
+    Submit,
+}
+
+pub fn get_onboarding_row_at(area: Rect, target_y: u16) -> Option<OnboardingHit> {
+    if target_y <= area.y || target_y >= area.y + area.height.saturating_sub(1) {
+        return None;
+    }
+    let inner_y = area.y + 1;
+    let cats_count = crate::feed::profile::POPULAR_CATEGORIES.len();
+    let start_cat_row = inner_y + 2;
+    if target_y >= start_cat_row && target_y < start_cat_row + (cats_count as u16) {
+        Some(OnboardingHit::Category((target_y - start_cat_row) as usize))
+    } else if target_y == start_cat_row + (cats_count as u16) + 1 {
+        Some(OnboardingHit::Submit)
+    } else {
+        None
+    }
+}

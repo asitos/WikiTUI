@@ -91,12 +91,42 @@ pub fn render_toc_modal(
     }
 
     let visible_rows = (toc_area.height.saturating_sub(2)) as usize;
-    let toc_scroll = selected_idx.saturating_sub(visible_rows / 2);
+    let toc_scroll = compute_toc_scroll(selected_idx, visible_rows, parsed_doc.headings.len());
 
     let toc_p = Paragraph::new(toc_lines)
         .block(toc_block)
         .scroll((toc_scroll as u16, 0));
     f.render_widget(toc_p, toc_area);
+}
+
+pub fn compute_toc_scroll(selected_idx: usize, visible_rows: usize, total_headings: usize) -> usize {
+    if total_headings <= visible_rows || visible_rows == 0 {
+        0
+    } else {
+        selected_idx
+            .saturating_sub(visible_rows / 2)
+            .min(total_headings.saturating_sub(visible_rows))
+    }
+}
+
+pub fn get_toc_heading_at(
+    parsed_doc: &ParsedDocument,
+    selected_idx: usize,
+    toc_area: Rect,
+    target_y: u16,
+) -> Option<usize> {
+    if target_y <= toc_area.y || target_y >= toc_area.y + toc_area.height.saturating_sub(1) {
+        return None;
+    }
+    let row_offset = (target_y - (toc_area.y + 1)) as usize;
+    let visible_rows = (toc_area.height.saturating_sub(2)) as usize;
+    let toc_scroll = compute_toc_scroll(selected_idx, visible_rows, parsed_doc.headings.len());
+    let clicked_idx = toc_scroll + row_offset;
+    if clicked_idx < parsed_doc.headings.len() {
+        Some(clicked_idx)
+    } else {
+        None
+    }
 }
 
 fn compute_section_numbers(headings: &[crate::parser::Heading]) -> Vec<String> {

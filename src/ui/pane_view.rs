@@ -484,3 +484,45 @@ pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
     }
     lines
 }
+
+pub fn compute_search_result_lines_count(
+    items: &[crate::api::SearchResultItem],
+    selected_idx: usize,
+    inner_width: usize,
+) -> Vec<usize> {
+    items
+        .iter()
+        .enumerate()
+        .map(|(i, item)| {
+            let snippet_lower = item.snippet.to_lowercase();
+            let snippet_lines = if !snippet_lower.is_empty() {
+                let wrap_w = if i == selected_idx {
+                    inner_width.saturating_sub(3).max(10)
+                } else {
+                    inner_width.saturating_sub(4).max(10)
+                };
+                wrap_text(&snippet_lower, wrap_w).len()
+            } else {
+                0
+            };
+            1 + snippet_lines + 1
+        })
+        .collect()
+}
+
+pub fn get_search_result_at_line(
+    items: &[crate::api::SearchResultItem],
+    selected_idx: usize,
+    inner_width: usize,
+    target_line: usize,
+) -> Option<usize> {
+    let mut cur_line = 0;
+    let counts = compute_search_result_lines_count(items, selected_idx, inner_width);
+    for (i, count) in counts.iter().enumerate() {
+        if target_line >= cur_line && target_line < cur_line + count {
+            return Some(i);
+        }
+        cur_line += count;
+    }
+    None
+}
