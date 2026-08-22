@@ -100,7 +100,7 @@ auto_restore_session = false # when set to true, automatically restore previous 
 confirm_quit = true # enable/disable confirmation prompt on quit
 
 [reader]
-scroll_lines = 1 # number of lines to scroll per j/k press
+scroll_lines = 1 # number of lines to scroll per j/k press (1-20)
 underline_links = false # enable/disable underlining links in articles
 show_footnotes = true # enable/disable inline citation markers and references
 show_external_links = true # enable/disable external links section
@@ -119,7 +119,11 @@ limit = 20 # maximum number of search results returned from wikipedia (5-50)
 [network]
 timeout = 10 # network request timeout in seconds
 offline_cache = true # enable/disable caching downloaded articles
-cache_lifetime = 24 # cache expiration lifetime in hours
+cache_lifetime = 24 # cache expiration lifetime in hours (1-168)
+
+[input]
+mouse_support = true # enable/disable mouse clicks, tab switching, and scroll wheel
+scroll_speed = 3 # number of lines to scroll per mouse wheel tick (1-20)
 ```
 
 ## acknowledgements
