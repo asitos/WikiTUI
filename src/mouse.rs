@@ -12,10 +12,10 @@ pub enum ScrollDragTarget {
 pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent, term_width: u16, term_height: u16) {
     match mouse.kind {
         MouseEventKind::ScrollUp => {
-            handle_scroll(app, -1, term_height);
+            handle_scroll(app, -1, mouse.column, mouse.row, term_width, term_height);
         }
         MouseEventKind::ScrollDown => {
-            handle_scroll(app, 1, term_height);
+            handle_scroll(app, 1, mouse.column, mouse.row, term_width, term_height);
         }
         MouseEventKind::Down(MouseButton::Left) => {
             if !handle_scrollbar_down(app, mouse.column, mouse.row, term_width, term_height) {
@@ -664,7 +664,14 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     }
 }
 
-fn handle_scroll(app: &mut App, delta: i32, term_height: u16) {
+fn handle_scroll(
+    app: &mut App,
+    delta: i32,
+    col: u16,
+    row: u16,
+    term_width: u16,
+    term_height: u16,
+) {
     if app.feed.active {
         if delta < 0 {
             app.feed.prev_post();
@@ -720,6 +727,24 @@ fn handle_scroll(app: &mut App, delta: i32, term_height: u16) {
             }
         }
         InputMode::SavedListsViewer => {
+            let size = Rect::new(0, 0, term_width, term_height);
+            let (_container_area, left_area, right_area) =
+                crate::ui::modals::lists::compute_saved_lists_viewer_areas(size);
+
+            if col >= right_area.x
+                && col < right_area.x + right_area.width
+                && row >= right_area.y
+                && row < right_area.y + right_area.height
+            {
+                app.lists_modal.viewer_focus_right = true;
+            } else if col >= left_area.x
+                && col < left_area.x + left_area.width
+                && row >= left_area.y
+                && row < left_area.y + left_area.height
+            {
+                app.lists_modal.viewer_focus_right = false;
+            }
+
             let lists_count = app.saved_lists.lists.len();
             let current_articles_count = app
                 .saved_lists
@@ -765,6 +790,16 @@ fn handle_scroll(app: &mut App, delta: i32, term_height: u16) {
             }
         }
         InputMode::Normal | InputMode::LocalSearch => {
+            if !app.zen_mode && row >= 1 && row < term_height.saturating_sub(1) {
+                let main_rect = Rect::new(0, 1, term_width, term_height.saturating_sub(2));
+                let tab = app.active_tab_mut();
+                let rects = tab.layout_root.compute_rects(main_rect);
+                if let Some(&(pane_idx, _)) = rects.iter().find(|(_, r)| {
+                    col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
+                }) {
+                    tab.active_pane_idx = pane_idx;
+                }
+            }
             let speed = app.config.input.scroll_speed.max(1);
             if delta < 0 {
                 app.scroll_up_lines(speed, term_height);
