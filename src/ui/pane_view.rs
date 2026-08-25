@@ -88,11 +88,7 @@ fn render_pane_at(
         PaneContent::Error(_) => " error ".to_string(),
     };
 
-    let border_type = if app.config.ui.rounded_borders {
-        ratatui::widgets::BorderType::Rounded
-    } else {
-        ratatui::widgets::BorderType::Plain
-    };
+    let border_type = app.config.ui.border_type();
 
     let block = if app.zen_mode {
         Block::default().padding(Padding::horizontal(1))

@@ -65,6 +65,12 @@ impl Default for UiConfig {
     }
 }
 
+impl UiConfig {
+    pub fn border_type(&self) -> ratatui::widgets::BorderType {
+        crate::theme::border_type(self.rounded_borders)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ReaderConfig {

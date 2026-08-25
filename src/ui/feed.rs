@@ -16,11 +16,7 @@ pub fn compute_feed_card_area(inner_area: Rect) -> Rect {
 pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect, rounded: bool) {
     f.render_widget(Clear, area);
 
-    let border_type = if rounded {
-        ratatui::widgets::BorderType::Rounded
-    } else {
-        ratatui::widgets::BorderType::Plain
-    };
+    let border_type = theme::border_type(rounded);
 
     let main_block = Block::bordered()
         .border_type(border_type)

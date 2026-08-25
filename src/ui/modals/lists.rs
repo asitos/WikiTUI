@@ -152,11 +152,7 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     } else {
         theme::GREY
     };
-    let border_type = if app.config.ui.rounded_borders {
-        ratatui::widgets::BorderType::Rounded
-    } else {
-        ratatui::widgets::BorderType::Plain
-    };
+    let border_type = app.config.ui.border_type();
     let left_block = Block::bordered()
         .border_type(border_type)
         .title(" custom lists ")

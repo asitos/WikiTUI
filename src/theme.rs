@@ -15,3 +15,11 @@ pub const LIME: Color = Color::Rgb(101, 173, 95); // #65ad5f
 pub const TEAL: Color = Color::Rgb(91, 203, 178); // #5bcbb2
 pub const BLUE: Color = Color::Rgb(73, 147, 198); // #4993c6
 pub const VIOLET: Color = Color::Rgb(143, 99, 204); // #8f63cc
+
+pub fn border_type(rounded: bool) -> ratatui::widgets::BorderType {
+    if rounded {
+        ratatui::widgets::BorderType::Rounded
+    } else {
+        ratatui::widgets::BorderType::Plain
+    }
+}

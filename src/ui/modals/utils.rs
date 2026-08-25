@@ -38,11 +38,7 @@ pub fn create_modal_block(
         format!(" {} {} ", icon, title)
     };
 
-    let border_type = if rounded {
-        ratatui::widgets::BorderType::Rounded
-    } else {
-        ratatui::widgets::BorderType::Plain
-    };
+    let border_type = theme::border_type(rounded);
 
     Block::bordered()
         .border_type(border_type)
