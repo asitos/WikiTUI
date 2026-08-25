@@ -297,83 +297,33 @@ fn render_pane_at(
                 }
             }
 
-            let query = pane.local_search_query.to_lowercase();
-            if !query.trim().is_empty() {
-                let active_match = pane
+            if !pane.local_matches.is_empty() && !pane.local_search_query.trim().is_empty() {
+                let query_len = pane.local_search_query.len();
+                let first_match_idx = pane
+                    .local_matches
+                    .partition_point(|m| m.line_idx < view_start);
+                let selected_match = pane
                     .selected_match_idx
                     .and_then(|idx| pane.local_matches.get(idx));
 
+                let mut match_ptr = first_match_idx;
                 for (local_idx, line) in rendered_lines.iter_mut().enumerate() {
                     let line_idx = view_start + local_idx;
-                    let full_line_text: String =
-                        line.spans.iter().map(|s| s.content.as_ref()).collect();
-                    let full_lower = full_line_text.to_lowercase();
+                    let mut line_matches = Vec::new();
 
-                    if full_lower.contains(&query) {
-                        let mut match_ranges = Vec::new();
-                        let mut start = 0;
-                        while let Some(pos) = full_lower[start..].find(&query) {
-                            let match_start = start + pos;
-                            let match_end = match_start + query.len();
-                            match_ranges.push((match_start, match_end));
-                            start = match_end.max(start + 1);
-                        }
+                    while match_ptr < pane.local_matches.len()
+                        && pane.local_matches[match_ptr].line_idx == line_idx
+                    {
+                        let m = &pane.local_matches[match_ptr];
+                        let is_active = selected_match.is_some_and(|sm| {
+                            sm.line_idx == m.line_idx && sm.char_offset == m.char_offset
+                        });
+                        line_matches.push((m.char_offset, m.char_offset + query_len, is_active));
+                        match_ptr += 1;
+                    }
 
-                        let mut new_spans = Vec::new();
-                        let mut current_global_offset = 0;
-
-                        for span in &line.spans {
-                            let text = &span.content;
-                            let span_len = text.len();
-                            let span_start = current_global_offset;
-                            let span_end = span_start + span_len;
-
-                            let mut text_cursor = 0;
-                            while text_cursor < span_len {
-                                let global_pos = span_start + text_cursor;
-                                let active_range =
-                                    match_ranges.iter().find(|&&(r_start, r_end)| {
-                                        global_pos >= r_start && global_pos < r_end
-                                    });
-
-                                if let Some(&(r_start, r_end)) = active_range {
-                                    let is_this_active = active_match.is_some_and(|m| {
-                                        m.line_idx == line_idx && m.char_offset == r_start
-                                    });
-                                    let bg_color = if is_this_active {
-                                        theme::YELLOW
-                                    } else {
-                                        theme::BEIGE
-                                    };
-
-                                    let match_end_in_span = (r_end - span_start).min(span_len);
-                                    let slice = &text[text_cursor..match_end_in_span];
-                                    new_spans.push(Span::styled(
-                                        slice.to_string(),
-                                        Style::default().bg(bg_color).fg(theme::BG).bold(),
-                                    ));
-                                    text_cursor = match_end_in_span;
-                                } else {
-                                    let next_match_start = match_ranges
-                                        .iter()
-                                        .map(|&(r_start, _)| r_start)
-                                        .filter(|&r_start| {
-                                            r_start > global_pos && r_start < span_end
-                                        })
-                                        .min()
-                                        .unwrap_or(span_end);
-
-                                    let unmatch_end_in_span = next_match_start - span_start;
-                                    let slice = &text[text_cursor..unmatch_end_in_span];
-                                    new_spans.push(Span::styled(slice.to_string(), span.style));
-                                    text_cursor = unmatch_end_in_span;
-                                }
-                            }
-
-                            current_global_offset = span_end;
-                        }
-
-                        line.spans = new_spans;
+                    if !line_matches.is_empty() {
+                        apply_search_highlights_to_line(line, &line_matches);
                     }
                 }
             }
@@ -525,4 +475,63 @@ pub fn get_search_result_at_line(
         cur_line += count;
     }
     None
+}
+
+fn apply_search_highlights_to_line(
+    line: &mut Line<'static>,
+    line_matches: &[(usize, usize, bool)],
+) {
+    if line_matches.is_empty() {
+        return;
+    }
+
+    let mut new_spans = Vec::with_capacity(line.spans.len() + line_matches.len() * 2);
+    let mut global_offset = 0;
+
+    for span in &line.spans {
+        let text = span.content.as_ref();
+        let span_len = text.len();
+        let span_start = global_offset;
+        let span_end = span_start + span_len;
+
+        let mut text_cursor = 0;
+
+        for &(m_start, m_end, is_active) in line_matches {
+            if m_end <= span_start || m_start >= span_end {
+                continue;
+            }
+
+            let rel_match_start = m_start.saturating_sub(span_start).max(text_cursor);
+            let rel_match_end = (m_end.saturating_sub(span_start)).min(span_len);
+
+            if rel_match_start > text_cursor && rel_match_start <= span_len {
+                let unmatch_slice = &text[text_cursor..rel_match_start];
+                new_spans.push(Span::styled(unmatch_slice.to_string(), span.style));
+                text_cursor = rel_match_start;
+            }
+
+            if rel_match_end > text_cursor && rel_match_end <= span_len {
+                let match_slice = &text[text_cursor..rel_match_end];
+                let bg_color = if is_active {
+                    theme::YELLOW
+                } else {
+                    theme::BEIGE
+                };
+                new_spans.push(Span::styled(
+                    match_slice.to_string(),
+                    Style::default().bg(bg_color).fg(theme::BG).bold(),
+                ));
+                text_cursor = rel_match_end;
+            }
+        }
+
+        if text_cursor < span_len {
+            let trailing_slice = &text[text_cursor..];
+            new_spans.push(Span::styled(trailing_slice.to_string(), span.style));
+        }
+
+        global_offset = span_end;
+    }
+
+    line.spans = new_spans;
 }
