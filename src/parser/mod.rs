@@ -223,6 +223,15 @@ fn process_node<'a>(
                 .flatten()
                 .map(|b| decode_html_entities(&b.as_utf8_str()));
 
+            if spoken::is_spoken_wikipedia_tag(tag, parser) {
+                if let Some(spoken_audio) = spoken::extract_spoken_audio(tag, parser) {
+                    if doc.spoken_audio.is_none() {
+                        doc.spoken_audio = Some(spoken_audio);
+                    }
+                }
+                return;
+            }
+
             if let Some((level, title, id_opt)) = heading_info(tag, parser) {
                 let lower_title = title.to_lowercase();
                 let lower_id = id_opt.as_deref().unwrap_or("").to_lowercase();
@@ -378,15 +387,6 @@ fn process_node<'a>(
                     }
                     return;
                 }
-            }
-
-            if spoken::is_spoken_wikipedia_tag(tag, parser) {
-                if let Some(spoken_audio) = spoken::extract_spoken_audio(tag, parser) {
-                    if doc.spoken_audio.is_none() {
-                        doc.spoken_audio = Some(spoken_audio);
-                    }
-                }
-                return;
             }
 
             if let Some(ref class_str) = class_attr {

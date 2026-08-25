@@ -23,10 +23,24 @@ pub fn compute_tab_titles(app: &App) -> Vec<String> {
                 )
             } else if let Some(active_pane) = tab.panes.get(tab.active_pane_idx) {
                 match &active_pane.content {
-                    PaneContent::ArticleText { title, .. } => {
+                    PaneContent::ArticleText {
+                        title, parsed_doc, ..
+                    } => {
                         let saved = app.saved_lists.is_article_saved_anywhere(title);
+                        let has_audio = parsed_doc.spoken_audio.is_some();
+                        let icon_str = if show_icons {
+                            if has_audio {
+                                "󰎆"
+                            } else {
+                                "≡"
+                            }
+                        } else if has_audio {
+                            "♪"
+                        } else {
+                            ""
+                        };
                         (
-                            if show_icons { "≡" } else { "" }.to_string(),
+                            icon_str.to_string(),
                             title.to_lowercase(),
                             saved,
                         )
