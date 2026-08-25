@@ -189,7 +189,24 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                 .add_modifier(Modifier::BOLD),
         )],
         InputMode::Normal => {
-            if app.feed.active {
+            if app.audio_player.is_active() {
+                let state_str = match app.audio_player.state {
+                    crate::audio::PlaybackState::Playing => "󰎆 playing",
+                    crate::audio::PlaybackState::Paused => "󰏤 paused",
+                    _ => "audio",
+                };
+                let title = app.audio_player.current_title.as_deref().unwrap_or("article");
+                vec![
+                    Span::styled(
+                        format!("{} [{}]", state_str, title),
+                        Style::default().fg(theme::PINK).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        " · a pause/resume · A stop",
+                        Style::default().fg(theme::GREY),
+                    ),
+                ]
+            } else if app.feed.active {
                 vec![Span::styled(
                     "j/k browse · l like · enter read · t tab · r reset · esc exit",
                     Style::default().fg(theme::GREY),
@@ -213,10 +230,22 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
             {
                 build_history_trail(active_pane)
             } else {
-                vec![Span::styled(
-                    "ctrl-s search · r random · F feed · , settings · ? help · q quit",
-                    Style::default().fg(theme::GREY),
-                )]
+                let has_spoken = if let PaneContent::ArticleText { parsed_doc, .. } = &active_pane.content {
+                    parsed_doc.spoken_audio.is_some()
+                } else {
+                    false
+                };
+                if has_spoken {
+                    vec![Span::styled(
+                        "ctrl-s search · a listen · r random · F feed · , settings · ? help",
+                        Style::default().fg(theme::GREY),
+                    )]
+                } else {
+                    vec![Span::styled(
+                        "ctrl-s search · r random · F feed · , settings · ? help · q quit",
+                        Style::default().fg(theme::GREY),
+                    )]
+                }
             }
         }
     }

@@ -132,6 +132,7 @@ pub struct App {
     pub recent_articles: Vec<String>,
     pub launch_quote_idx: usize,
     pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
+    pub audio_player: crate::audio::AudioPlayer,
 
     pub(crate) next_pane_id: usize,
     pub(crate) cmd_tx: Sender<NetworkCommand>,
@@ -264,6 +265,7 @@ impl App {
             recent_articles: Self::load_recent_articles(),
             launch_quote_idx: quote_idx,
             scroll_drag: None,
+            audio_player: crate::audio::AudioPlayer::new(),
 
             next_pane_id: 1,
             cmd_tx,
@@ -535,6 +537,54 @@ impl App {
         if let Some((title, _snippet, is_liked)) = self.feed.toggle_like() {
             self.saved_lists
                 .set_article_in_list("liked", "Liked", &title, is_liked);
+        }
+    }
+
+    pub fn toggle_spoken_audio(&mut self) {
+        if self.audio_player.is_active() {
+            self.audio_player.toggle_pause();
+            let msg = match self.audio_player.state {
+                crate::audio::PlaybackState::Playing => "audio resumed".to_string(),
+                crate::audio::PlaybackState::Paused => "audio paused".to_string(),
+                crate::audio::PlaybackState::Stopped => "audio stopped".to_string(),
+            };
+            self.set_status_message(msg);
+            return;
+        }
+
+        let track_info = match &self.active_pane().content {
+            PaneContent::ArticleText {
+                parsed_doc, title, ..
+            } => {
+                if let Some(spoken) = &parsed_doc.spoken_audio {
+                    spoken.tracks.first().map(|t| (title.clone(), t.url.clone()))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        if let Some((play_title, track_url)) = track_info {
+            let success = self.audio_player.play(&play_title, &track_url);
+            if success {
+                self.set_status_message(format!("playing spoken article: {}", play_title));
+            } else if self.audio_player.backend.is_none() {
+                self.set_status_message(
+                    "no audio backend found (install mpv, ffplay, or cvlc)".to_string(),
+                );
+            } else {
+                self.set_status_message("failed to start audio playback".to_string());
+            }
+        } else {
+            self.set_status_message("no spoken audio available for this article".to_string());
+        }
+    }
+
+    pub fn stop_spoken_audio(&mut self) {
+        if self.audio_player.is_active() {
+            self.audio_player.stop();
+            self.set_status_message("audio playback stopped".to_string());
         }
     }
 }

@@ -88,6 +88,12 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('r') => {
                 app.fetch_random_article();
             }
+            KeyCode::Char('a') => {
+                app.toggle_spoken_audio();
+            }
+            KeyCode::Char('A') => {
+                app.stop_spoken_audio();
+            }
             KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.intra_jump_back(term_height);
             }

@@ -81,6 +81,7 @@ fn run_app(
 
     while app.running {
         app.check_config_sync();
+        app.audio_player.poll_status();
 
         if app.config.input.mouse_support != mouse_capture_enabled {
             mouse_capture_enabled = app.config.input.mouse_support;
