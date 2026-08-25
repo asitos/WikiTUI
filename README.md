@@ -39,6 +39,19 @@ cd wikid
 makepkg -si
 ```
 
+### NetBSD (from the official repository)
+
+```bash
+pkgin install wikid
+```
+
+Or, if you prefer to build from source
+
+```bash
+cd /usr/pkgsrc/www/wikid
+make install
+```
+
 ### build from source
 ```bash
 git clone https://github.com/sharkthakftw/wikid.git
