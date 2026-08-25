@@ -3,11 +3,6 @@ use crate::app::{is_article_link, App};
 use crate::layout::SplitDirection;
 
 impl App {
-    pub(crate) fn calc_max_scroll(total_lines: usize, term_height: u16) -> usize {
-        let half_screen = (term_height as usize / 2).max(1);
-        total_lines.saturating_sub(half_screen)
-    }
-
     pub fn clamp_link_selection_to_viewport(&mut self, term_height: u16) {
         let pane = self.active_pane_mut();
         let PaneContent::ArticleText { parsed_doc, .. } = &pane.content else {
@@ -18,11 +13,7 @@ impl App {
             return;
         }
 
-        let viewport_h = if pane.viewport_height > 0 {
-            pane.viewport_height
-        } else {
-            (term_height as usize).saturating_sub(4).max(1)
-        };
+        let viewport_h = pane.effective_viewport_height(term_height);
 
         let view_start = pane.scroll_offset;
         let view_end = pane.scroll_offset + viewport_h;
@@ -58,8 +49,8 @@ impl App {
         if is_article {
             let step = lines.max(1);
             let pane = self.active_pane_mut();
-            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
-                let max_scroll = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
+            if matches!(&pane.content, PaneContent::ArticleText { .. }) {
+                let max_scroll = pane.max_scroll(term_height);
                 pane.scroll_offset = (pane.scroll_offset + step).min(max_scroll);
             }
             self.clamp_link_selection_to_viewport(term_height);
@@ -451,17 +442,15 @@ impl App {
     }
 
     pub fn scroll_page_down(&mut self, term_height: u16) {
-        let step = (term_height as usize * 3 / 4).max(1);
         let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        let pane = self.active_pane_mut();
+        let step = pane.page_scroll_step(term_height);
+
         if is_article {
-            let pane = self.active_pane_mut();
-            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
-                let max_scroll = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
-                pane.scroll_offset = (pane.scroll_offset + step).min(max_scroll);
-            }
+            let max_scroll = pane.max_scroll(term_height);
+            pane.scroll_offset = (pane.scroll_offset + step).min(max_scroll);
             self.clamp_link_selection_to_viewport(term_height);
         } else {
-            let pane = self.active_pane_mut();
             match &pane.content {
                 PaneContent::SearchResults { items, .. } if !items.is_empty() => {
                     pane.selected_idx = (pane.selected_idx + step).min(items.len() - 1);
@@ -473,18 +462,16 @@ impl App {
     }
 
     pub fn scroll_page_up(&mut self, term_height: u16) {
-        let step = (term_height as usize * 3 / 4).max(1);
         let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        let pane = self.active_pane_mut();
+        let step = pane.page_scroll_step(term_height);
+
         if is_article {
-            let pane = self.active_pane_mut();
             pane.scroll_offset = pane.scroll_offset.saturating_sub(step);
             self.clamp_link_selection_to_viewport(term_height);
-        } else {
-            let pane = self.active_pane_mut();
-            if let PaneContent::SearchResults { .. } = &pane.content {
-                pane.selected_idx = pane.selected_idx.saturating_sub(step);
-                Self::keep_search_selection_visible(pane, term_height);
-            }
+        } else if let PaneContent::SearchResults { .. } = &pane.content {
+            pane.selected_idx = pane.selected_idx.saturating_sub(step);
+            Self::keep_search_selection_visible(pane, term_height);
         }
     }
 
@@ -505,9 +492,7 @@ impl App {
         let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
         if is_article {
             let pane = self.active_pane_mut();
-            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
-                pane.scroll_offset = Self::calc_max_scroll(parsed_doc.lines.len(), term_height);
-            }
+            pane.scroll_offset = pane.max_scroll(term_height);
             self.clamp_link_selection_to_viewport(term_height);
         } else {
             let pane = self.active_pane_mut();

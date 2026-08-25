@@ -132,4 +132,26 @@ impl Pane {
             None
         }
     }
+
+    pub fn effective_viewport_height(&self, term_height: u16) -> usize {
+        if self.viewport_height > 0 {
+            self.viewport_height
+        } else {
+            (term_height as usize).saturating_sub(4).max(1)
+        }
+    }
+
+    pub fn page_scroll_step(&self, term_height: u16) -> usize {
+        (self.effective_viewport_height(term_height) * 3 / 4).max(1)
+    }
+
+    pub fn max_scroll(&self, term_height: u16) -> usize {
+        let viewport = self.effective_viewport_height(term_height);
+        match &self.content {
+            PaneContent::ArticleText { parsed_doc, .. } => {
+                parsed_doc.lines.len().saturating_sub(viewport)
+            }
+            _ => 0,
+        }
+    }
 }
