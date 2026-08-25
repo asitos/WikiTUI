@@ -142,6 +142,7 @@ scroll_speed = 3 # number of lines to scroll per mouse wheel tick (1-20)
 ## acknowledgements
 
 - special thanks to [xikipedia](https://github.com/rebane2001/xikipedia) for inspiring the recommendation feed feature!
+- thanks to [0323pin](https://github.com/0323pin) for packaging and maintaining the NetBSD package.
 
 ## license
 
