@@ -47,12 +47,17 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         PaneContent::ArticleText { parsed_doc, .. } => {
             let total_lines = parsed_doc.lines.len();
             let scroll = active_pane.scroll_offset;
-            if total_lines == 0 || scroll == 0 {
+            let viewport = active_pane.viewport_height.max(1);
+            let max_scroll = total_lines.saturating_sub(viewport);
+
+            if total_lines <= viewport {
+                "ALL".to_string()
+            } else if scroll == 0 {
                 "TOP".to_string()
-            } else if scroll + (area.height as usize) >= total_lines {
+            } else if scroll >= max_scroll {
                 "BOT".to_string()
             } else {
-                format!("{}%", (scroll * 100) / total_lines.max(1))
+                format!("{}%", (scroll * 100) / max_scroll.max(1))
             }
         }
         PaneContent::SearchResults { items, .. } => {
