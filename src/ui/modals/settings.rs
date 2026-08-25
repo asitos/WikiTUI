@@ -1,4 +1,4 @@
-use super::utils::render_modal_container;
+use super::utils::{centered_rect, render_modal_container_at};
 use crate::app::{App, SettingItem};
 use crate::theme;
 use ratatui::{
@@ -9,13 +9,16 @@ use ratatui::{
     Frame,
 };
 
+pub fn compute_settings_modal_area(size: Rect) -> Rect {
+    centered_rect(55, 80, size)
+}
+
 pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     let icon = if app.config.ui.icons { "󰒓" } else { "" };
-    let inner = render_modal_container(
+    let area = compute_settings_modal_area(size);
+    let inner = render_modal_container_at(
         f,
-        size,
-        55,
-        80,
+        area,
         icon,
         "settings (config.toml)",
         theme::ORANGE,

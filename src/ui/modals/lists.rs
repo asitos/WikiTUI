@@ -1,5 +1,5 @@
 use super::utils::{
-    centered_rect, create_checkbox_line, create_selectable_line, render_modal_frame,
+    centered_rect, create_checkbox_line, create_selectable_line, render_modal_frame_at,
 };
 use crate::app::App;
 use crate::theme;
@@ -11,13 +11,24 @@ use ratatui::{
     Frame,
 };
 
+pub fn compute_save_to_list_modal_area(size: Rect) -> Rect {
+    centered_rect(55, 60, size)
+}
+
+pub fn compute_create_new_list_modal_area(size: Rect) -> Rect {
+    centered_rect(45, 25, size)
+}
+
+pub fn compute_confirm_modal_area(size: Rect) -> Rect {
+    centered_rect(50, 30, size)
+}
+
 pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let icon = if app.config.ui.icons { "★" } else { "" };
-    let (area, block) = render_modal_frame(
+    let area = compute_save_to_list_modal_area(size);
+    let block = render_modal_frame_at(
         f,
-        size,
-        55,
-        60,
+        area,
         icon,
         "save to list",
         theme::VIOLET,
@@ -82,11 +93,10 @@ pub fn render_save_to_list_modal(f: &mut Frame, app: &App, size: Rect) {
 
 pub fn render_create_new_list_modal(f: &mut Frame, app: &App, size: Rect) {
     let icon = if app.config.ui.icons { "★" } else { "" };
-    let (area, block) = render_modal_frame(
+    let area = compute_create_new_list_modal_area(size);
+    let block = render_modal_frame_at(
         f,
-        size,
-        45,
-        25,
+        area,
         icon,
         "create new list",
         theme::VIOLET,
@@ -352,11 +362,10 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
     };
 
     let icon = if app.config.ui.icons { "󰅚" } else { "" };
-    let (area, block) = render_modal_frame(
+    let area = compute_confirm_modal_area(size);
+    let block = render_modal_frame_at(
         f,
-        size,
-        50,
-        30,
+        area,
         icon,
         modal_title,
         theme::RED,

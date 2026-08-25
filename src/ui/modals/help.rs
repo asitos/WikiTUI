@@ -1,4 +1,4 @@
-use super::utils::render_modal_container;
+use super::utils::{centered_rect, render_modal_container_at};
 use crate::theme;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -8,17 +8,20 @@ use ratatui::{
     Frame,
 };
 
+pub fn compute_help_modal_area(size: Rect) -> Rect {
+    centered_rect(70, 80, size)
+}
+
 #[rustfmt::skip]
 pub fn render_help_modal(f: &mut Frame, app: &crate::app::App, size: Rect) {
     let is_macos = cfg!(target_os = "macos");
     let opt_label = if is_macos { "opt" } else { "alt" };
 
     let icon = if app.config.ui.icons { "󰘥" } else { "" };
-    let inner = render_modal_container(
+    let area = compute_help_modal_area(size);
+    let inner = render_modal_container_at(
         f,
-        size,
-        70,
-        80,
+        area,
         icon,
         "keybindings",
         theme::PINK,

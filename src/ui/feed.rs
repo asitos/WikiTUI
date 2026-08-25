@@ -9,6 +9,10 @@ use ratatui::{
     Frame,
 };
 
+pub fn compute_feed_card_area(inner_area: Rect) -> Rect {
+    centered_rect(80, 85, inner_area)
+}
+
 pub fn render_feed_view(f: &mut Frame, feed: &FeedState, area: Rect, rounded: bool) {
     f.render_widget(Clear, area);
 

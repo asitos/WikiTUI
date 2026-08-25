@@ -43,11 +43,11 @@ fn handle_scrollbar_down(
 
     if app.active_pane().toc_focused {
         let container_rect = if app.zen_mode {
-            crate::ui::modals::centered_rect(80, 90, size)
+            crate::ui::compute_zen_area(size)
         } else {
             Rect::new(0, 1, term_width, term_height.saturating_sub(2))
         };
-        let toc_area = crate::ui::modals::centered_rect(60, 60, container_rect);
+        let toc_area = crate::ui::modals::compute_toc_modal_area(container_rect);
         if col == toc_area.x + toc_area.width.saturating_sub(1)
             && row > toc_area.y
             && row < toc_area.y + toc_area.height.saturating_sub(1)
@@ -197,11 +197,11 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
         ScrollDragTarget::Toc => {
             if app.active_pane().toc_focused {
                 let container_rect = if app.zen_mode {
-                    crate::ui::modals::centered_rect(80, 90, size)
+                    crate::ui::compute_zen_area(size)
                 } else {
                     Rect::new(0, 1, term_width, term_height.saturating_sub(2))
                 };
-                let toc_area = crate::ui::modals::centered_rect(60, 60, container_rect);
+                let toc_area = crate::ui::modals::compute_toc_modal_area(container_rect);
                 let pane = app.active_pane_mut();
                 if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
                     let total = parsed_doc.headings.len();
@@ -310,7 +310,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             .constraints([Constraint::Min(0), Constraint::Length(1)])
             .split(size);
         let inner_area = chunks[0];
-        let card_area = crate::ui::modals::centered_rect(80, 85, inner_area);
+        let card_area = crate::ui::feed::compute_feed_card_area(inner_area);
 
         if row == card_area.y + card_area.height.saturating_sub(1)
             && col >= card_area.x + card_area.width.saturating_sub(14)
@@ -324,7 +324,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     }
 
     if app.input_mode == InputMode::Help {
-        let help_area = crate::ui::modals::centered_rect(70, 80, size);
+        let help_area = crate::ui::modals::compute_help_modal_area(size);
         if col < help_area.x
             || col >= help_area.x + help_area.width
             || row < help_area.y
@@ -348,7 +348,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     }
 
     if app.input_mode == InputMode::CreateNewList {
-        let create_area = crate::ui::modals::centered_rect(45, 25, size);
+        let create_area = crate::ui::modals::compute_create_new_list_modal_area(size);
         if col < create_area.x
             || col >= create_area.x + create_area.width
             || row < create_area.y
@@ -360,7 +360,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     }
 
     if app.input_mode == InputMode::Settings {
-        let area = crate::ui::modals::centered_rect(55, 80, size);
+        let area = crate::ui::modals::compute_settings_modal_area(size);
         let inner = Rect::new(
             area.x + 1,
             area.y + 1,
@@ -368,49 +368,51 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             area.height.saturating_sub(2),
         );
 
-        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
+        if col < area.x
+            || col >= area.x + area.width
+            || row < area.y
+            || row >= area.y + area.height
         {
-            if col >= inner.x
-                && col < inner.x + inner.width
-                && row >= inner.y
-                && row < inner.y + inner.height
-            {
-                if let Some((idx, item, val_start_x)) =
-                    crate::ui::modals::settings::get_setting_row_at(inner, row)
-                {
-                    app.settings_cursor_idx = idx;
-                    let is_numeric = matches!(
-                        item,
-                        SettingItem::ScrollLines
-                            | SettingItem::SearchLimit
-                            | SettingItem::NetworkTimeout
-                            | SettingItem::CacheLifetime
-                            | SettingItem::ScrollSpeed
-                    );
-                    if is_numeric {
-                        if col >= val_start_x {
-                            let rel_col = col - val_start_x;
-                            if rel_col <= 3 {
-                                app.adjust_selected_setting(-1);
-                            } else if rel_col >= 11 {
-                                app.adjust_selected_setting(1);
-                            } else {
-                                app.adjust_selected_setting(0);
-                            }
-                        }
+            app.input_mode = InputMode::Normal;
+            return;
+        }
+
+        if let Some((idx, item, val_start_x)) =
+            crate::ui::modals::settings::get_setting_row_at(inner, row)
+        {
+            app.settings_cursor_idx = idx;
+            let is_numeric = matches!(
+                item,
+                crate::app::SettingItem::ScrollLines
+                    | crate::app::SettingItem::SearchLimit
+                    | crate::app::SettingItem::NetworkTimeout
+                    | crate::app::SettingItem::CacheLifetime
+                    | crate::app::SettingItem::ScrollSpeed
+            );
+            if is_numeric {
+                if col >= val_start_x {
+                    let rel_col = col - val_start_x;
+                    if rel_col <= 3 {
+                        app.adjust_selected_setting(-1);
+                    } else if rel_col >= 11 {
+                        app.adjust_selected_setting(1);
                     } else {
                         app.adjust_selected_setting(0);
                     }
                 }
+            } else {
+                app.adjust_selected_setting(0);
             }
-        } else {
-            app.input_mode = InputMode::Normal;
         }
         return;
     }
 
+    if app.input_mode == InputMode::SavedListsViewer {
+        return;
+    }
+
     if app.input_mode == InputMode::CategoryOnboarding {
-        let area = crate::ui::modals::centered_rect(60, 80, size);
+        let area = crate::ui::modals::compute_onboarding_modal_area(size);
         if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
         {
             match crate::ui::modals::onboarding::get_onboarding_row_at(area, row) {
@@ -432,7 +434,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     }
 
     if app.input_mode == InputMode::SaveToList {
-        let area = crate::ui::modals::centered_rect(55, 60, size);
+        let area = crate::ui::modals::compute_save_to_list_modal_area(size);
         if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
         {
             match crate::ui::modals::lists::get_save_to_list_item_at(app, area, row) {
@@ -473,7 +475,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     }
 
     if app.input_mode == InputMode::Confirm {
-        let area = crate::ui::modals::centered_rect(50, 30, size);
+        let area = crate::ui::modals::compute_confirm_modal_area(size);
         if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
         {
             if let Some(c) = crate::ui::modals::lists::get_confirm_button_at(app, area, col, row) {
@@ -494,11 +496,11 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
 
     if app.active_pane().toc_focused {
         let container_rect = if app.zen_mode {
-            crate::ui::modals::centered_rect(80, 90, size)
+            crate::ui::compute_zen_area(size)
         } else {
             Rect::new(0, 1, term_width, term_height.saturating_sub(2))
         };
-        let toc_area = crate::ui::modals::centered_rect(60, 60, container_rect);
+        let toc_area = crate::ui::modals::compute_toc_modal_area(container_rect);
         if col >= toc_area.x
             && col < toc_area.x + toc_area.width
             && row >= toc_area.y

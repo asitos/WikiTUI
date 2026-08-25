@@ -1,4 +1,4 @@
-use super::utils::render_modal_frame;
+use super::utils::{centered_rect, render_modal_frame_at};
 use crate::app::Pane;
 use crate::parser::ParsedDocument;
 use crate::theme;
@@ -10,6 +10,10 @@ use ratatui::{
     Frame,
 };
 
+pub fn compute_toc_modal_area(container_rect: Rect) -> Rect {
+    centered_rect(60, 60, container_rect)
+}
+
 pub fn render_toc_modal(
     f: &mut Frame,
     pane: &Pane,
@@ -20,11 +24,10 @@ pub fn render_toc_modal(
     show_icons: bool,
 ) {
     let icon = if show_icons { "≡" } else { "" };
-    let (toc_area, toc_block) = render_modal_frame(
+    let toc_area = compute_toc_modal_area(container_rect);
+    let toc_block = render_modal_frame_at(
         f,
-        container_rect,
-        60,
-        60,
+        toc_area,
         icon,
         "contents",
         theme::LIME,

@@ -22,6 +22,10 @@ pub fn current_spinner_frame() -> &'static str {
     SPINNER_FRAMES[frame_idx]
 }
 
+pub fn compute_zen_area(size: ratatui::layout::Rect) -> ratatui::layout::Rect {
+    modals::centered_rect(80, 90, size)
+}
+
 pub fn draw(f: &mut Frame, app: &mut App) {
     let size = f.size();
 
@@ -37,7 +41,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         feed::render_feed_view(f, &app.feed, feed_area, app.config.ui.rounded_borders);
         status_bar::render(f, app, status_area);
     } else if app.zen_mode {
-        let zen_area = modals::centered_rect(80, 90, size);
+        let zen_area = compute_zen_area(size);
         pane_view::render_single_active_pane(f, app, zen_area);
     } else {
         let chunks = Layout::default()
