@@ -43,6 +43,9 @@ pub fn extract_spoken_audio(tag: &tl::HTMLTag, parser: &tl::Parser) -> Option<Sp
         return None;
     }
 
+    // Prefer mp3 streams for maximum player compatibility and lowest stream latency
+    tracks.sort_by_key(|t| if t.url.ends_with(".mp3") || t.url.contains(".mp3") { 0 } else { 1 });
+
     Some(SpokenAudio {
         title: "Spoken Article".to_string(),
         duration,
@@ -59,7 +62,7 @@ fn collect_audio_sources<'a>(
 
     if name == "source" || name == "audio" {
         if let Some(src_attr) = tag.attributes().get("src").flatten() {
-            let mut src = src_attr.as_utf8_str().to_string();
+            let mut src = decode_html_entities(&src_attr.as_utf8_str());
             if src.starts_with("//") {
                 src = format!("https:{}", src);
             }

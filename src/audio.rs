@@ -5,6 +5,7 @@ pub enum AudioBackend {
     Mpv,
     Ffplay,
     Cvlc,
+    Vlc,
     Afplay,
 }
 
@@ -47,6 +48,8 @@ impl AudioPlayer {
             Some(AudioBackend::Ffplay)
         } else if Self::has_binary("cvlc") {
             Some(AudioBackend::Cvlc)
+        } else if Self::has_binary("vlc") {
+            Some(AudioBackend::Vlc)
         } else if Self::has_binary("afplay") {
             Some(AudioBackend::Afplay)
         } else {
@@ -94,7 +97,13 @@ impl AudioPlayer {
                 .stderr(Stdio::null())
                 .spawn(),
             AudioBackend::Cvlc => Command::new("cvlc")
-                .args(["--play-and-exit", "-I", "dummy", url])
+                .args(["--play-and-exit", "--no-video", "-I", "dummy", url, "vlc://quit"])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn(),
+            AudioBackend::Vlc => Command::new("vlc")
+                .args(["--play-and-exit", "--no-video", "-I", "dummy", url, "vlc://quit"])
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
