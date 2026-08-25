@@ -6,7 +6,7 @@ pub mod types;
 pub mod utils;
 
 pub use banners::{ArticleBanner, BannerType};
-pub use types::{Heading, Link, ParsedDocument};
+pub use types::{AudioTrack, Heading, Link, ParsedDocument, SpokenAudio};
 pub use utils::url_decode;
 
 use crate::theme;

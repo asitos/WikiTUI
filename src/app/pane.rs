@@ -11,7 +11,7 @@ pub enum PaneContent {
     ArticleText {
         title: String,
         raw_html: String,
-        parsed_doc: ParsedDocument,
+        parsed_doc: Box<ParsedDocument>,
         last_width: usize,
         last_show_footnotes: bool,
         last_show_external_links: bool,
@@ -101,7 +101,7 @@ impl Pane {
             {
                 return;
             }
-            *parsed_doc = parse_wikipedia_html(
+            **parsed_doc = parse_wikipedia_html(
                 raw_html,
                 width,
                 show_footnotes,

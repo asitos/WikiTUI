@@ -501,7 +501,7 @@ impl App {
                     pane.content = PaneContent::ArticleText {
                         title,
                         raw_html: content,
-                        parsed_doc,
+                        parsed_doc: Box::new(parsed_doc),
                         last_width: initial_width,
                         last_show_footnotes: show_footnotes,
                         last_show_external_links: show_external_links,
