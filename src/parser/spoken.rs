@@ -44,7 +44,13 @@ pub fn extract_spoken_audio(tag: &tl::HTMLTag, parser: &tl::Parser) -> Option<Sp
     }
 
     // Prefer mp3 streams for maximum player compatibility and lowest stream latency
-    tracks.sort_by_key(|t| if t.url.ends_with(".mp3") || t.url.contains(".mp3") { 0 } else { 1 });
+    tracks.sort_by_key(|t| {
+        if t.url.ends_with(".mp3") || t.url.contains(".mp3") {
+            0
+        } else {
+            1
+        }
+    });
 
     Some(SpokenAudio {
         title: "Spoken Article".to_string(),

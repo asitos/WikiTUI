@@ -368,10 +368,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             area.height.saturating_sub(2),
         );
 
-        if col < area.x
-            || col >= area.x + area.width
-            || row < area.y
-            || row >= area.y + area.height
+        if col < area.x || col >= area.x + area.width || row < area.y || row >= area.y + area.height
         {
             app.input_mode = InputMode::Normal;
             return;
@@ -664,14 +661,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
     }
 }
 
-fn handle_scroll(
-    app: &mut App,
-    delta: i32,
-    col: u16,
-    row: u16,
-    term_width: u16,
-    term_height: u16,
-) {
+fn handle_scroll(app: &mut App, delta: i32, col: u16, row: u16, term_width: u16, term_height: u16) {
     if app.feed.active {
         if delta < 0 {
             app.feed.prev_post();

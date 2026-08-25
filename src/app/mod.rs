@@ -557,7 +557,10 @@ impl App {
                 parsed_doc, title, ..
             } => {
                 if let Some(spoken) = &parsed_doc.spoken_audio {
-                    spoken.tracks.first().map(|t| (title.clone(), t.url.clone()))
+                    spoken
+                        .tracks
+                        .first()
+                        .map(|t| (title.clone(), t.url.clone()))
                 } else {
                     None
                 }

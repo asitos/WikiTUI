@@ -97,13 +97,27 @@ impl AudioPlayer {
                 .stderr(Stdio::null())
                 .spawn(),
             AudioBackend::Cvlc => Command::new("cvlc")
-                .args(["--play-and-exit", "--no-video", "-I", "dummy", url, "vlc://quit"])
+                .args([
+                    "--play-and-exit",
+                    "--no-video",
+                    "-I",
+                    "dummy",
+                    url,
+                    "vlc://quit",
+                ])
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .spawn(),
             AudioBackend::Vlc => Command::new("vlc")
-                .args(["--play-and-exit", "--no-video", "-I", "dummy", url, "vlc://quit"])
+                .args([
+                    "--play-and-exit",
+                    "--no-video",
+                    "-I",
+                    "dummy",
+                    url,
+                    "vlc://quit",
+                ])
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())

@@ -25,14 +25,7 @@ pub fn render_toc_modal(
 ) {
     let icon = if show_icons { "≡" } else { "" };
     let toc_area = compute_toc_modal_area(container_rect);
-    let toc_block = render_modal_frame_at(
-        f,
-        toc_area,
-        icon,
-        "contents",
-        theme::LIME,
-        rounded,
-    );
+    let toc_block = render_modal_frame_at(f, toc_area, icon, "contents", theme::LIME, rounded);
 
     let current_scroll = pane.scroll_offset;
     let active_heading_idx = parsed_doc

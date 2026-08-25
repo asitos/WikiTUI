@@ -39,11 +39,7 @@ pub fn compute_tab_titles(app: &App) -> Vec<String> {
                         } else {
                             ""
                         };
-                        (
-                            icon_str.to_string(),
-                            title.to_lowercase(),
-                            saved,
-                        )
+                        (icon_str.to_string(), title.to_lowercase(), saved)
                     }
                     PaneContent::SearchResults { query, .. } => (
                         if show_icons { "󰍉" } else { "" }.to_string(),
