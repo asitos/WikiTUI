@@ -1,5 +1,5 @@
 use crate::app::{App, InputMode};
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub fn handle_save_to_list_mode(app: &mut App, key: KeyEvent) {
     let custom_lists: Vec<_> = app
@@ -132,6 +132,27 @@ pub fn handle_saved_lists_viewer_mode(app: &mut App, key: KeyEvent) {
                     .cloned()
                 {
                     app.input_mode = InputMode::Normal;
+                    if key
+                        .modifiers
+                        .intersects(KeyModifiers::ALT | KeyModifiers::META)
+                    {
+                        app.new_tab();
+                    }
+                    app.open_article(&title);
+                }
+            }
+        }
+        KeyCode::Char('t') => {
+            if app.lists_modal.viewer_focus_right {
+                if let Some(title) = app
+                    .saved_lists
+                    .lists
+                    .get(app.lists_modal.viewer_list_idx)
+                    .and_then(|l| l.articles.get(app.lists_modal.viewer_article_idx))
+                    .cloned()
+                {
+                    app.input_mode = InputMode::Normal;
+                    app.new_tab();
                     app.open_article(&title);
                 }
             }
