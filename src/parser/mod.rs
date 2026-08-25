@@ -1,6 +1,7 @@
 pub mod banners;
 pub mod blocks;
 pub mod codeblocks;
+pub mod spoken;
 pub mod tables;
 pub mod types;
 pub mod utils;
@@ -377,6 +378,15 @@ fn process_node<'a>(
                     }
                     return;
                 }
+            }
+
+            if spoken::is_spoken_wikipedia_tag(tag, parser) {
+                if let Some(spoken_audio) = spoken::extract_spoken_audio(tag, parser) {
+                    if doc.spoken_audio.is_none() {
+                        doc.spoken_audio = Some(spoken_audio);
+                    }
+                }
+                return;
             }
 
             if let Some(ref class_str) = class_attr {
