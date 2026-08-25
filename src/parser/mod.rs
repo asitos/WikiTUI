@@ -283,34 +283,7 @@ fn process_node<'a>(
 
             if let Some(ref class_str) = class_attr {
                 if let Some(banner_type) = banners::classify_ambox_class(class_str.as_ref()) {
-                    let raw_text = tag.inner_text(parser);
-                    let mut clean_text = raw_text.split_whitespace().collect::<Vec<_>>().join(" ");
-
-                    clean_text = clean_text
-                        .replace(" .", ".")
-                        .replace(" ,", ",")
-                        .replace(" :", ":")
-                        .replace(" ;", ";")
-                        .replace(" !", "!")
-                        .replace(" ?", "?");
-
-                    if let Some(idx) = clean_text.find("( Learn how") {
-                        clean_text.truncate(idx);
-                    }
-                    if let Some(idx) = clean_text.find("(Learn how") {
-                        clean_text.truncate(idx);
-                    }
-                    if let Some(open_paren) = clean_text.rfind('(') {
-                        let trailing = &clean_text[open_paren..];
-                        if trailing.contains("202")
-                            || trailing.contains("201")
-                            || trailing.contains("200")
-                        {
-                            clean_text.truncate(open_paren);
-                        }
-                    }
-
-                    let final_message = clean_text.trim().to_string();
+                    let final_message = banners::clean_ambox_text(&tag.inner_text(parser));
                     if !final_message.is_empty() {
                         if !current_tokens.is_empty() {
                             wrap_and_append_block(current_tokens, doc, max_width);

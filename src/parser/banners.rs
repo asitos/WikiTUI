@@ -104,3 +104,36 @@ pub fn classify_ambox_class(class_attr: &str) -> Option<BannerType> {
 
     Some(BannerType::Style)
 }
+
+pub fn clean_ambox_text(raw_text: &str) -> String {
+    let mut clean_text = String::with_capacity(raw_text.len());
+
+    for word in raw_text.split_whitespace() {
+        if matches!(word, "." | "," | ":" | ";" | "!" | "?") {
+            if clean_text.ends_with(' ') {
+                clean_text.pop();
+            }
+            clean_text.push_str(word);
+        } else {
+            if !clean_text.is_empty() && !clean_text.ends_with(' ') {
+                clean_text.push(' ');
+            }
+            clean_text.push_str(word);
+        }
+    }
+
+    if let Some(idx) = clean_text.find("( Learn how") {
+        clean_text.truncate(idx);
+    }
+    if let Some(idx) = clean_text.find("(Learn how") {
+        clean_text.truncate(idx);
+    }
+    if let Some(open_paren) = clean_text.rfind('(') {
+        let trailing = &clean_text[open_paren..];
+        if trailing.contains("202") || trailing.contains("201") || trailing.contains("200") {
+            clean_text.truncate(open_paren);
+        }
+    }
+
+    clean_text.trim().to_string()
+}
