@@ -65,13 +65,15 @@ pub enum NetworkEvent {
 }
 
 pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>) {
-    let agent: ureq::Agent = ureq::builder()
-        .user_agent(concat!(
-            "wikid/",
-            env!("CARGO_PKG_VERSION"),
-            " (https://github.com/sharkthakftw/wikid)"
-        ))
-        .build();
+    let agent: std::sync::Arc<ureq::Agent> = std::sync::Arc::new(
+        ureq::builder()
+            .user_agent(concat!(
+                "wikid/",
+                env!("CARGO_PKG_VERSION"),
+                " (https://github.com/sharkthakftw/wikid)"
+            ))
+            .build(),
+    );
 
     while let Ok(cmd) = cmd_rx.recv() {
         let agent = agent.clone();
