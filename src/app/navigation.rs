@@ -92,12 +92,22 @@ impl App {
     }
 
     pub fn select_next_item(&mut self, term_height: u16) {
-        let step = self.config.reader.scroll_lines.max(1);
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        let step = if is_article {
+            self.config.reader.scroll_lines.max(1)
+        } else {
+            1
+        };
         self.scroll_down_lines(step, term_height);
     }
 
     pub fn select_prev_item(&mut self, term_height: u16) {
-        let step = self.config.reader.scroll_lines.max(1);
+        let is_article = matches!(self.active_pane().content, PaneContent::ArticleText { .. });
+        let step = if is_article {
+            self.config.reader.scroll_lines.max(1)
+        } else {
+            1
+        };
         self.scroll_up_lines(step, term_height);
     }
 
