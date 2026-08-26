@@ -13,8 +13,14 @@ struct WikiParseObject {
 }
 
 #[derive(Deserialize)]
+struct WikiError {
+    info: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct WikiParseResponse {
     parse: Option<WikiParseObject>,
+    error: Option<WikiError>,
 }
 
 pub fn cache_dir() -> PathBuf {
@@ -110,6 +116,12 @@ pub fn fetch_article_wikipedia(
             let parse_resp: WikiParseResponse = response
                 .into_json()
                 .map_err(|e| format!("parse error: {}", e))?;
+
+            if let Some(err) = parse_resp.error {
+                if let Some(info) = err.info {
+                    return Err(format!("Wikipedia error: {}", info));
+                }
+            }
 
             let html = parse_resp
                 .parse
