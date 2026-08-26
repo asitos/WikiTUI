@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 #[derive(Deserialize)]
@@ -46,9 +45,13 @@ pub fn cache_file_path(title: &str) -> PathBuf {
             }
         })
         .collect();
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    title.hash(&mut hasher);
-    let hash = hasher.finish();
+    
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for b in title.bytes() {
+        hash ^= b as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    
     cache_dir().join(format!("{}_{:016x}.html", safe_name, hash))
 }
 
