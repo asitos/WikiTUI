@@ -287,24 +287,24 @@ impl App {
 
         if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
             for (line_idx, line) in parsed_doc.lines.iter().enumerate() {
-                let full_text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
-                let full_lower = full_text.to_lowercase();
-                for (match_pos, _) in full_lower.match_indices(&query) {
-                    let mut current_offset = 0;
-                    let mut start_span_idx = 0;
-                    for (idx, span) in line.spans.iter().enumerate() {
-                        let span_len = span.content.len();
-                        if current_offset + span_len > match_pos {
-                            start_span_idx = idx;
-                            break;
+                if let Some(full_lower) = parsed_doc.plain_text_lower.get(line_idx) {
+                    for (match_pos, _) in full_lower.match_indices(&query) {
+                        let mut current_offset = 0;
+                        let mut start_span_idx = 0;
+                        for (idx, span) in line.spans.iter().enumerate() {
+                            let span_len = span.content.len();
+                            if current_offset + span_len > match_pos {
+                                start_span_idx = idx;
+                                break;
+                            }
+                            current_offset += span_len;
                         }
-                        current_offset += span_len;
+                        pane.local_matches.push(LocalMatch {
+                            line_idx,
+                            span_idx: start_span_idx,
+                            char_offset: match_pos,
+                        });
                     }
-                    pane.local_matches.push(LocalMatch {
-                        line_idx,
-                        span_idx: start_span_idx,
-                        char_offset: match_pos,
-                    });
                 }
             }
             if !pane.local_matches.is_empty() {

@@ -48,6 +48,7 @@ pub struct SpokenAudio {
 #[derive(Debug, Clone, Default)]
 pub struct ParsedDocument {
     pub lines: Vec<Line<'static>>,
+    pub plain_text_lower: Vec<String>,
     pub links: Vec<Link>,
     pub headings: Vec<Heading>,
     pub reference_targets: HashMap<String, usize>,
