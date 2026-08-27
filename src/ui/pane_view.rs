@@ -146,10 +146,28 @@ fn render_pane_at(
                     .alignment(Alignment::Center);
                 f.render_widget(no_res_p, rect);
             } else {
-                let mut lines = Vec::new();
                 let inner_width = (rect.width as usize).saturating_sub(4).max(20);
+                let item_counts = compute_search_result_lines_count(items, pane.selected_idx, inner_width);
+                let total_lines: usize = item_counts.iter().sum();
+                let view_start = pane.scroll_offset;
+                let view_end = view_start + pane.viewport_height + 2;
+
+                let mut lines = Vec::with_capacity(total_lines);
+                let mut cur_line = 0;
 
                 for (i, item) in items.iter().enumerate() {
+                    let item_height = item_counts[i];
+                    let item_start = cur_line;
+                    let item_end = item_start + item_height;
+                    cur_line = item_end;
+
+                    if item_end <= view_start || item_start >= view_end {
+                        for _ in 0..item_height {
+                            lines.push(Line::from(""));
+                        }
+                        continue;
+                    }
+
                     let is_selected = i == pane.selected_idx;
                     let title_lower = item.title.to_lowercase();
                     let snippet_lower = item.snippet.to_lowercase();
@@ -212,7 +230,6 @@ fn render_pane_at(
                     }
                     lines.push(Line::from(""));
                 }
-                let total_lines = lines.len();
                 let results_p = Paragraph::new(lines)
                     .block(block)
                     .scroll((pane.scroll_offset as u16, 0));
@@ -431,6 +448,26 @@ pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
     lines
 }
 
+pub fn count_wrapped_lines(text: &str, max_width: usize) -> usize {
+    if text.trim().is_empty() {
+        return 0;
+    }
+    let mut count = 1;
+    let mut current_width = 0;
+    for word in text.split_whitespace() {
+        let word_width = unicode_width::UnicodeWidthStr::width(word);
+        if current_width == 0 {
+            current_width = word_width;
+        } else if current_width + 1 + word_width <= max_width {
+            current_width += 1 + word_width;
+        } else {
+            count += 1;
+            current_width = word_width;
+        }
+    }
+    count
+}
+
 pub fn compute_search_result_lines_count(
     items: &[crate::api::SearchResultItem],
     selected_idx: usize,
@@ -440,14 +477,13 @@ pub fn compute_search_result_lines_count(
         .iter()
         .enumerate()
         .map(|(i, item)| {
-            let snippet_lower = item.snippet.to_lowercase();
-            let snippet_lines = if !snippet_lower.is_empty() {
+            let snippet_lines = if !item.snippet.is_empty() {
                 let wrap_w = if i == selected_idx {
                     inner_width.saturating_sub(3).max(10)
                 } else {
                     inner_width.saturating_sub(4).max(10)
                 };
-                wrap_text(&snippet_lower, wrap_w).len()
+                count_wrapped_lines(&item.snippet, wrap_w)
             } else {
                 0
             };
