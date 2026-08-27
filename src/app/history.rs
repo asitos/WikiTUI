@@ -15,6 +15,7 @@ impl App {
         active_pane.selected_link_idx = None;
         active_pane.intra_jump_back.clear();
         active_pane.intra_jump_forward.clear();
+        active_pane.scroll_offset = 0;
         self.send_fetch_article(pane_id, title.to_string());
     }
 

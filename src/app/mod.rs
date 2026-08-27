@@ -427,7 +427,6 @@ impl App {
                 let code_line_numbers = self.config.reader.code_line_numbers;
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     pane.is_loading = false;
-                    pane.scroll_offset = 0;
                     pane.toc_focused = false;
                     let initial_width = 80;
                     let parsed_doc = parse_wikipedia_html(
@@ -438,6 +437,7 @@ impl App {
                         heading_marker,
                         code_line_numbers,
                     );
+                    pane.scroll_offset = pane.scroll_offset.min(parsed_doc.lines.len().saturating_sub(1));
                     let initial_link_idx = if !parsed_doc.links.is_empty() {
                         Some(0)
                     } else {

@@ -50,6 +50,7 @@ impl App {
 
         if let Some(pane) = self.find_pane_mut(pane_id) {
             pane.is_loading = true;
+            pane.scroll_offset = 0;
         }
 
         self.send_fetch_random_article(pane_id);
