@@ -36,6 +36,7 @@ pub enum InputMode {
     SavedListsViewer,
     Confirm,
     Settings,
+    Categories,
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -128,6 +129,7 @@ pub struct App {
     pub config_last_mtime: Option<std::time::SystemTime>,
     pub last_config_check: std::time::Instant,
     pub settings_cursor_idx: usize,
+    pub categories_cursor_idx: usize,
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
     pub wiki_stats: crate::api::WikiStatistics,
@@ -199,6 +201,7 @@ impl App {
             config_last_mtime: crate::config::Config::get_modified_time(),
             last_config_check: std::time::Instant::now(),
             settings_cursor_idx: 0,
+            categories_cursor_idx: 0,
             closed_tabs_stack: Vec::new(),
             status_message: None,
             wiki_stats: crate::api::WikiStatistics::default(),
@@ -528,6 +531,25 @@ impl App {
         if self.audio_player.is_active() {
             self.audio_player.stop();
             self.set_status_message("audio playback stopped".to_string());
+        }
+    }
+
+    pub fn toggle_categories_modal(&mut self) {
+        if self.input_mode == InputMode::Categories {
+            self.input_mode = InputMode::Normal;
+            return;
+        }
+
+        let has_categories = match &self.active_pane().content {
+            PaneContent::ArticleText { parsed_doc, .. } => !parsed_doc.categories.is_empty(),
+            _ => false,
+        };
+
+        if has_categories {
+            self.categories_cursor_idx = 0;
+            self.input_mode = InputMode::Categories;
+        } else {
+            self.set_status_message("no categories found for this article".to_string());
         }
     }
 }

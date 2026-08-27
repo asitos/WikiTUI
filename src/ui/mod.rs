@@ -93,4 +93,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.input_mode == InputMode::Settings {
         modals::render_settings_modal(f, app, size);
     }
+
+    if app.input_mode == InputMode::Categories {
+        modals::render_categories_modal(f, app, size);
+    }
 }
