@@ -218,19 +218,8 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('x') => {
                 app.close_active_pane();
             }
-            KeyCode::Char('C')
-                if key
-                    .modifiers
-                    .intersects(KeyModifiers::ALT | KeyModifiers::META) =>
-            {
+            KeyCode::Char('u') if key.modifiers.is_empty() => {
                 app.reopen_last_closed();
-            }
-            KeyCode::Char('c')
-                if key
-                    .modifiers
-                    .intersects(KeyModifiers::ALT | KeyModifiers::META) =>
-            {
-                app.close_active_pane();
             }
             KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.navigate_panes('h', term_width, term_height);
