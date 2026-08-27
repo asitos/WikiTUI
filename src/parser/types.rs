@@ -53,6 +53,7 @@ pub struct ParsedDocument {
     pub headings: Vec<Heading>,
     pub reference_targets: HashMap<String, usize>,
     pub spoken_audio: Option<SpokenAudio>,
+    pub categories: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

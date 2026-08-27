@@ -34,7 +34,8 @@ impl App {
     }
 
     pub fn record_recent_article(&mut self, title: &str) {
-        if title.trim().is_empty() {
+        let trimmed = title.trim();
+        if trimmed.is_empty() || trimmed.to_lowercase().starts_with("category:") {
             return;
         }
         self.recent_articles.retain(|t| t != title);
@@ -46,15 +47,22 @@ impl App {
     }
 
     pub fn get_continue_reading_articles(&self) -> Vec<String> {
-        if !self.recent_articles.is_empty() {
-            return self.recent_articles.clone();
+        let filtered_recent: Vec<String> = self
+            .recent_articles
+            .iter()
+            .filter(|t| !t.to_lowercase().starts_with("category:"))
+            .cloned()
+            .collect();
+
+        if !filtered_recent.is_empty() {
+            return filtered_recent;
         }
 
         let mut seen = HashSet::new();
         let mut list = Vec::with_capacity(10);
         for l in &self.saved_lists.lists {
             for a in l.articles.iter().rev() {
-                if seen.insert(a.as_str()) {
+                if !a.to_lowercase().starts_with("category:") && seen.insert(a.as_str()) {
                     list.push(a.clone());
                     if list.len() >= 10 {
                         return list;

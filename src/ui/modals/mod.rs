@@ -1,3 +1,4 @@
+pub mod categories;
 pub mod help;
 pub mod lists;
 pub mod onboarding;
@@ -6,6 +7,7 @@ pub mod settings;
 pub mod toc;
 pub mod utils;
 
+pub use categories::{compute_categories_modal_area, render_categories_modal};
 pub use help::{compute_help_modal_area, render_help_modal};
 pub use lists::{
     compute_confirm_modal_area, compute_create_new_list_modal_area,
