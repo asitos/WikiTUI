@@ -116,6 +116,49 @@ impl Pane {
             *last_show_external_links = show_external_links;
             *last_heading_marker = heading_marker;
             *last_code_line_numbers = code_line_numbers;
+            self.recompute_local_matches();
+        }
+    }
+
+    pub fn recompute_local_matches(&mut self) {
+        self.local_matches.clear();
+        let query = self.local_search_query.to_lowercase();
+        if query.trim().is_empty() {
+            self.selected_match_idx = None;
+            return;
+        }
+
+        if let PaneContent::ArticleText { parsed_doc, .. } = &self.content {
+            for (line_idx, line) in parsed_doc.lines.iter().enumerate() {
+                if let Some(full_lower) = parsed_doc.plain_text_lower.get(line_idx) {
+                    for (match_pos, _) in full_lower.match_indices(&query) {
+                        let mut current_offset = 0;
+                        let mut start_span_idx = 0;
+                        for (idx, span) in line.spans.iter().enumerate() {
+                            let span_len = span.content.len();
+                            if current_offset + span_len > match_pos {
+                                start_span_idx = idx;
+                                break;
+                            }
+                            current_offset += span_len;
+                        }
+                        self.local_matches.push(LocalMatch {
+                            line_idx,
+                            span_idx: start_span_idx,
+                            char_offset: match_pos,
+                        });
+                    }
+                }
+            }
+            if !self.local_matches.is_empty() {
+                if let Some(sel) = self.selected_match_idx {
+                    self.selected_match_idx = Some(sel.min(self.local_matches.len() - 1));
+                } else {
+                    self.selected_match_idx = Some(0);
+                }
+            } else {
+                self.selected_match_idx = None;
+            }
         }
     }
 
