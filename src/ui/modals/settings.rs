@@ -189,9 +189,9 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
 
 fn bool_span(val: bool) -> Span<'static> {
     if val {
-        Span::styled("[✔ ON] ", Style::default().fg(theme::LIME).bold())
+        Span::styled("[ ON ] ", Style::default().fg(theme::LIME).bold())
     } else {
-        Span::styled("[✖ OFF]", Style::default().fg(theme::GREY))
+        Span::styled("[ OFF ]", Style::default().fg(theme::GREY))
     }
 }
 

@@ -86,7 +86,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let center_spans = if let Some((ref msg, time)) = app.status_message {
         if time.elapsed().as_secs_f32() < 3.0 {
             vec![Span::styled(
-                format!("✓ {}", msg),
+                msg.clone(),
                 Style::default()
                     .fg(theme::LIME)
                     .add_modifier(Modifier::BOLD),

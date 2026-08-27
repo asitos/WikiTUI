@@ -24,7 +24,7 @@ pub fn render_categories_modal(f: &mut Frame, app: &App, size: Rect) {
 
     let total = categories.len();
     let modal_title = format!("categories · {} ({})", title.to_lowercase(), total);
-    let icon = if app.config.ui.icons { "󰓹" } else { "🏷" };
+    let icon = if app.config.ui.icons { "󰓹" } else { "" };
 
     let modal_area = compute_categories_modal_area(size);
     let modal_block = render_modal_frame_at(
