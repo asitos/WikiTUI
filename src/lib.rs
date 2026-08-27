@@ -8,6 +8,7 @@ pub mod keybinds;
 pub mod layout;
 pub mod mouse;
 pub mod parser;
+pub mod paths;
 pub mod saved_lists;
 pub mod session;
 pub mod theme;

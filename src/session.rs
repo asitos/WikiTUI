@@ -28,15 +28,7 @@ pub struct SessionState {
 
 impl SessionState {
     pub fn file_path() -> PathBuf {
-        if let Ok(home) = std::env::var("HOME") {
-            let mut dir = PathBuf::from(home);
-            dir.push(".config");
-            dir.push("wikid");
-            dir.push("session.json");
-            dir
-        } else {
-            PathBuf::from("session.json")
-        }
+        crate::paths::config_dir().join("session.json")
     }
 
     pub fn load() -> Option<Self> {

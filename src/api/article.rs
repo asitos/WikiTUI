@@ -31,20 +31,7 @@ struct WikiParseResponse {
 }
 
 pub fn cache_dir() -> PathBuf {
-    if let Ok(cache_home) = std::env::var("XDG_CACHE_HOME") {
-        let mut p = PathBuf::from(cache_home);
-        p.push("wikid");
-        p.push("articles");
-        p
-    } else if let Ok(home) = std::env::var("HOME") {
-        let mut p = PathBuf::from(home);
-        p.push(".cache");
-        p.push("wikid");
-        p.push("articles");
-        p
-    } else {
-        PathBuf::from(".cache/wikid/articles")
-    }
+    crate::paths::cache_dir().join("articles")
 }
 
 pub fn cache_file_path(title: &str) -> PathBuf {

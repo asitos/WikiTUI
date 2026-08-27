@@ -4,15 +4,7 @@ use std::path::PathBuf;
 
 impl App {
     pub fn recent_articles_file_path() -> PathBuf {
-        if let Ok(home) = std::env::var("HOME") {
-            let mut dir = PathBuf::from(home);
-            dir.push(".config");
-            dir.push("wikid");
-            dir.push("recent_articles.json");
-            dir
-        } else {
-            PathBuf::from("recent_articles.json")
-        }
+        crate::paths::config_dir().join("recent_articles.json")
     }
 
     pub fn load_recent_articles() -> Vec<String> {

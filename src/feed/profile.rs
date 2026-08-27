@@ -41,15 +41,7 @@ impl Default for FeedProfile {
 
 impl FeedProfile {
     pub fn profile_path() -> PathBuf {
-        if let Ok(home) = std::env::var("HOME") {
-            let mut dir = PathBuf::from(home);
-            dir.push(".config");
-            dir.push("wikid");
-            dir.push("feed_profile.json");
-            dir
-        } else {
-            PathBuf::from("feed_profile.json")
-        }
+        crate::paths::config_dir().join("feed_profile.json")
     }
 
     pub fn load() -> Self {

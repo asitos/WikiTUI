@@ -131,15 +131,7 @@ use std::time::SystemTime;
 
 impl Config {
     pub fn config_path() -> PathBuf {
-        if let Ok(home) = std::env::var("HOME") {
-            let mut dir = PathBuf::from(home);
-            dir.push(".config");
-            dir.push("wikid");
-            dir.push("config.toml");
-            dir
-        } else {
-            PathBuf::from("config.toml")
-        }
+        crate::paths::config_dir().join("config.toml")
     }
 
     pub fn get_modified_time() -> Option<SystemTime> {

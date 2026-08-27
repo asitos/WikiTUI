@@ -34,15 +34,7 @@ impl Default for SavedListsStore {
 
 impl SavedListsStore {
     pub fn file_path() -> PathBuf {
-        if let Ok(home) = std::env::var("HOME") {
-            let mut dir = PathBuf::from(home);
-            dir.push(".config");
-            dir.push("wikid");
-            dir.push("saved_articles.json");
-            dir
-        } else {
-            PathBuf::from("saved_articles.json")
-        }
+        crate::paths::config_dir().join("saved_articles.json")
     }
 
     pub fn rebuild_cache(&mut self) {
