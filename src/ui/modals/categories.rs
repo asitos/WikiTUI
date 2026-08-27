@@ -1,4 +1,4 @@
-use super::utils::{centered_rect, render_modal_frame_at};
+use super::utils::{centered_rect, create_selectable_line, render_modal_frame_at};
 use crate::app::{App, PaneContent};
 use crate::theme;
 use ratatui::{
@@ -56,25 +56,13 @@ pub fn render_categories_modal(f: &mut Frame, app: &App, size: Rect) {
     } else {
         for (idx, cat) in categories.iter().enumerate() {
             let is_selected = idx == selected_idx;
-            let prefix = if is_selected { "▶ " } else { "  " };
-
-            let style = if is_selected {
-                Style::default().fg(theme::TEAL).bold()
-            } else {
-                Style::default().fg(theme::FG)
-            };
-
-            lines.push(Line::from(vec![
-                Span::styled(
-                    prefix,
-                    if is_selected {
-                        Style::default().fg(theme::TEAL).bold()
-                    } else {
-                        Style::default().fg(theme::GREY)
-                    },
-                ),
-                Span::styled(cat, style),
-            ]));
+            lines.push(create_selectable_line(
+                cat,
+                is_selected,
+                true,
+                theme::TEAL,
+                None,
+            ));
         }
     }
 

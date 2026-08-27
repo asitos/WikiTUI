@@ -1,14 +1,8 @@
-use super::utils::{centered_rect, render_modal_frame_at};
+use super::utils::{centered_rect, create_selectable_line, render_modal_frame_at};
 use crate::app::Pane;
 use crate::parser::ParsedDocument;
 use crate::theme;
-use ratatui::{
-    layout::Rect,
-    style::{Style, Stylize},
-    text::{Line, Span},
-    widgets::Paragraph,
-    Frame,
-};
+use ratatui::{layout::Rect, widgets::Paragraph, Frame};
 
 pub fn compute_toc_modal_area(container_rect: Rect) -> Rect {
     centered_rect(60, 60, container_rect)
@@ -47,13 +41,6 @@ pub fn render_toc_modal(
         let is_selected = idx == selected_idx;
         let indent_len = ((h.level.saturating_sub(1)) * 2) as usize;
         let indent = " ".repeat(indent_len);
-        let prefix = if is_selected { "> " } else { "  " };
-
-        let style = if is_selected {
-            Style::default().fg(theme::LIME).bold()
-        } else {
-            Style::default().fg(theme::FG)
-        };
 
         let num_str = section_numbers.get(idx).map(|s| s.as_str()).unwrap_or("");
         let num_len = num_str.len();
@@ -71,19 +58,19 @@ pub fn render_toc_modal(
             h.title.clone()
         };
 
-        let num_style = if is_selected {
-            Style::default().fg(theme::LIME)
+        let label = if num_str.is_empty() {
+            format!("{}{}", indent, truncated_title)
         } else {
-            Style::default().fg(theme::GREY)
+            format!("{}{}{}", indent, num_str, truncated_title)
         };
 
-        let mut spans = vec![Span::styled(prefix, style), Span::raw(indent)];
-        if !num_str.is_empty() {
-            spans.push(Span::styled(num_str.to_string(), num_style));
-        }
-        spans.push(Span::styled(truncated_title, style));
-
-        toc_lines.push(Line::from(spans));
+        toc_lines.push(create_selectable_line(
+            &label,
+            is_selected,
+            true,
+            theme::LIME,
+            None,
+        ));
     }
 
     let visible_rows = (toc_area.height.saturating_sub(2)) as usize;
