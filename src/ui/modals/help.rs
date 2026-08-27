@@ -88,6 +88,7 @@ pub fn render_help_modal(f: &mut Frame, app: &crate::app::App, size: Rect) {
                 Style::default().fg(theme::VIOLET).bold(),
             )]),
             Line::from("   z                   toggle zen mode"),
+            Line::from("   c                   view article categories"),
             Line::from("   a / A               play/pause / stop spoken audio"),
             Line::from("   F                   toggle feed mode"),
             Line::from("   S                   restore session"),
@@ -118,6 +119,7 @@ pub fn render_help_modal(f: &mut Frame, app: &crate::app::App, size: Rect) {
             Line::from("   H/L                 go backward / forward in history"),
             Line::from("   ]/[                 jump to next / prev heading"),
             Line::from("   o                   toggle table of contents"),
+            Line::from("   c                   view article categories"),
             Line::from(""),
             Line::from(vec![Span::styled(
                 " links & selection",

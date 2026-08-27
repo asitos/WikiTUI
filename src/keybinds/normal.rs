@@ -103,6 +103,9 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('o') => {
                 app.toggle_toc();
             }
+            KeyCode::Char('c') if key.modifiers.is_empty() => {
+                app.toggle_categories_modal();
+            }
             KeyCode::Char('m') => {
                 app.open_save_to_list_modal();
             }
