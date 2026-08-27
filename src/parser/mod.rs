@@ -1,5 +1,6 @@
 pub mod banners;
 pub mod blocks;
+pub mod categories;
 pub mod codeblocks;
 pub mod elements;
 pub mod spoken;
@@ -238,6 +239,11 @@ fn process_node<'a>(
                         doc.spoken_audio = Some(spoken_audio);
                     }
                 }
+                return;
+            }
+
+            if categories::is_category_links_tag(tag, parser) {
+                categories::extract_categories_from_tag(tag, parser, &mut doc.categories);
                 return;
             }
 
