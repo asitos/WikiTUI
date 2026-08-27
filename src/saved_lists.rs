@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 
@@ -13,6 +14,8 @@ pub struct SavedList {
 pub struct SavedListsStore {
     pub version: u32,
     pub lists: Vec<SavedList>,
+    #[serde(skip)]
+    pub cached_saved_set: HashSet<String>,
 }
 
 impl Default for SavedListsStore {
@@ -24,6 +27,7 @@ impl Default for SavedListsStore {
                 name: "Liked".to_string(),
                 articles: Vec::new(),
             }],
+            cached_saved_set: HashSet::new(),
         }
     }
 }
@@ -41,6 +45,15 @@ impl SavedListsStore {
         }
     }
 
+    pub fn rebuild_cache(&mut self) {
+        self.cached_saved_set.clear();
+        for list in &self.lists {
+            for a in &list.articles {
+                self.cached_saved_set.insert(a.trim().to_lowercase());
+            }
+        }
+    }
+
     pub fn load() -> Self {
         let path = Self::file_path();
         let loaded = fs::read_to_string(&path)
@@ -49,10 +62,12 @@ impl SavedListsStore {
 
         if let Some(mut store) = loaded {
             store.ensure_list("liked", "Liked");
+            store.rebuild_cache();
             return store;
         }
-        let store = Self::default();
+        let mut store = Self::default();
         store.save();
+        store.rebuild_cache();
         store
     }
 
@@ -80,6 +95,7 @@ impl SavedListsStore {
                 articles: Vec::new(),
             });
             self.save();
+            self.rebuild_cache();
         }
         id
     }
@@ -90,6 +106,7 @@ impl SavedListsStore {
         }
         self.lists.retain(|l| l.id != list_id);
         self.save();
+        self.rebuild_cache();
     }
 
     pub fn toggle_article_in_list(&mut self, list_id: &str, title: &str) -> bool {
@@ -99,15 +116,16 @@ impl SavedListsStore {
         }
 
         if let Some(list) = self.lists.iter_mut().find(|l| l.id == list_id) {
-            if let Some(idx) = list.articles.iter().position(|a| a == title_trimmed) {
+            let added = if let Some(idx) = list.articles.iter().position(|a| a == title_trimmed) {
                 list.articles.remove(idx);
-                self.save();
-                return false;
+                false
             } else {
                 list.articles.push(title_trimmed.to_string());
-                self.save();
-                return true;
-            }
+                true
+            };
+            self.save();
+            self.rebuild_cache();
+            return added;
         }
         false
     }
@@ -126,11 +144,7 @@ impl SavedListsStore {
         if title_trimmed.is_empty() {
             return false;
         }
-        self.lists.iter().any(|l| {
-            l.articles
-                .iter()
-                .any(|a| a.eq_ignore_ascii_case(title_trimmed))
-        })
+        self.cached_saved_set.contains(&title_trimmed.to_lowercase())
     }
 
     pub fn ensure_list(&mut self, id: &str, name: &str) {
@@ -163,10 +177,12 @@ impl SavedListsStore {
                 if !list.articles.iter().any(|a| a == title_trimmed) {
                     list.articles.push(title_trimmed.to_string());
                     self.save();
+                    self.rebuild_cache();
                 }
             } else if let Some(idx) = list.articles.iter().position(|a| a == title_trimmed) {
                 list.articles.remove(idx);
                 self.save();
+                self.rebuild_cache();
             }
         }
     }
