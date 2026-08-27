@@ -1,6 +1,7 @@
 pub mod banners;
 pub mod blocks;
 pub mod codeblocks;
+pub mod elements;
 pub mod spoken;
 pub mod tables;
 pub mod types;
@@ -13,7 +14,6 @@ pub use utils::url_decode;
 use crate::theme;
 use blocks::wrap_and_append_block;
 use ratatui::style::{Modifier, Style};
-use ratatui::text::{Line, Span};
 use types::StyledToken;
 use utils::{decode_html_entities, extract_title_from_href, to_subscript_str, to_superscript_str};
 
@@ -302,98 +302,7 @@ fn process_node<'a>(
 
             if let Some(ref class_str) = class_attr {
                 if let Some(banner_type) = banners::classify_ambox_class(class_str.as_ref()) {
-                    let final_message = banners::clean_ambox_text(&tag.inner_text(parser));
-                    if !final_message.is_empty() {
-                        if !current_tokens.is_empty() {
-                            wrap_and_append_block(current_tokens, doc, max_width);
-                            current_tokens.clear();
-                        }
-
-                        let color = banner_type.color();
-                        let label = banner_type.label();
-
-                        let side_margin = if max_width > 60 {
-                            (max_width * 10 / 100).clamp(4, 20)
-                        } else {
-                            2
-                        };
-                        let left_padding = " ".repeat(side_margin);
-
-                        let box_width = max_width.saturating_sub(side_margin * 2).max(20);
-                        let header_str = format!("─ ⚠️ {} ", label);
-                        let header_chars = header_str.chars().count();
-                        let fill_top = box_width.saturating_sub(2 + header_chars);
-
-                        doc.lines.push(Line::from(vec![
-                            Span::raw(left_padding.clone()),
-                            Span::styled("┌", Style::default().fg(color)),
-                            Span::styled(
-                                header_str,
-                                Style::default().fg(color).add_modifier(Modifier::BOLD),
-                            ),
-                            Span::styled("─".repeat(fill_top), Style::default().fg(color)),
-                            Span::styled("┐", Style::default().fg(color)),
-                        ]));
-
-                        let inner_width = box_width.saturating_sub(4).max(10);
-                        let mut current_line = String::new();
-                        for word in final_message.split_whitespace() {
-                            if current_line.is_empty() {
-                                current_line.push_str(word);
-                            } else if current_line.chars().count() + 1 + word.chars().count()
-                                <= inner_width
-                            {
-                                current_line.push(' ');
-                                current_line.push_str(word);
-                            } else {
-                                let msg_len = current_line.chars().count();
-                                let padding = inner_width.saturating_sub(msg_len);
-                                doc.lines.push(Line::from(vec![
-                                    Span::raw(left_padding.clone()),
-                                    Span::styled("│ ", Style::default().fg(color)),
-                                    Span::styled(
-                                        current_line,
-                                        Style::default()
-                                            .fg(theme::FG)
-                                            .add_modifier(Modifier::ITALIC),
-                                    ),
-                                    Span::styled(
-                                        " ".repeat(padding),
-                                        Style::default().fg(theme::FG),
-                                    ),
-                                    Span::styled(" │", Style::default().fg(color)),
-                                ]));
-                                current_line = word.to_string();
-                            }
-                        }
-                        if !current_line.is_empty() {
-                            let msg_len = current_line.chars().count();
-                            let padding = inner_width.saturating_sub(msg_len);
-                            doc.lines.push(Line::from(vec![
-                                Span::raw(left_padding.clone()),
-                                Span::styled("│ ", Style::default().fg(color)),
-                                Span::styled(
-                                    current_line,
-                                    Style::default()
-                                        .fg(theme::FG)
-                                        .add_modifier(Modifier::ITALIC),
-                                ),
-                                Span::styled(" ".repeat(padding), Style::default().fg(theme::FG)),
-                                Span::styled(" │", Style::default().fg(color)),
-                            ]));
-                        }
-
-                        doc.lines.push(Line::from(vec![
-                            Span::raw(left_padding),
-                            Span::styled("└", Style::default().fg(color)),
-                            Span::styled(
-                                "─".repeat(box_width.saturating_sub(2)),
-                                Style::default().fg(color),
-                            ),
-                            Span::styled("┘", Style::default().fg(color)),
-                        ]));
-                        doc.lines.push(Line::from(""));
-                    }
+                    banners::render_ambox_banner(tag, parser, current_tokens, doc, max_width, banner_type);
                     return;
                 }
             }
@@ -519,35 +428,15 @@ fn process_node<'a>(
 
             match tag_name {
                 "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
-                    let level = tag_name
-                        .chars()
-                        .nth(1)
-                        .and_then(|c| c.to_digit(10))
-                        .unwrap_or(1) as u8;
-                    let title = decode_html_entities(&tag.inner_text(parser))
-                        .trim()
-                        .to_string();
-                    if !title.is_empty() {
-                        doc.headings.push(Heading {
-                            title,
-                            level,
-                            line_idx: doc.lines.len(),
-                        });
-                    }
-
-                    current_style = match tag_name {
-                        "h1" | "h2" => current_style.fg(theme::RED).add_modifier(Modifier::BOLD),
-                        "h3" | "h4" => current_style.fg(theme::ORANGE).add_modifier(Modifier::BOLD),
-                        _ => current_style.fg(theme::YELLOW).add_modifier(Modifier::BOLD),
-                    };
-
-                    if heading_marker {
-                        current_tokens.push(StyledToken {
-                            text: "▍".to_string(),
-                            style: current_style,
-                            link_target: None,
-                        });
-                    }
+                    current_style = elements::handle_heading_tag(
+                        tag,
+                        parser,
+                        tag_name,
+                        doc,
+                        current_tokens,
+                        heading_marker,
+                        current_style,
+                    );
                 }
                 "b" | "strong" => {
                     current_style = current_style.add_modifier(Modifier::BOLD);
@@ -599,57 +488,9 @@ fn process_node<'a>(
                     });
                 }
                 "img" => {
-                    let is_math_fallback = class_attr
-                        .as_deref()
-                        .map(|c| c.contains("mwe-math"))
-                        .unwrap_or(false);
-
-                    let alt_text = tag
-                        .attributes()
-                        .get("alt")
-                        .flatten()
-                        .or_else(|| tag.attributes().get("title").flatten())
-                        .map(|b| decode_html_entities(&b.as_utf8_str()))
-                        .unwrap_or_else(|| "image".to_string());
-
-                    let clean_alt = alt_text.trim();
-                    let is_latex = clean_alt.contains("\\displaystyle")
-                        || clean_alt.contains("\\textstyle")
-                        || clean_alt.starts_with("{\\");
-
-                    if is_math_fallback || is_latex {
-                        return;
+                    if let Some(token) = elements::handle_img_tag(tag, class_attr.as_deref(), &current_link) {
+                        current_tokens.push(token);
                     }
-
-                    let label = if clean_alt.is_empty() {
-                        "[image]".to_string()
-                    } else {
-                        format!("[image: {}]", clean_alt)
-                    };
-
-                    let img_target = tag
-                        .attributes()
-                        .get("src")
-                        .flatten()
-                        .map(|b| b.as_utf8_str())
-                        .and_then(|src| {
-                            if src.starts_with("//") {
-                                Some(format!("https:{}", src))
-                            } else if src.starts_with("http") {
-                                Some(src.to_string())
-                            } else {
-                                extract_title_from_href(src.as_ref())
-                            }
-                        })
-                        .or_else(|| current_link.clone());
-
-                    current_tokens.push(StyledToken {
-                        text: format!(" {} ", label),
-                        style: Style::default()
-                            .fg(theme::BEIGE)
-                            .add_modifier(Modifier::ITALIC),
-                        link_target: img_target,
-                    });
                 }
                 _ => {}
             }
@@ -700,26 +541,7 @@ fn process_node<'a>(
 
             if tag_name == "a" {
                 if let Some(ref target) = current_link {
-                    if target.starts_with("http://")
-                        || target.starts_with("https://")
-                        || target.starts_with("//")
-                    {
-                        let pill_text = if let Some(domain) = utils::extract_domain(target) {
-                            format!(" ↗ {} ", domain)
-                        } else {
-                            " ↗ ".to_string()
-                        };
-                        current_tokens.push(StyledToken {
-                            text: " ".to_string(),
-                            style: Style::default(),
-                            link_target: None,
-                        });
-                        current_tokens.push(StyledToken {
-                            text: pill_text,
-                            style: Style::default().fg(theme::GREY).bg(theme::LIGHT_BG),
-                            link_target: current_link.clone(),
-                        });
-                    }
+                    current_tokens.extend(elements::handle_external_link_pill(target, &current_link));
                 }
             }
 

@@ -137,3 +137,116 @@ pub fn clean_ambox_text(raw_text: &str) -> String {
 
     clean_text.trim().to_string()
 }
+
+pub(crate) fn render_ambox_banner(
+    tag: &tl::HTMLTag,
+    parser: &tl::Parser,
+    current_tokens: &mut Vec<super::types::StyledToken>,
+    doc: &mut super::types::ParsedDocument,
+    max_width: usize,
+    banner_type: BannerType,
+) {
+    use ratatui::style::Modifier;
+    use ratatui::text::{Line, Span};
+
+    let final_message = clean_ambox_text(&tag.inner_text(parser));
+    if final_message.is_empty() {
+        return;
+    }
+
+    if !current_tokens.is_empty() {
+        super::blocks::wrap_and_append_block(current_tokens, doc, max_width);
+        current_tokens.clear();
+    }
+
+    let color = banner_type.color();
+    let label = banner_type.label();
+
+    let side_margin = if max_width > 60 {
+        (max_width * 10 / 100).clamp(4, 20)
+    } else {
+        2
+    };
+    let left_padding = " ".repeat(side_margin);
+
+    let box_width = max_width.saturating_sub(side_margin * 2).max(20);
+    let header_str = format!("─ ⚠️ {} ", label);
+    let header_chars = header_str.chars().count();
+    let fill_top = box_width.saturating_sub(2 + header_chars);
+
+    doc.lines.push(Line::from(vec![
+        Span::raw(left_padding.clone()),
+        Span::styled("┌", ratatui::style::Style::default().fg(color)),
+        Span::styled(
+            header_str,
+            ratatui::style::Style::default()
+                .fg(color)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "─".repeat(fill_top),
+            ratatui::style::Style::default().fg(color),
+        ),
+        Span::styled("┐", ratatui::style::Style::default().fg(color)),
+    ]));
+
+    let inner_width = box_width.saturating_sub(4).max(10);
+    let mut current_line = String::new();
+    for word in final_message.split_whitespace() {
+        if current_line.is_empty() {
+            current_line.push_str(word);
+        } else if current_line.chars().count() + 1 + word.chars().count() <= inner_width {
+            current_line.push(' ');
+            current_line.push_str(word);
+        } else {
+            let msg_len = current_line.chars().count();
+            let padding = inner_width.saturating_sub(msg_len);
+            doc.lines.push(Line::from(vec![
+                Span::raw(left_padding.clone()),
+                Span::styled("│ ", ratatui::style::Style::default().fg(color)),
+                Span::styled(
+                    current_line,
+                    ratatui::style::Style::default()
+                        .fg(theme::FG)
+                        .add_modifier(Modifier::ITALIC),
+                ),
+                Span::styled(
+                    " ".repeat(padding),
+                    ratatui::style::Style::default().fg(theme::FG),
+                ),
+                Span::styled(" │", ratatui::style::Style::default().fg(color)),
+            ]));
+            current_line = word.to_string();
+        }
+    }
+    if !current_line.is_empty() {
+        let msg_len = current_line.chars().count();
+        let padding = inner_width.saturating_sub(msg_len);
+        doc.lines.push(Line::from(vec![
+            Span::raw(left_padding.clone()),
+            Span::styled("│ ", ratatui::style::Style::default().fg(color)),
+            Span::styled(
+                current_line,
+                ratatui::style::Style::default()
+                    .fg(theme::FG)
+                    .add_modifier(Modifier::ITALIC),
+            ),
+            Span::styled(
+                " ".repeat(padding),
+                ratatui::style::Style::default().fg(theme::FG),
+            ),
+            Span::styled(" │", ratatui::style::Style::default().fg(color)),
+        ]));
+    }
+
+    doc.lines.push(Line::from(vec![
+        Span::raw(left_padding),
+        Span::styled("└", ratatui::style::Style::default().fg(color)),
+        Span::styled(
+            "─".repeat(box_width.saturating_sub(2)),
+            ratatui::style::Style::default().fg(color),
+        ),
+        Span::styled("┘", ratatui::style::Style::default().fg(color)),
+    ]));
+    doc.lines.push(Line::from(""));
+}
