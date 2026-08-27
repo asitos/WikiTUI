@@ -540,16 +540,9 @@ impl App {
             return;
         }
 
-        let has_categories = match &self.active_pane().content {
-            PaneContent::ArticleText { parsed_doc, .. } => !parsed_doc.categories.is_empty(),
-            _ => false,
-        };
-
-        if has_categories {
+        if matches!(self.active_pane().content, PaneContent::ArticleText { .. }) {
             self.categories_cursor_idx = 0;
             self.input_mode = InputMode::Categories;
-        } else {
-            self.set_status_message("no categories found for this article".to_string());
         }
     }
 }

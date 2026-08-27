@@ -75,7 +75,9 @@ pub fn get_cached_article(title: &str, lifetime_hours: u64) -> Option<String> {
             if let Ok(elapsed) = modified.elapsed() {
                 if elapsed.as_secs() <= lifetime_hours.saturating_mul(3600) {
                     if let Ok(content) = std::fs::read_to_string(&path) {
-                        return Some(content);
+                        if content.contains("catlinks") {
+                            return Some(content);
+                        }
                     }
                 }
             }
