@@ -8,8 +8,15 @@ struct WikiParseText {
 }
 
 #[derive(Deserialize)]
+struct WikiParseCategoriesHtml {
+    #[serde(rename = "*")]
+    html: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct WikiParseObject {
     text: Option<WikiParseText>,
+    categorieshtml: Option<WikiParseCategoriesHtml>,
 }
 
 #[derive(Deserialize)]
@@ -104,7 +111,7 @@ pub fn fetch_article_wikipedia(
         .timeout(std::time::Duration::from_secs(timeout_secs.max(1)))
         .query("action", "parse")
         .query("page", &decoded_title)
-        .query("prop", "text")
+        .query("prop", "text|categorieshtml")
         .query("format", "json")
         .query("disableeditsection", "1")
         .query("disabletoc", "1")
@@ -123,20 +130,32 @@ pub fn fetch_article_wikipedia(
                 }
             }
 
-            let html = parse_resp
-                .parse
-                .and_then(|p| p.text)
-                .and_then(|t| t.html)
-                .filter(|h| !h.trim().is_empty());
+            let parse_obj = parse_resp.parse;
+            let body_html = parse_obj
+                .as_ref()
+                .and_then(|p| p.text.as_ref())
+                .and_then(|t| t.html.as_deref())
+                .unwrap_or("");
+            let cat_html = parse_obj
+                .as_ref()
+                .and_then(|p| p.categorieshtml.as_ref())
+                .and_then(|c| c.html.as_deref())
+                .unwrap_or("");
 
-            if let Some(h) = html {
-                if offline_cache {
-                    save_cached_article(title, &h);
-                }
-                Ok(h)
-            } else {
-                Err("article HTML content not found".to_string())
+            if body_html.trim().is_empty() {
+                return Err("article HTML content not found".to_string());
             }
+
+            let combined_html = if cat_html.trim().is_empty() {
+                body_html.to_string()
+            } else {
+                format!("{}\n{}", body_html, cat_html)
+            };
+
+            if offline_cache {
+                save_cached_article(title, &combined_html);
+            }
+            Ok(combined_html)
         }
         Err(err) => {
             if offline_cache {
