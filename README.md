@@ -92,11 +92,13 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **copy article URL** | `Y` | copy current article URL to clipboard |
 | **split pane** | `ctrl-w` `s`/`v` | split active pane horizontally (`s`) or vertically (`v`) |
 | **navigate panes** | `ctrl-h/j/k/l` | switch focus between split panes |
-| **close pane** | `x / alt-c` | close active pane |
-| **reopen closed** | `alt-shift-c` | reopen last closed tab or split pane |
+| **close pane** | `x` | close active pane |
+| **reopen closed** | `u` | reopen last closed tab or split pane |
 | **new tab** | `alt-t` | create a new empty tab |
 | **switch tabs** | `alt-h` / `alt-l` | switch to previous / next tab |
 | **jump to tab** | `alt-0..9` | switch to tab 1-10 |
+| **categories** | `c` | view categories of current article |
+| **spoken audio** | `a` / `A` | play/pause / stop spoken audio |
 | **restore session** | `S` | restore previous session (from home tab) |
 | **settings modal** | `,` | open interactive settings modal |
 | **help popup** | `?` | toggle keybindings cheat sheet |
