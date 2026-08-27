@@ -284,13 +284,7 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
                                         pane.selected_idx,
                                         inner_width,
                                     );
-                                let total_lines: usize = counts.iter().sum();
-                                let viewport = pane.viewport_height.max(1);
-                                if total_lines > viewport {
-                                    let max_scroll = total_lines.saturating_sub(viewport);
-                                    let target_scroll = (rel_y * max_scroll) / (track_height - 1);
-                                    pane.scroll_offset = target_scroll.min(max_scroll);
-                                }
+                                case_compute_search_scroll(pane, &counts, inner_width, rel_y, track_height);
                             }
                             _ => {}
                         }
@@ -301,9 +295,40 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
     }
 }
 
+fn case_compute_search_scroll(
+    pane: &mut crate::app::Pane,
+    counts: &[usize],
+    _inner_width: usize,
+    rel_y: usize,
+    track_height: usize,
+) {
+    let total_lines: usize = counts.iter().sum();
+    let viewport = pane.viewport_height.max(1);
+    if total_lines > viewport {
+        let max_scroll = total_lines.saturating_sub(viewport);
+        let target_scroll = (rel_y * max_scroll) / (track_height - 1);
+        pane.scroll_offset = target_scroll.min(max_scroll);
+    }
+}
+
 fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_height: u16) {
     let size = Rect::new(0, 0, term_width, term_height);
 
+    if handle_modal_left_click(app, col, row, size, term_width, term_height) {
+        return;
+    }
+
+    handle_workspace_left_click(app, col, row, term_width, term_height);
+}
+
+fn handle_modal_left_click(
+    app: &mut App,
+    col: u16,
+    row: u16,
+    size: Rect,
+    term_width: u16,
+    term_height: u16,
+) -> bool {
     if app.feed.active {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -320,7 +345,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             app.feed.active = false;
             app.open_article(&item.title);
         }
-        return;
+        return true;
     }
 
     if app.input_mode == InputMode::Help {
@@ -332,7 +357,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
         {
             app.input_mode = InputMode::Normal;
         }
-        return;
+        return true;
     }
 
     if app.input_mode == InputMode::Search {
@@ -344,7 +369,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
         {
             app.input_mode = InputMode::Normal;
         }
-        return;
+        return true;
     }
 
     if app.input_mode == InputMode::CreateNewList {
@@ -356,7 +381,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
         {
             app.input_mode = app.lists_modal.create_return_mode.clone();
         }
-        return;
+        return true;
     }
 
     if app.input_mode == InputMode::Settings {
@@ -371,7 +396,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
         if col < area.x || col >= area.x + area.width || row < area.y || row >= area.y + area.height
         {
             app.input_mode = InputMode::Normal;
-            return;
+            return true;
         }
 
         if let Some((idx, item, val_start_x)) =
@@ -401,11 +426,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                 app.adjust_selected_setting(0);
             }
         }
-        return;
-    }
-
-    if app.input_mode == InputMode::SavedListsViewer {
-        return;
+        return true;
     }
 
     if app.input_mode == InputMode::CategoryOnboarding {
@@ -427,7 +448,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
         } else {
             app.input_mode = InputMode::Normal;
         }
-        return;
+        return true;
     }
 
     if app.input_mode == InputMode::SaveToList {
@@ -468,7 +489,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
         } else {
             app.input_mode = InputMode::Normal;
         }
-        return;
+        return true;
     }
 
     if app.input_mode == InputMode::Confirm {
@@ -488,7 +509,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
             app.input_mode = InputMode::Normal;
             app.confirm_action = None;
         }
-        return;
+        return true;
     }
 
     if app.active_pane().toc_focused {
@@ -526,7 +547,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
         } else {
             app.active_pane_mut().toc_focused = false;
         }
-        return;
+        return true;
     }
 
     if app.input_mode == InputMode::SavedListsViewer {
@@ -552,7 +573,7 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                     app.lists_modal.viewer_article_idx = 0;
                     app.lists_modal.viewer_focus_right = false;
                 }
-                return;
+                return true;
             }
 
             if col > right_area.x
@@ -575,14 +596,18 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
                         }
                     }
                 }
-                return;
+                return true;
             }
         } else {
             app.input_mode = InputMode::Normal;
         }
-        return;
+        return true;
     }
 
+    false
+}
+
+fn handle_workspace_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_height: u16) {
     if app.input_mode != InputMode::Normal || app.zen_mode {
         return;
     }
@@ -662,6 +687,16 @@ fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_he
 }
 
 fn handle_scroll(app: &mut App, delta: i32, col: u16, row: u16, term_width: u16, term_height: u16) {
+    let size = Rect::new(0, 0, term_width, term_height);
+
+    if handle_modal_scroll(app, delta, col, row, size) {
+        return;
+    }
+
+    handle_workspace_scroll(app, delta, col, row, term_width, term_height);
+}
+
+fn handle_modal_scroll(app: &mut App, delta: i32, col: u16, row: u16, size: Rect) -> bool {
     if app.feed.active {
         if delta < 0 {
             app.feed.prev_post();
@@ -669,7 +704,7 @@ fn handle_scroll(app: &mut App, delta: i32, col: u16, row: u16, term_width: u16,
             app.feed.next_post();
             app.maybe_fetch_feed_batch();
         }
-        return;
+        return true;
     }
 
     if app.active_pane().toc_focused {
@@ -678,7 +713,7 @@ fn handle_scroll(app: &mut App, delta: i32, col: u16, row: u16, term_width: u16,
         } else {
             app.select_next_toc_item();
         }
-        return;
+        return true;
     }
 
     match &app.input_mode {
@@ -695,6 +730,7 @@ fn handle_scroll(app: &mut App, delta: i32, col: u16, row: u16, term_width: u16,
                     app.settings_cursor_idx = (app.settings_cursor_idx + 1) % total;
                 }
             }
+            true
         }
         InputMode::SaveToList => {
             let count = app
@@ -715,9 +751,9 @@ fn handle_scroll(app: &mut App, delta: i32, col: u16, row: u16, term_width: u16,
                     app.lists_modal.save_cursor_idx = (app.lists_modal.save_cursor_idx + 1) % count;
                 }
             }
+            true
         }
         InputMode::SavedListsViewer => {
-            let size = Rect::new(0, 0, term_width, term_height);
             let (_container_area, left_area, right_area) =
                 crate::ui::modals::lists::compute_saved_lists_viewer_areas(size);
 
@@ -764,6 +800,7 @@ fn handle_scroll(app: &mut App, delta: i32, col: u16, row: u16, term_width: u16,
                 }
                 app.lists_modal.viewer_article_idx = 0;
             }
+            true
         }
         InputMode::CategoryOnboarding => {
             let total = crate::feed::profile::POPULAR_CATEGORIES.len();
@@ -778,25 +815,36 @@ fn handle_scroll(app: &mut App, delta: i32, col: u16, row: u16, term_width: u16,
                     app.onboarding.cursor_idx = (app.onboarding.cursor_idx + 1) % total;
                 }
             }
+            true
         }
-        InputMode::Normal | InputMode::LocalSearch => {
-            if !app.zen_mode && row >= 1 && row < term_height.saturating_sub(1) {
-                let main_rect = Rect::new(0, 1, term_width, term_height.saturating_sub(2));
-                let tab = app.active_tab_mut();
-                let rects = tab.layout_root.compute_rects(main_rect);
-                if let Some(&(pane_idx, _)) = rects.iter().find(|(_, r)| {
-                    col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
-                }) {
-                    tab.active_pane_idx = pane_idx;
-                }
-            }
-            let speed = app.config.input.scroll_speed.max(1);
-            if delta < 0 {
-                app.scroll_up_lines(speed, term_height);
-            } else {
-                app.scroll_down_lines(speed, term_height);
+        _ => false,
+    }
+}
+
+fn handle_workspace_scroll(
+    app: &mut App,
+    delta: i32,
+    col: u16,
+    row: u16,
+    term_width: u16,
+    term_height: u16,
+) {
+    if matches!(app.input_mode, InputMode::Normal | InputMode::LocalSearch) {
+        if !app.zen_mode && row >= 1 && row < term_height.saturating_sub(1) {
+            let main_rect = Rect::new(0, 1, term_width, term_height.saturating_sub(2));
+            let tab = app.active_tab_mut();
+            let rects = tab.layout_root.compute_rects(main_rect);
+            if let Some(&(pane_idx, _)) = rects.iter().find(|(_, r)| {
+                col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
+            }) {
+                tab.active_pane_idx = pane_idx;
             }
         }
-        _ => {}
+        let speed = app.config.input.scroll_speed.max(1);
+        if delta < 0 {
+            app.scroll_up_lines(speed, term_height);
+        } else {
+            app.scroll_down_lines(speed, term_height);
+        }
     }
 }
