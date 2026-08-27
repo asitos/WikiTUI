@@ -32,6 +32,22 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent, term_width: u16, ter
     }
 }
 
+fn active_pane_rect(app: &App, term_width: u16, term_height: u16) -> Rect {
+    let size = Rect::new(0, 0, term_width, term_height);
+    let main_rect = if app.zen_mode {
+        crate::ui::compute_zen_area(size)
+    } else {
+        Rect::new(0, 1, term_width, term_height.saturating_sub(2))
+    };
+    let tab = app.active_tab();
+    let rects = tab.layout_root.compute_rects(main_rect);
+    rects
+        .iter()
+        .find(|(idx, _)| *idx == tab.active_pane_idx)
+        .map(|(_, r)| *r)
+        .unwrap_or(main_rect)
+}
+
 fn handle_scrollbar_down(
     app: &mut App,
     col: u16,
@@ -42,11 +58,7 @@ fn handle_scrollbar_down(
     let size = Rect::new(0, 0, term_width, term_height);
 
     if app.active_pane().toc_focused {
-        let container_rect = if app.zen_mode {
-            crate::ui::compute_zen_area(size)
-        } else {
-            Rect::new(0, 1, term_width, term_height.saturating_sub(2))
-        };
+        let container_rect = active_pane_rect(app, term_width, term_height);
         let toc_area = crate::ui::modals::compute_toc_modal_area(container_rect);
         if col == toc_area.x + toc_area.width.saturating_sub(1)
             && row > toc_area.y
@@ -196,11 +208,7 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
     match target {
         ScrollDragTarget::Toc => {
             if app.active_pane().toc_focused {
-                let container_rect = if app.zen_mode {
-                    crate::ui::compute_zen_area(size)
-                } else {
-                    Rect::new(0, 1, term_width, term_height.saturating_sub(2))
-                };
+                let container_rect = active_pane_rect(app, term_width, term_height);
                 let toc_area = crate::ui::modals::compute_toc_modal_area(container_rect);
                 let pane = app.active_pane_mut();
                 if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
@@ -557,11 +565,7 @@ fn handle_modal_left_click(
     }
 
     if app.active_pane().toc_focused {
-        let container_rect = if app.zen_mode {
-            crate::ui::compute_zen_area(size)
-        } else {
-            Rect::new(0, 1, term_width, term_height.saturating_sub(2))
-        };
+        let container_rect = active_pane_rect(app, term_width, term_height);
         let toc_area = crate::ui::modals::compute_toc_modal_area(container_rect);
         if col >= toc_area.x
             && col < toc_area.x + toc_area.width
