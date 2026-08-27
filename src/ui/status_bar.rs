@@ -310,15 +310,18 @@ fn build_history_trail(pane: &crate::app::Pane) -> Vec<Span<'static>> {
 }
 
 fn truncate_trail_title(title: &str, max_len: usize) -> String {
-    let lower = title.to_lowercase();
-    if lower.chars().count() > max_len {
-        let byte_idx = lower
-            .char_indices()
-            .nth(max_len.saturating_sub(1))
-            .map(|(i, _)| i)
-            .unwrap_or(lower.len());
-        format!("{}…", &lower[..byte_idx])
+    let char_count = title.chars().count();
+    if char_count > max_len {
+        let take_chars = max_len.saturating_sub(1);
+        let mut result = String::with_capacity(take_chars * 4 + 3);
+        for c in title.chars().take(take_chars) {
+            for lc in c.to_lowercase() {
+                result.push(lc);
+            }
+        }
+        result.push('…');
+        result
     } else {
-        lower
+        title.to_lowercase()
     }
 }
