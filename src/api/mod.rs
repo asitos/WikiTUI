@@ -17,12 +17,14 @@ pub struct SearchResultItem {
 
 pub enum NetworkCommand {
     Search {
+        request_id: u64,
         pane_id: usize,
         query: String,
         limit: usize,
         timeout: u64,
     },
     FetchArticle {
+        request_id: u64,
         pane_id: usize,
         title: String,
         timeout: u64,
@@ -30,6 +32,7 @@ pub enum NetworkCommand {
         cache_lifetime: u64,
     },
     FetchRandomArticle {
+        request_id: u64,
         pane_id: usize,
         timeout: u64,
         offline_cache: bool,
@@ -45,11 +48,13 @@ pub enum NetworkCommand {
 
 pub enum NetworkEvent {
     SearchResult {
+        request_id: u64,
         pane_id: usize,
         query: String,
         results: Vec<SearchResultItem>,
     },
     ArticleResult {
+        request_id: u64,
         pane_id: usize,
         title: String,
         content: String,
@@ -59,6 +64,7 @@ pub enum NetworkEvent {
     },
     StatsLoaded(WikiStatistics),
     Error {
+        request_id: u64,
         pane_id: usize,
         message: String,
     },
@@ -81,6 +87,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
 
         std::thread::spawn(move || match cmd {
             NetworkCommand::Search {
+                request_id,
                 pane_id,
                 query,
                 limit,
@@ -88,6 +95,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
             } => match search::search_wikipedia(&agent, &query, limit, timeout) {
                 Ok(results) => {
                     let _ = ev_tx.send(NetworkEvent::SearchResult {
+                        request_id,
                         pane_id,
                         query,
                         results,
@@ -95,12 +103,14 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 }
                 Err(err) => {
                     let _ = ev_tx.send(NetworkEvent::Error {
+                        request_id,
                         pane_id,
                         message: err,
                     });
                 }
             },
             NetworkCommand::FetchArticle {
+                request_id,
                 pane_id,
                 title,
                 timeout,
@@ -116,6 +126,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 ) {
                     Ok(content) => {
                         let _ = ev_tx.send(NetworkEvent::ArticleResult {
+                            request_id,
                             pane_id,
                             title,
                             content,
@@ -123,6 +134,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                     }
                     Err(err) => {
                         let _ = ev_tx.send(NetworkEvent::Error {
+                            request_id,
                             pane_id,
                             message: err,
                         });
@@ -130,6 +142,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 }
             }
             NetworkCommand::FetchRandomArticle {
+                request_id,
                 pane_id,
                 timeout,
                 offline_cache,
@@ -138,6 +151,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 match random::fetch_random_article(&agent, timeout, offline_cache, cache_lifetime) {
                     Ok((title, content)) => {
                         let _ = ev_tx.send(NetworkEvent::ArticleResult {
+                            request_id,
                             pane_id,
                             title,
                             content,
@@ -145,6 +159,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                     }
                     Err(err) => {
                         let _ = ev_tx.send(NetworkEvent::Error {
+                            request_id,
                             pane_id,
                             message: err,
                         });

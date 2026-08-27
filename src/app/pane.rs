@@ -48,6 +48,7 @@ pub struct Pane {
     pub history_forward: Vec<String>,
     pub intra_jump_back: Vec<usize>,
     pub intra_jump_forward: Vec<usize>,
+    pub current_request_id: u64,
 }
 
 impl Pane {
@@ -71,6 +72,7 @@ impl Pane {
             history_forward: Vec::new(),
             intra_jump_back: Vec::new(),
             intra_jump_forward: Vec::new(),
+            current_request_id: 0,
         }
     }
 

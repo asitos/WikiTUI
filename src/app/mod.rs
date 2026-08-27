@@ -139,12 +139,24 @@ pub struct App {
     pub audio_player: crate::audio::AudioPlayer,
 
     pub(crate) next_pane_id: usize,
+    pub(crate) next_request_id: u64,
     pub(crate) cmd_tx: Sender<NetworkCommand>,
 }
 
 impl App {
-    pub fn send_fetch_article(&self, pane_id: usize, title: String) {
+    pub fn next_request_id(&mut self) -> u64 {
+        let req_id = self.next_request_id;
+        self.next_request_id = self.next_request_id.wrapping_add(1).max(1);
+        req_id
+    }
+
+    pub fn send_fetch_article(&mut self, pane_id: usize, title: String) {
+        let request_id = self.next_request_id();
+        if let Some(pane) = self.find_pane_mut(pane_id) {
+            pane.current_request_id = request_id;
+        }
         let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
+            request_id,
             pane_id,
             title,
             timeout: self.config.network.timeout,
@@ -153,8 +165,13 @@ impl App {
         });
     }
 
-    pub fn send_fetch_random_article(&self, pane_id: usize) {
+    pub fn send_fetch_random_article(&mut self, pane_id: usize) {
+        let request_id = self.next_request_id();
+        if let Some(pane) = self.find_pane_mut(pane_id) {
+            pane.current_request_id = request_id;
+        }
         let _ = self.cmd_tx.send(NetworkCommand::FetchRandomArticle {
+            request_id,
             pane_id,
             timeout: self.config.network.timeout,
             offline_cache: self.config.network.offline_cache,
@@ -211,6 +228,7 @@ impl App {
             audio_player: crate::audio::AudioPlayer::new(),
 
             next_pane_id: 1,
+            next_request_id: 1,
             cmd_tx,
         };
         for title in &app.feed.profile.liked_articles {
@@ -400,66 +418,82 @@ impl App {
     pub fn handle_network_event(&mut self, ev: NetworkEvent) {
         match ev {
             NetworkEvent::SearchResult {
+                request_id,
                 pane_id,
                 query,
                 results,
             } => {
                 if let Some(pane) = self.find_pane_mut(pane_id) {
-                    pane.is_loading = false;
-                    pane.selected_idx = 0;
-                    pane.scroll_offset = 0;
-                    pane.toc_focused = false;
-                    pane.content = PaneContent::SearchResults {
-                        query,
-                        items: results,
-                    };
+                    if request_id >= pane.current_request_id {
+                        pane.is_loading = false;
+                        pane.selected_idx = 0;
+                        pane.scroll_offset = 0;
+                        pane.toc_focused = false;
+                        pane.content = PaneContent::SearchResults {
+                            query,
+                            items: results,
+                        };
+                    }
                 }
             }
             NetworkEvent::ArticleResult {
+                request_id,
                 pane_id,
                 title,
                 content,
             } => {
-                self.record_recent_article(&title);
-                let show_footnotes = self.config.reader.show_footnotes;
-                let show_external_links = self.config.reader.show_external_links;
-                let heading_marker = self.config.reader.heading_marker;
-                let code_line_numbers = self.config.reader.code_line_numbers;
-                if let Some(pane) = self.find_pane_mut(pane_id) {
-                    pane.is_loading = false;
-                    pane.toc_focused = false;
-                    let initial_width = 80;
-                    let parsed_doc = parse_wikipedia_html(
-                        &content,
-                        initial_width,
-                        show_footnotes,
-                        show_external_links,
-                        heading_marker,
-                        code_line_numbers,
-                    );
-                    pane.scroll_offset = pane.scroll_offset.min(parsed_doc.lines.len().saturating_sub(1));
-                    let initial_link_idx = if !parsed_doc.links.is_empty() {
-                        Some(0)
-                    } else {
-                        None
-                    };
-                    pane.content = PaneContent::ArticleText {
-                        title,
-                        raw_html: content,
-                        parsed_doc: Box::new(parsed_doc),
-                        last_width: initial_width,
-                        last_show_footnotes: show_footnotes,
-                        last_show_external_links: show_external_links,
-                        last_heading_marker: heading_marker,
-                        last_code_line_numbers: code_line_numbers,
-                    };
-                    pane.selected_link_idx = initial_link_idx;
+                let is_current = self
+                    .find_pane_mut(pane_id)
+                    .is_some_and(|p| request_id >= p.current_request_id);
+
+                if is_current {
+                    self.record_recent_article(&title);
+                    let show_footnotes = self.config.reader.show_footnotes;
+                    let show_external_links = self.config.reader.show_external_links;
+                    let heading_marker = self.config.reader.heading_marker;
+                    let code_line_numbers = self.config.reader.code_line_numbers;
+                    if let Some(pane) = self.find_pane_mut(pane_id) {
+                        pane.is_loading = false;
+                        pane.toc_focused = false;
+                        let initial_width = 80;
+                        let parsed_doc = parse_wikipedia_html(
+                            &content,
+                            initial_width,
+                            show_footnotes,
+                            show_external_links,
+                            heading_marker,
+                            code_line_numbers,
+                        );
+                        pane.scroll_offset = pane.scroll_offset.min(parsed_doc.lines.len().saturating_sub(1));
+                        let initial_link_idx = if !parsed_doc.links.is_empty() {
+                            Some(0)
+                        } else {
+                            None
+                        };
+                        pane.content = PaneContent::ArticleText {
+                            title,
+                            raw_html: content,
+                            parsed_doc: Box::new(parsed_doc),
+                            last_width: initial_width,
+                            last_show_footnotes: show_footnotes,
+                            last_show_external_links: show_external_links,
+                            last_heading_marker: heading_marker,
+                            last_code_line_numbers: code_line_numbers,
+                        };
+                        pane.selected_link_idx = initial_link_idx;
+                    }
                 }
             }
-            NetworkEvent::Error { pane_id, message } => {
+            NetworkEvent::Error {
+                request_id,
+                pane_id,
+                message,
+            } => {
                 if let Some(pane) = self.find_pane_mut(pane_id) {
-                    pane.is_loading = false;
-                    pane.content = PaneContent::Error(message);
+                    if request_id >= pane.current_request_id {
+                        pane.is_loading = false;
+                        pane.content = PaneContent::Error(message);
+                    }
                 }
             }
             NetworkEvent::FeedBatchLoaded { items } => {

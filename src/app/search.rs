@@ -160,13 +160,16 @@ impl App {
                     self.new_tab();
                 }
             }
+            let request_id = self.next_request_id();
             let active_pane = self.active_pane_mut();
             let pane_id = active_pane.id;
+            active_pane.current_request_id = request_id;
             active_pane.is_loading = true;
             active_pane.selected_idx = 0;
             let limit = self.config.search.limit;
             let timeout = self.config.network.timeout;
             let _ = self.cmd_tx.send(NetworkCommand::Search {
+                request_id,
                 pane_id,
                 query,
                 limit,
