@@ -23,14 +23,15 @@ pub fn handle_categories_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Enter => {
-            let target_title = if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
-                parsed_doc
-                    .categories
-                    .get(app.categories_cursor_idx)
-                    .map(|cat| format!("Category:{}", cat))
-            } else {
-                None
-            };
+            let target_title =
+                if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
+                    parsed_doc
+                        .categories
+                        .get(app.categories_cursor_idx)
+                        .map(|cat| format!("Category:{}", cat))
+                } else {
+                    None
+                };
 
             if let Some(cat_title) = target_title {
                 app.input_mode = InputMode::Normal;
@@ -38,14 +39,20 @@ pub fn handle_categories_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('y') => {
-            let copy_url = if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
-                parsed_doc
-                    .categories
-                    .get(app.categories_cursor_idx)
-                    .map(|cat| format!("https://en.wikipedia.org/wiki/Category:{}", cat.replace(' ', "_")))
-            } else {
-                None
-            };
+            let copy_url =
+                if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
+                    parsed_doc
+                        .categories
+                        .get(app.categories_cursor_idx)
+                        .map(|cat| {
+                            format!(
+                                "https://en.wikipedia.org/wiki/Category:{}",
+                                cat.replace(' ', "_")
+                            )
+                        })
+                } else {
+                    None
+                };
 
             if let Some(url) = copy_url {
                 crate::clipboard::copy_to_clipboard(&url);

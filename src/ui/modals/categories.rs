@@ -16,7 +16,9 @@ pub fn compute_categories_modal_area(container_rect: Rect) -> Rect {
 pub fn render_categories_modal(f: &mut Frame, app: &App, size: Rect) {
     let pane = app.active_pane();
     let (title, categories) = match &pane.content {
-        PaneContent::ArticleText { title, parsed_doc, .. } => (title.as_str(), &parsed_doc.categories),
+        PaneContent::ArticleText {
+            title, parsed_doc, ..
+        } => (title.as_str(), &parsed_doc.categories),
         _ => return,
     };
 
@@ -47,9 +49,10 @@ pub fn render_categories_modal(f: &mut Frame, app: &App, size: Rect) {
 
     let mut lines = Vec::new();
     if categories.is_empty() {
-        lines.push(Line::from(vec![
-            Span::styled("  no categories found for this article.", Style::default().fg(theme::GREY).italic())
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            "  no categories found for this article.",
+            Style::default().fg(theme::GREY).italic(),
+        )]));
     } else {
         for (idx, cat) in categories.iter().enumerate() {
             let is_selected = idx == selected_idx;
@@ -62,7 +65,14 @@ pub fn render_categories_modal(f: &mut Frame, app: &App, size: Rect) {
             };
 
             lines.push(Line::from(vec![
-                Span::styled(prefix, if is_selected { Style::default().fg(theme::TEAL).bold() } else { Style::default().fg(theme::GREY) }),
+                Span::styled(
+                    prefix,
+                    if is_selected {
+                        Style::default().fg(theme::TEAL).bold()
+                    } else {
+                        Style::default().fg(theme::GREY)
+                    },
+                ),
                 Span::styled(cat, style),
             ]));
         }

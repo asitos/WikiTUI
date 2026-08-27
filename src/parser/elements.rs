@@ -50,9 +50,7 @@ pub(crate) fn handle_img_tag(
     class_attr: Option<&str>,
     current_link: &Option<String>,
 ) -> Option<StyledToken> {
-    let is_math_fallback = class_attr
-        .map(|c| c.contains("mwe-math"))
-        .unwrap_or(false);
+    let is_math_fallback = class_attr.map(|c| c.contains("mwe-math")).unwrap_or(false);
 
     let alt_text = tag
         .attributes()
@@ -102,11 +100,11 @@ pub(crate) fn handle_img_tag(
     })
 }
 
-pub(crate) fn handle_external_link_pill(target: &str, current_link: &Option<String>) -> Vec<StyledToken> {
-    if target.starts_with("http://")
-        || target.starts_with("https://")
-        || target.starts_with("//")
-    {
+pub(crate) fn handle_external_link_pill(
+    target: &str,
+    current_link: &Option<String>,
+) -> Vec<StyledToken> {
+    if target.starts_with("http://") || target.starts_with("https://") || target.starts_with("//") {
         let pill_text = if let Some(domain) = utils::extract_domain(target) {
             format!(" ↗ {} ", domain)
         } else {

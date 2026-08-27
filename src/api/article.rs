@@ -58,13 +58,13 @@ pub fn cache_file_path(title: &str) -> PathBuf {
             }
         })
         .collect();
-    
+
     let mut hash: u64 = 0xcbf29ce484222325;
     for b in title.bytes() {
         hash ^= b as u64;
         hash = hash.wrapping_mul(0x100000001b3);
     }
-    
+
     cache_dir().join(format!("{}_{:016x}.html", safe_name, hash))
 }
 

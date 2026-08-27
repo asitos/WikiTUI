@@ -284,7 +284,13 @@ fn handle_scrollbar_drag(app: &mut App, row: u16, term_width: u16, term_height: 
                                         pane.selected_idx,
                                         inner_width,
                                     );
-                                case_compute_search_scroll(pane, &counts, inner_width, rel_y, track_height);
+                                case_compute_search_scroll(
+                                    pane,
+                                    &counts,
+                                    inner_width,
+                                    rel_y,
+                                    track_height,
+                                );
                             }
                             _ => {}
                         }
@@ -453,23 +459,30 @@ fn handle_modal_left_click(
 
     if app.input_mode == InputMode::Categories {
         let area = crate::ui::modals::compute_categories_modal_area(size);
-        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height {
-            let hit = if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
-                let total = parsed_doc.categories.len();
-                let inner_height = area.height.saturating_sub(2) as usize;
-                let selected_idx = app.categories_cursor_idx.min(total.saturating_sub(1));
-                let scroll = if total <= inner_height || inner_height == 0 {
-                    0
+        if col >= area.x && col < area.x + area.width && row >= area.y && row < area.y + area.height
+        {
+            let hit =
+                if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
+                    let total = parsed_doc.categories.len();
+                    let inner_height = area.height.saturating_sub(2) as usize;
+                    let selected_idx = app.categories_cursor_idx.min(total.saturating_sub(1));
+                    let scroll = if total <= inner_height || inner_height == 0 {
+                        0
+                    } else {
+                        selected_idx
+                            .saturating_sub(inner_height / 2)
+                            .min(total.saturating_sub(inner_height))
+                    };
+                    crate::ui::modals::categories::get_category_row_at(area, row, total, scroll)
+                        .and_then(|idx| {
+                            parsed_doc
+                                .categories
+                                .get(idx)
+                                .map(|cat| (idx, format!("Category:{}", cat)))
+                        })
                 } else {
-                    selected_idx
-                        .saturating_sub(inner_height / 2)
-                        .min(total.saturating_sub(inner_height))
+                    None
                 };
-                crate::ui::modals::categories::get_category_row_at(area, row, total, scroll)
-                    .and_then(|idx| parsed_doc.categories.get(idx).map(|cat| (idx, format!("Category:{}", cat))))
-            } else {
-                None
-            };
 
             if let Some((clicked_idx, cat_title)) = hit {
                 app.categories_cursor_idx = clicked_idx;
@@ -638,7 +651,13 @@ fn handle_modal_left_click(
     false
 }
 
-fn handle_workspace_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_height: u16) {
+fn handle_workspace_left_click(
+    app: &mut App,
+    col: u16,
+    row: u16,
+    term_width: u16,
+    term_height: u16,
+) {
     if app.input_mode != InputMode::Normal || app.zen_mode {
         return;
     }

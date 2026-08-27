@@ -308,7 +308,14 @@ fn process_node<'a>(
 
             if let Some(ref class_str) = class_attr {
                 if let Some(banner_type) = banners::classify_ambox_class(class_str.as_ref()) {
-                    banners::render_ambox_banner(tag, parser, current_tokens, doc, max_width, banner_type);
+                    banners::render_ambox_banner(
+                        tag,
+                        parser,
+                        current_tokens,
+                        doc,
+                        max_width,
+                        banner_type,
+                    );
                     return;
                 }
             }
@@ -494,7 +501,9 @@ fn process_node<'a>(
                     });
                 }
                 "img" => {
-                    if let Some(token) = elements::handle_img_tag(tag, class_attr.as_deref(), &current_link) {
+                    if let Some(token) =
+                        elements::handle_img_tag(tag, class_attr.as_deref(), &current_link)
+                    {
                         current_tokens.push(token);
                     }
                 }
@@ -547,7 +556,8 @@ fn process_node<'a>(
 
             if tag_name == "a" {
                 if let Some(ref target) = current_link {
-                    current_tokens.extend(elements::handle_external_link_pill(target, &current_link));
+                    current_tokens
+                        .extend(elements::handle_external_link_pill(target, &current_link));
                 }
             }
 
