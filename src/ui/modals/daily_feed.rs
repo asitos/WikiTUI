@@ -96,8 +96,8 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
         DailyFeedKind::MostRead => {
             let mut entries = Vec::new();
             if let Some(payload) = &feed.mostread {
-                for item in &payload.articles {
-                    let rank_str = item.rank.map(|r| format!("{}. ", r)).unwrap_or_default();
+                for (idx, item) in payload.articles.iter().take(25).enumerate() {
+                    let rank_str = format!("{}. ", idx + 1);
                     let views_str = item.views.map(crate::api::stats::format_metric);
                     let display = format!("{}{}", rank_str, item.display_title());
                     entries.push(FeedEntry {
