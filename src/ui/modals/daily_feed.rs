@@ -37,6 +37,54 @@ pub struct FeedEntry {
     pub suffix: Option<String>,
 }
 
+pub fn strip_html_tags(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '<' {
+            if chars.clone().take(3).collect::<String>() == "!--" {
+                chars.next();
+                chars.next();
+                chars.next();
+                let mut dashes = 0;
+                for nc in chars.by_ref() {
+                    if nc == '-' {
+                        dashes += 1;
+                    } else if nc == '>' && dashes >= 2 {
+                        break;
+                    } else {
+                        dashes = 0;
+                    }
+                }
+                continue;
+            }
+
+            for nc in chars.by_ref() {
+                if nc == '>' {
+                    break;
+                }
+            }
+            continue;
+        }
+
+        result.push(c);
+    }
+
+    let decoded = result
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&nbsp;", " ")
+        .replace("&ndash;", "–")
+        .replace("&mdash;", "—");
+
+    decoded.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
     let feed = match &app.daily_feed {
         Some(f) => f,
@@ -49,11 +97,7 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
             for item in &feed.news {
                 if let Some(first_link) = item.links.first() {
                     let summary = item.story.as_deref().unwrap_or("");
-                    let clean_story = summary
-                        .replace("<b>", "")
-                        .replace("</b>", "")
-                        .replace("<i>", "")
-                        .replace("</i>", "");
+                    let clean_story = strip_html_tags(summary);
                     let target = first_link.title.clone();
                     entries.push(FeedEntry {
                         title: if !clean_story.is_empty() {
@@ -84,7 +128,8 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
                     Some(y) => format!("{}", y),
                     None => "—".to_string(),
                 };
-                let display = format!("{}: {}", year_str, event.text);
+                let clean_text = strip_html_tags(&event.text);
+                let display = format!("{}: {}", year_str, clean_text);
                 entries.push(FeedEntry {
                     title: display,
                     target_article: target,
