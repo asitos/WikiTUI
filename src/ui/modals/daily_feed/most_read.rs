@@ -1,0 +1,74 @@
+use super::types::FeedEntry;
+use crate::app::App;
+use crate::theme;
+use crate::ui::modals::utils::create_selectable_line;
+use ratatui::{
+    layout::Rect,
+    style::{Style, Stylize},
+    text::{Line, Span},
+    widgets::{Block, Paragraph},
+    Frame,
+};
+
+pub fn render_most_read_modal(
+    f: &mut Frame,
+    app: &App,
+    entries: &[FeedEntry],
+    modal_area: Rect,
+    modal_block: Block,
+    selected_idx: usize,
+) {
+    let total = entries.len();
+    let inner_height = modal_area.height.saturating_sub(2) as usize;
+
+    let scroll = if total <= inner_height || inner_height == 0 {
+        0
+    } else {
+        selected_idx
+            .saturating_sub(inner_height / 2)
+            .min(total.saturating_sub(inner_height))
+    };
+
+    let mut lines = Vec::new();
+    if entries.is_empty() {
+        let empty_msg = if app.daily_feed.is_none() {
+            "  loading daily feed from Wikipedia..."
+        } else {
+            "  no entries found."
+        };
+        lines.push(Line::from(vec![Span::styled(
+            empty_msg,
+            Style::default().fg(theme::GREY).italic(),
+        )]));
+    } else {
+        let avail_w = (modal_area.width as usize).saturating_sub(8);
+        for (idx, entry) in entries.iter().enumerate() {
+            let is_selected = idx == selected_idx;
+            let title = if entry.title.chars().count() > avail_w && avail_w > 3 {
+                let byte_end = entry
+                    .title
+                    .char_indices()
+                    .nth(avail_w.saturating_sub(3))
+                    .map(|(i, _)| i)
+                    .unwrap_or(entry.title.len());
+                format!("{}...", &entry.title[..byte_end])
+            } else {
+                entry.title.clone()
+            };
+
+            lines.push(create_selectable_line(
+                &title,
+                is_selected,
+                true,
+                theme::BLUE,
+                entry.suffix.as_deref(),
+            ));
+        }
+    }
+
+    let p = Paragraph::new(lines)
+        .block(modal_block)
+        .scroll((scroll as u16, 0));
+
+    f.render_widget(p, modal_area);
+}
