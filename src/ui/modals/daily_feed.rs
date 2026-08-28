@@ -824,10 +824,21 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
             for (idx, event) in feed.onthisday.iter().enumerate() {
                 line_offsets.push(lines.len());
                 let is_selected = idx == selected_idx;
-                let year_str = match event.year {
-                    Some(y) if y < 0 => format!("{} BC", y.abs()),
-                    Some(y) => format!("{}", y),
-                    None => "—".to_string(),
+                let current_year = crate::api::daily_feed::utc_today().0 as i32;
+                let (year_str, elapsed_str) = match event.year {
+                    Some(y) if y < 0 => {
+                        let yrs = current_year + y.abs();
+                        (format!("{} BC", y.abs()), format!("({} yrs ago) ", yrs))
+                    }
+                    Some(y) => {
+                        let yrs = current_year - y;
+                        if yrs == 0 {
+                            (format!("{}", y), "(this year) ".to_string())
+                        } else {
+                            (format!("{}", y), format!("({} yrs ago) ", yrs))
+                        }
+                    }
+                    None => ("—".to_string(), String::new()),
                 };
                 let (chunks, event_links) = parse_onthisday_event(&event.text, &event.pages);
                 let active_link_idx = if is_selected {
@@ -835,7 +846,7 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                 } else {
                     0
                 };
-                let badge_prefix = format!("[ {} ] ", year_str);
+                let badge_prefix = format!("[ {} ] {}", year_str, elapsed_str);
                 let badge_len = badge_prefix.chars().count();
                 let text_w = avail_w.saturating_sub(badge_len + 3);
 
@@ -856,6 +867,12 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                             Style::default().fg(theme::BLUE).bold(),
                         ));
                         spans.push(Span::styled(" ] ", Style::default().fg(theme::DARK_GREY)));
+                        if !elapsed_str.is_empty() {
+                            spans.push(Span::styled(
+                                elapsed_str.clone(),
+                                Style::default().fg(theme::GREY).italic(),
+                            ));
+                        }
                     } else {
                         let pad_len = 3 + badge_len;
                         spans.push(Span::raw(" ".repeat(pad_len)));
