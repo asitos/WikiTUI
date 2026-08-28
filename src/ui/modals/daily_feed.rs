@@ -347,7 +347,7 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
                     None => "—".to_string(),
                 };
                 let clean_text = strip_html_tags(&event.text);
-                let display = format!("{}: {}", year_str, clean_text);
+                let display = format!("[ {} ]  {}", year_str, clean_text);
                 entries.push(FeedEntry {
                     title: display,
                     target_article: target,
@@ -696,6 +696,91 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
         }
 
         let p = Paragraph::new(lines).block(modal_block);
+        f.render_widget(p, modal_area);
+        return;
+    }
+
+    if state.kind == DailyFeedKind::OnThisDay {
+        let feed = match &app.daily_feed {
+            Some(f) => f,
+            None => return,
+        };
+
+        let mut lines = Vec::new();
+        let mut line_offsets = Vec::new();
+        if feed.onthisday.is_empty() {
+            lines.push(Line::from(vec![Span::styled(
+                "  no historical milestones available.",
+                Style::default().fg(theme::GREY).italic(),
+            )]));
+        } else {
+            let avail_w = (modal_area.width as usize).saturating_sub(4);
+            for (idx, event) in feed.onthisday.iter().enumerate() {
+                line_offsets.push(lines.len());
+                let is_selected = idx == selected_idx;
+                let year_str = match event.year {
+                    Some(y) if y < 0 => format!("{} BC", y.abs()),
+                    Some(y) => format!("{}", y),
+                    None => "—".to_string(),
+                };
+                let clean_text = strip_html_tags(&event.text);
+                let chunk = StyledChunk {
+                    text: clean_text,
+                    style: SpanStyle::Normal,
+                };
+                let badge_prefix = format!("[ {} ] ", year_str);
+                let badge_len = badge_prefix.chars().count();
+                let text_w = avail_w.saturating_sub(badge_len + 3);
+
+                let wrapped_lines = wrap_story_spans(&[chunk], text_w + 3);
+                for (line_idx, line_words) in wrapped_lines.into_iter().enumerate() {
+                    let mut spans = Vec::new();
+                    if line_idx == 0 {
+                        let prefix = if is_selected { " ▶ " } else { "   " };
+                        let prefix_style = if is_selected {
+                            Style::default().fg(theme::BLUE).bold()
+                        } else {
+                            Style::default().fg(theme::GREY)
+                        };
+                        spans.push(Span::styled(prefix, prefix_style));
+                        spans.push(Span::styled("[ ", Style::default().fg(theme::DARK_GREY)));
+                        spans.push(Span::styled(
+                            year_str.clone(),
+                            Style::default().fg(theme::BLUE).bold(),
+                        ));
+                        spans.push(Span::styled(" ] ", Style::default().fg(theme::DARK_GREY)));
+                    } else {
+                        let pad_len = 3 + badge_len;
+                        spans.push(Span::raw(" ".repeat(pad_len)));
+                    }
+
+                    for (text, _) in line_words {
+                        let text_style = if is_selected {
+                            Style::default().fg(theme::FG).bold()
+                        } else {
+                            Style::default().fg(theme::FG)
+                        };
+                        spans.push(Span::styled(text, text_style));
+                    }
+                    lines.push(Line::from(spans));
+                }
+                lines.push(Line::from(""));
+            }
+        }
+
+        let total_lines = lines.len();
+        let scroll = if total_lines <= inner_height || inner_height == 0 {
+            0
+        } else {
+            let target_line = line_offsets.get(selected_idx).copied().unwrap_or(0);
+            target_line
+                .saturating_sub(inner_height / 3)
+                .min(total_lines.saturating_sub(inner_height))
+        };
+
+        let p = Paragraph::new(lines)
+            .block(modal_block)
+            .scroll((scroll as u16, 0));
         f.render_widget(p, modal_area);
         return;
     }
