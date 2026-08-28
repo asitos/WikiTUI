@@ -103,7 +103,7 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
                     entries.push(FeedEntry {
                         title: display,
                         target_article: item.title.clone(),
-                        suffix: views_str.map(|v| format!("{} views", v)),
+                        suffix: views_str.map(|v| format!(" {} views", v)),
                     });
                 }
             }
