@@ -217,6 +217,28 @@ pub fn strip_html_tags(input: &str) -> String {
     decoded.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+pub fn get_ongoing_links(
+    ongoing: &[crate::api::daily_feed::OngoingItem],
+) -> Vec<(String, String)> {
+    let mut links = Vec::new();
+    for og in ongoing {
+        links.push((og.target.clone(), og.display.clone()));
+        for (sub_target, sub_display) in &og.sub_events {
+            links.push((sub_target.clone(), sub_display.clone()));
+        }
+    }
+    links
+}
+
+pub fn get_recent_deaths_links(
+    deaths: &[crate::api::daily_feed::RecentDeathItem],
+) -> Vec<(String, String)> {
+    deaths
+        .iter()
+        .map(|d| (d.target.clone(), d.name.clone()))
+        .collect()
+}
+
 pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
     let feed = match &app.daily_feed {
         Some(f) => f,
@@ -241,6 +263,30 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
                         suffix: None,
                     });
                 }
+            }
+            if !feed.ongoing.is_empty() {
+                let first_target = feed
+                    .ongoing
+                    .first()
+                    .map(|o| o.target.clone())
+                    .unwrap_or_default();
+                entries.push(FeedEntry {
+                    title: "Ongoing".to_string(),
+                    target_article: first_target,
+                    suffix: None,
+                });
+            }
+            if !feed.recent_deaths.is_empty() {
+                let first_target = feed
+                    .recent_deaths
+                    .first()
+                    .map(|d| d.target.clone())
+                    .unwrap_or_default();
+                entries.push(FeedEntry {
+                    title: "Recent deaths".to_string(),
+                    target_article: first_target,
+                    suffix: None,
+                });
             }
             entries
         }
@@ -414,8 +460,9 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
             )]));
         } else {
             let avail_w = (modal_area.width as usize).saturating_sub(4);
-            for (idx, item) in feed.news.iter().enumerate() {
-                let is_selected = idx == selected_idx;
+            let mut row_counter = 0;
+            for item in &feed.news {
+                let is_selected = row_counter == selected_idx;
                 let raw_story = item.story.as_deref().unwrap_or("");
                 let (chunks, story_links) = parse_story_html(raw_story);
                 let active_link_idx = if is_selected {
@@ -483,6 +530,114 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                     lines.push(Line::from(spans));
                 }
                 lines.push(Line::from(""));
+                row_counter += 1;
+            }
+
+            // Ongoing events row
+            if !feed.ongoing.is_empty() {
+                let is_selected = row_counter == selected_idx;
+                let (prefix, prefix_style) = if is_selected {
+                    (" ▶ ", Style::default().fg(theme::TEAL).bold())
+                } else {
+                    ("   ", Style::default().fg(theme::GREY))
+                };
+                let mut spans = vec![
+                    Span::styled(prefix, prefix_style),
+                    Span::styled("Ongoing: ", Style::default().fg(theme::FG).bold()),
+                ];
+
+                let ongoing_links = get_ongoing_links(&feed.ongoing);
+                let active_link_idx = if is_selected {
+                    state.link_idx.min(ongoing_links.len().saturating_sub(1))
+                } else {
+                    0
+                };
+
+                let mut link_counter = 0;
+                for (og_idx, og) in feed.ongoing.iter().enumerate() {
+                    if og_idx > 0 {
+                        spans.push(Span::styled(" · ", Style::default().fg(theme::GREY)));
+                    }
+
+                    let cur_l_idx = link_counter;
+                    link_counter += 1;
+                    let main_style = if is_selected && cur_l_idx == active_link_idx {
+                        Style::default()
+                            .fg(theme::VIOLET)
+                            .bold()
+                            .add_modifier(Modifier::UNDERLINED)
+                    } else if app.config.reader.underline_links {
+                        Style::default()
+                            .fg(theme::BLUE)
+                            .add_modifier(Modifier::UNDERLINED)
+                    } else {
+                        Style::default().fg(theme::BLUE)
+                    };
+                    spans.push(Span::styled(og.display.clone(), main_style));
+
+                    for (_sub_target, sub_display) in &og.sub_events {
+                        let sub_l_idx = link_counter;
+                        link_counter += 1;
+                        spans.push(Span::styled(" (", Style::default().fg(theme::GREY)));
+                        let sub_style = if is_selected && sub_l_idx == active_link_idx {
+                            Style::default()
+                                .fg(theme::VIOLET)
+                                .bold()
+                                .add_modifier(Modifier::UNDERLINED)
+                        } else if app.config.reader.underline_links {
+                            Style::default()
+                                .fg(theme::BLUE)
+                                .add_modifier(Modifier::UNDERLINED)
+                        } else {
+                            Style::default().fg(theme::BLUE)
+                        };
+                        spans.push(Span::styled(sub_display.clone(), sub_style));
+                        spans.push(Span::styled(")", Style::default().fg(theme::GREY)));
+                    }
+                }
+                lines.push(Line::from(spans));
+                lines.push(Line::from(""));
+                row_counter += 1;
+            }
+
+            // Recent deaths row
+            if !feed.recent_deaths.is_empty() {
+                let is_selected = row_counter == selected_idx;
+                let (prefix, prefix_style) = if is_selected {
+                    (" ▶ ", Style::default().fg(theme::TEAL).bold())
+                } else {
+                    ("   ", Style::default().fg(theme::GREY))
+                };
+                let mut spans = vec![
+                    Span::styled(prefix, prefix_style),
+                    Span::styled("Recent deaths: ", Style::default().fg(theme::FG).bold()),
+                ];
+
+                let active_link_idx = if is_selected {
+                    state.link_idx.min(feed.recent_deaths.len().saturating_sub(1))
+                } else {
+                    0
+                };
+
+                for (d_idx, death) in feed.recent_deaths.iter().enumerate() {
+                    if d_idx > 0 {
+                        spans.push(Span::styled(" · ", Style::default().fg(theme::GREY)));
+                    }
+                    let death_style = if is_selected && d_idx == active_link_idx {
+                        Style::default()
+                            .fg(theme::VIOLET)
+                            .bold()
+                            .add_modifier(Modifier::UNDERLINED)
+                    } else if app.config.reader.underline_links {
+                        Style::default()
+                            .fg(theme::BLUE)
+                            .add_modifier(Modifier::UNDERLINED)
+                    } else {
+                        Style::default().fg(theme::BLUE)
+                    };
+                    spans.push(Span::styled(death.name.clone(), death_style));
+                }
+                lines.push(Line::from(spans));
             }
         }
 

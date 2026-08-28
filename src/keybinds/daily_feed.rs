@@ -1,6 +1,37 @@
 use crate::app::{App, InputMode};
-use crate::ui::modals::{get_feed_entries, parse_story_html, DailyFeedKind};
+use crate::ui::modals::{
+    get_feed_entries, get_ongoing_links, get_recent_deaths_links, parse_story_html, DailyFeedKind,
+};
 use crossterm::event::{KeyCode, KeyEvent};
+
+fn get_news_row_links(app: &App, cursor_idx: usize) -> Vec<String> {
+    let feed = match &app.daily_feed {
+        Some(f) => f,
+        None => return Vec::new(),
+    };
+    if cursor_idx < feed.news.len() {
+        if let Some(item) = feed.news.get(cursor_idx) {
+            let raw = item.story.as_deref().unwrap_or("");
+            let (_, links) = parse_story_html(raw);
+            return links;
+        }
+    }
+    let ongoing_row = feed.news.len();
+    if !feed.ongoing.is_empty() && cursor_idx == ongoing_row {
+        return get_ongoing_links(&feed.ongoing)
+            .into_iter()
+            .map(|(target, _)| target)
+            .collect();
+    }
+    let deaths_row = feed.news.len() + (if !feed.ongoing.is_empty() { 1 } else { 0 });
+    if !feed.recent_deaths.is_empty() && cursor_idx == deaths_row {
+        return get_recent_deaths_links(&feed.recent_deaths)
+            .into_iter()
+            .map(|(target, _)| target)
+            .collect();
+    }
+    Vec::new()
+}
 
 pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
     let state = match &app.daily_feed_modal {
@@ -52,54 +83,37 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Tab | KeyCode::Char('l') | KeyCode::Right => {
             if state.kind == DailyFeedKind::News {
-                if let Some(feed) = &app.daily_feed {
-                    if let Some(item) = feed.news.get(state.cursor_idx) {
-                        let raw = item.story.as_deref().unwrap_or("");
-                        let (_, links) = parse_story_html(raw);
-                        let total_links = links.len();
-                        if total_links > 0 {
-                            if let Some(modal) = &mut app.daily_feed_modal {
-                                modal.link_idx = (modal.link_idx + 1) % total_links;
-                            }
-                        }
+                let links = get_news_row_links(app, state.cursor_idx);
+                let total_links = links.len();
+                if total_links > 0 {
+                    if let Some(modal) = &mut app.daily_feed_modal {
+                        modal.link_idx = (modal.link_idx + 1) % total_links;
                     }
                 }
             }
         }
         KeyCode::BackTab | KeyCode::Char('h') | KeyCode::Left => {
             if state.kind == DailyFeedKind::News {
-                if let Some(feed) = &app.daily_feed {
-                    if let Some(item) = feed.news.get(state.cursor_idx) {
-                        let raw = item.story.as_deref().unwrap_or("");
-                        let (_, links) = parse_story_html(raw);
-                        let total_links = links.len();
-                        if total_links > 0 {
-                            if let Some(modal) = &mut app.daily_feed_modal {
-                                modal.link_idx = if modal.link_idx == 0 {
-                                    total_links - 1
-                                } else {
-                                    modal.link_idx - 1
-                                };
-                            }
-                        }
+                let links = get_news_row_links(app, state.cursor_idx);
+                let total_links = links.len();
+                if total_links > 0 {
+                    if let Some(modal) = &mut app.daily_feed_modal {
+                        modal.link_idx = if modal.link_idx == 0 {
+                            total_links - 1
+                        } else {
+                            modal.link_idx - 1
+                        };
                     }
                 }
             }
         }
         KeyCode::Enter => {
             let target = if state.kind == DailyFeedKind::News {
-                if let Some(feed) = &app.daily_feed {
-                    feed.news.get(state.cursor_idx).and_then(|item| {
-                        let raw = item.story.as_deref().unwrap_or("");
-                        let (_, links) = parse_story_html(raw);
-                        links
-                            .get(state.link_idx)
-                            .cloned()
-                            .or_else(|| links.first().cloned())
-                    })
-                } else {
-                    None
-                }
+                let links = get_news_row_links(app, state.cursor_idx);
+                links
+                    .get(state.link_idx)
+                    .cloned()
+                    .or_else(|| links.first().cloned())
             } else {
                 entries
                     .get(state.cursor_idx)
@@ -117,18 +131,11 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Char('t') => {
             let target = if state.kind == DailyFeedKind::News {
-                if let Some(feed) = &app.daily_feed {
-                    feed.news.get(state.cursor_idx).and_then(|item| {
-                        let raw = item.story.as_deref().unwrap_or("");
-                        let (_, links) = parse_story_html(raw);
-                        links
-                            .get(state.link_idx)
-                            .cloned()
-                            .or_else(|| links.first().cloned())
-                    })
-                } else {
-                    None
-                }
+                let links = get_news_row_links(app, state.cursor_idx);
+                links
+                    .get(state.link_idx)
+                    .cloned()
+                    .or_else(|| links.first().cloned())
             } else {
                 entries
                     .get(state.cursor_idx)

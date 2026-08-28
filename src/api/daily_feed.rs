@@ -59,6 +59,20 @@ pub struct MostReadPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OngoingItem {
+    pub display: String,
+    pub target: String,
+    #[serde(default)]
+    pub sub_events: Vec<(String, String)>, // (target, display)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecentDeathItem {
+    pub name: String,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DailyFeed {
     pub tfa: Option<PageSummary>,
     #[serde(default)]
@@ -66,6 +80,133 @@ pub struct DailyFeed {
     #[serde(default)]
     pub onthisday: Vec<OnThisDayEvent>,
     pub mostread: Option<MostReadPayload>,
+    #[serde(default)]
+    pub ongoing: Vec<OngoingItem>,
+    #[serde(default)]
+    pub recent_deaths: Vec<RecentDeathItem>,
+}
+
+pub fn strip_wikitext_comments(s: &str) -> String {
+    let mut res = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '<' && chars.clone().take(3).collect::<String>() == "!--" {
+            chars.next();
+            chars.next();
+            chars.next();
+            let mut dashes = 0;
+            for nc in chars.by_ref() {
+                if nc == '-' {
+                    dashes += 1;
+                } else if nc == '>' && dashes >= 2 {
+                    break;
+                } else {
+                    dashes = 0;
+                }
+            }
+            continue;
+        }
+        res.push(c);
+    }
+    res
+}
+
+pub fn extract_all_links_from_wikitext(s: &str) -> Vec<(String, String)> {
+    let mut links = Vec::new();
+    let mut rest = s;
+    while let Some(start) = rest.find("[[") {
+        let after_start = &rest[start + 2..];
+        if let Some(end) = after_start.find("]]") {
+            let link_content = &after_start[..end];
+            let parts: Vec<&str> = link_content.split('|').collect();
+            if parts.len() >= 2 {
+                links.push((parts[0].trim().to_string(), parts[1].trim().to_string()));
+            } else {
+                let p = parts[0].trim().to_string();
+                links.push((p.clone(), p));
+            }
+            rest = &after_start[end + 2..];
+        } else {
+            break;
+        }
+    }
+    links
+}
+
+pub fn parse_itn_footer(wikitext: &str) -> (Vec<OngoingItem>, Vec<RecentDeathItem>) {
+    let mut ongoing = Vec::new();
+    let mut recent_deaths = Vec::new();
+    let clean = strip_wikitext_comments(wikitext);
+
+    let currentevents_block = if let Some(pos) = clean.find("currentevents") {
+        let rest = &clean[pos + 13..];
+        if let Some(d_pos) = rest.find("recentdeaths") {
+            &rest[..d_pos]
+        } else {
+            rest
+        }
+    } else {
+        ""
+    };
+
+    let recentdeaths_block = if let Some(pos) = clean.find("recentdeaths") {
+        &clean[pos + 12..]
+    } else {
+        ""
+    };
+
+    let mut current_ongoing: Option<OngoingItem> = None;
+    for line in currentevents_block.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("**") {
+            for (target, display) in extract_all_links_from_wikitext(trimmed) {
+                if let Some(og) = &mut current_ongoing {
+                    og.sub_events.push((target, display));
+                }
+            }
+        } else if trimmed.starts_with('*') {
+            if let Some(og) = current_ongoing.take() {
+                ongoing.push(og);
+            }
+            let clean_line = trimmed.trim_start_matches('*');
+            let mut sub_events = Vec::new();
+            let mut main_link = None;
+
+            for link in extract_all_links_from_wikitext(clean_line) {
+                if main_link.is_none() {
+                    main_link = Some(link);
+                } else {
+                    sub_events.push(link);
+                }
+            }
+
+            if let Some((target, display)) = main_link {
+                current_ongoing = Some(OngoingItem {
+                    display,
+                    target,
+                    sub_events,
+                });
+            }
+        }
+    }
+    if let Some(og) = current_ongoing {
+        ongoing.push(og);
+    }
+
+    for line in recentdeaths_block.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('*') {
+            let clean_line = trimmed.trim_start_matches('*');
+            for (target, display) in extract_all_links_from_wikitext(clean_line) {
+                recent_deaths.push(RecentDeathItem {
+                    name: display,
+                    target,
+                });
+            }
+        }
+    }
+
+    (ongoing, recent_deaths)
 }
 
 pub fn utc_today() -> (u32, u32, u32) {
@@ -133,9 +274,30 @@ pub fn fetch_daily_feed(
         .call()
         .map_err(|e| format!("Failed to fetch daily feed: {}", e))?;
 
-    let feed: DailyFeed = resp
+    let mut feed: DailyFeed = resp
         .into_json()
         .map_err(|e| format!("Failed to parse daily feed: {}", e))?;
+
+    // Also fetch ITN footer for Ongoing and Recent Deaths
+    let itn_url = "https://en.wikipedia.org/w/api.php?action=parse&page=Template:In_the_news&prop=wikitext&format=json";
+    if let Ok(itn_resp) = agent
+        .get(itn_url)
+        .timeout(std::time::Duration::from_secs(timeout))
+        .call()
+    {
+        if let Ok(itn_json) = itn_resp.into_json::<serde_json::Value>() {
+            if let Some(wikitext) = itn_json
+                .get("parse")
+                .and_then(|p| p.get("wikitext"))
+                .and_then(|t| t.get("*"))
+                .and_then(|h| h.as_str())
+            {
+                let (ongoing, recent_deaths) = parse_itn_footer(wikitext);
+                feed.ongoing = ongoing;
+                feed.recent_deaths = recent_deaths;
+            }
+        }
+    }
 
     if offline_cache {
         save_cached_daily_feed(year, month, day, &feed);
