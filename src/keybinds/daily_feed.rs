@@ -143,19 +143,18 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Enter => {
-            let target = if state.kind == DailyFeedKind::News
-                || state.kind == DailyFeedKind::OnThisDay
-            {
-                let links = get_modal_row_links(app, state.kind, state.cursor_idx);
-                links
-                    .get(state.link_idx)
-                    .cloned()
-                    .or_else(|| links.first().cloned())
-            } else {
-                entries
-                    .get(state.cursor_idx)
-                    .map(|e| e.target_article.clone())
-            };
+            let target =
+                if state.kind == DailyFeedKind::News || state.kind == DailyFeedKind::OnThisDay {
+                    let links = get_modal_row_links(app, state.kind, state.cursor_idx);
+                    links
+                        .get(state.link_idx)
+                        .cloned()
+                        .or_else(|| links.first().cloned())
+                } else {
+                    entries
+                        .get(state.cursor_idx)
+                        .map(|e| e.target_article.clone())
+                };
 
             if let Some(target) = target.or_else(|| {
                 entries
@@ -169,19 +168,18 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('t') => {
-            let target = if state.kind == DailyFeedKind::News
-                || state.kind == DailyFeedKind::OnThisDay
-            {
-                let links = get_modal_row_links(app, state.kind, state.cursor_idx);
-                links
-                    .get(state.link_idx)
-                    .cloned()
-                    .or_else(|| links.first().cloned())
-            } else {
-                entries
-                    .get(state.cursor_idx)
-                    .map(|e| e.target_article.clone())
-            };
+            let target =
+                if state.kind == DailyFeedKind::News || state.kind == DailyFeedKind::OnThisDay {
+                    let links = get_modal_row_links(app, state.kind, state.cursor_idx);
+                    links
+                        .get(state.link_idx)
+                        .cloned()
+                        .or_else(|| links.first().cloned())
+                } else {
+                    entries
+                        .get(state.cursor_idx)
+                        .map(|e| e.target_article.clone())
+                };
 
             if let Some(target) = target.or_else(|| {
                 entries

@@ -508,10 +508,21 @@ pub fn parse_onthisday_event(
         links.push(canonical.clone());
 
         let norm_display = normalize_search_str(&display);
-        let base_title = norm_display.split('(').next().unwrap_or(&norm_display).trim();
+        let base_title = norm_display
+            .split('(')
+            .next()
+            .unwrap_or(&norm_display)
+            .trim();
         if !base_title.is_empty() {
             match_targets.push((base_title.to_string(), canonical.clone(), link_idx));
-            for suffix in [" line", " battle", " war", " siege", " treaty", " expedition"] {
+            for suffix in [
+                " line",
+                " battle",
+                " war",
+                " siege",
+                " treaty",
+                " expedition",
+            ] {
                 if let Some(stripped) = base_title.strip_suffix(suffix) {
                     if stripped.len() >= 3 {
                         match_targets.push((stripped.to_string(), canonical.clone(), link_idx));

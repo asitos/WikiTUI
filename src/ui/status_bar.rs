@@ -201,23 +201,31 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                 if modal.kind == crate::ui::modals::DailyFeedKind::OnThisDay {
                     vec![Span::styled(
                         "1-4 category · j/k navigate · tab links · enter read · esc close",
-                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(theme::BLUE)
+                            .add_modifier(Modifier::BOLD),
                     )]
                 } else if modal.kind == crate::ui::modals::DailyFeedKind::News {
                     vec![Span::styled(
                         "j/k navigate · tab links · enter read · esc close",
-                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(theme::BLUE)
+                            .add_modifier(Modifier::BOLD),
                     )]
                 } else {
                     vec![Span::styled(
                         "j/k navigate · enter read · esc close",
-                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(theme::BLUE)
+                            .add_modifier(Modifier::BOLD),
                     )]
                 }
             } else {
                 vec![Span::styled(
                     "j/k navigate · enter read · esc close",
-                    Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::BLUE)
+                        .add_modifier(Modifier::BOLD),
                 )]
             }
         }
