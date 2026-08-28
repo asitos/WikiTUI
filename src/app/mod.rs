@@ -133,6 +133,7 @@ pub struct App {
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
     pub wiki_stats: crate::api::WikiStatistics,
+    pub daily_feed: Option<crate::api::DailyFeed>,
     pub recent_articles: Vec<String>,
     pub launch_quote_idx: usize,
     pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
@@ -185,6 +186,13 @@ impl App {
         });
     }
 
+    pub fn send_fetch_daily_feed(&self) {
+        let _ = self.cmd_tx.send(NetworkCommand::FetchDailyFeed {
+            timeout: self.config.network.timeout,
+            offline_cache: self.config.network.offline_cache,
+        });
+    }
+
     pub fn send_fetch_stats(&self) {
         let _ = self.cmd_tx.send(NetworkCommand::FetchStats {
             timeout: self.config.network.timeout,
@@ -195,6 +203,16 @@ impl App {
         let config = crate::config::Config::load();
         let _ = cmd_tx.send(NetworkCommand::FetchStats {
             timeout: config.network.timeout,
+        });
+        let (y, m, d) = crate::api::daily_feed::utc_today();
+        let cached_feed = if config.network.offline_cache {
+            crate::api::daily_feed::get_cached_daily_feed(y, m, d)
+        } else {
+            None
+        };
+        let _ = cmd_tx.send(NetworkCommand::FetchDailyFeed {
+            timeout: config.network.timeout,
+            offline_cache: config.network.offline_cache,
         });
         let quote_idx = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -222,6 +240,7 @@ impl App {
             closed_tabs_stack: Vec::new(),
             status_message: None,
             wiki_stats: crate::api::WikiStatistics::default(),
+            daily_feed: cached_feed,
             recent_articles: Self::load_recent_articles(),
             launch_quote_idx: quote_idx,
             scroll_drag: None,
@@ -503,6 +522,9 @@ impl App {
                         || self.saved_lists.is_article_in_list("liked", &item.title);
                     self.feed.add_item(item);
                 }
+            }
+            NetworkEvent::DailyFeedLoaded(feed) => {
+                self.daily_feed = Some(feed);
             }
             NetworkEvent::StatsLoaded(stats) => {
                 self.wiki_stats = stats;

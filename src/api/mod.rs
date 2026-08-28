@@ -43,6 +43,10 @@ pub enum NetworkCommand {
     FetchFeedBatch {
         timeout: u64,
     },
+    FetchDailyFeed {
+        timeout: u64,
+        offline_cache: bool,
+    },
     FetchStats {
         timeout: u64,
     },
@@ -64,6 +68,7 @@ pub enum NetworkEvent {
     FeedBatchLoaded {
         items: Vec<FeedItem>,
     },
+    DailyFeedLoaded(DailyFeed),
     StatsLoaded(WikiStatistics),
     Error {
         request_id: u64,
@@ -171,6 +176,14 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
             NetworkCommand::FetchFeedBatch { timeout } => {
                 if let Ok(items) = feed::fetch_feed_batch(&agent, timeout) {
                     let _ = ev_tx.send(NetworkEvent::FeedBatchLoaded { items });
+                }
+            }
+            NetworkCommand::FetchDailyFeed {
+                timeout,
+                offline_cache,
+            } => {
+                if let Ok(feed) = daily_feed::fetch_daily_feed(&agent, timeout, offline_cache) {
+                    let _ = ev_tx.send(NetworkEvent::DailyFeedLoaded(feed));
                 }
             }
             NetworkCommand::FetchStats { timeout } => {
