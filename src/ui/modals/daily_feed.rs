@@ -533,6 +533,16 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                 row_counter += 1;
             }
 
+            // Divider between top headlines and Ongoing / Recent deaths
+            if !feed.ongoing.is_empty() || !feed.recent_deaths.is_empty() {
+                let div_w = avail_w.saturating_sub(2);
+                lines.push(Line::from(vec![
+                    Span::styled("   ", Style::default()),
+                    Span::styled("─".repeat(div_w), Style::default().fg(theme::DARK_GREY)),
+                ]));
+                lines.push(Line::from(""));
+            }
+
             // Ongoing events row
             if !feed.ongoing.is_empty() {
                 let is_selected = row_counter == selected_idx;
