@@ -1,8 +1,6 @@
 use crate::app::App;
 use crate::theme;
-use crate::ui::modals::utils::{
-    centered_rect, create_checkbox_line, render_modal_frame_at,
-};
+use crate::ui::modals::utils::{centered_rect, create_checkbox_line, render_modal_frame_at};
 use ratatui::{
     layout::Rect,
     style::{Style, Stylize},

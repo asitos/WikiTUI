@@ -10,7 +10,8 @@ pub fn handle_categories_mode(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab => {
             if categories_count > 0 {
-                app.categories_modal.cursor_idx = (app.categories_modal.cursor_idx + 1) % categories_count;
+                app.categories_modal.cursor_idx =
+                    (app.categories_modal.cursor_idx + 1) % categories_count;
             }
         }
         KeyCode::Up | KeyCode::Char('k') | KeyCode::BackTab => {

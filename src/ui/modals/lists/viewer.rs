@@ -1,8 +1,6 @@
 use crate::app::App;
 use crate::theme;
-use crate::ui::modals::utils::{
-    centered_rect, create_modal_block, create_selectable_line,
-};
+use crate::ui::modals::utils::{centered_rect, create_modal_block, create_selectable_line};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},

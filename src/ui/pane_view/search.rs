@@ -183,10 +183,7 @@ pub fn render_search_pane(
                                 s_line,
                                 Style::default().bg(theme::LIGHT_BG).fg(theme::GREY),
                             ),
-                            Span::styled(
-                                " ".repeat(pad_s),
-                                Style::default().bg(theme::LIGHT_BG),
-                            ),
+                            Span::styled(" ".repeat(pad_s), Style::default().bg(theme::LIGHT_BG)),
                         ]));
                     }
                 }

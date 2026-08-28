@@ -105,9 +105,8 @@ pub fn render_article_pane(
                 && pane.local_matches[match_ptr].line_idx == line_idx
             {
                 let m = &pane.local_matches[match_ptr];
-                let is_active = selected_match.is_some_and(|sm| {
-                    sm.line_idx == m.line_idx && sm.char_offset == m.char_offset
-                });
+                let is_active = selected_match
+                    .is_some_and(|sm| sm.line_idx == m.line_idx && sm.char_offset == m.char_offset);
                 line_matches.push((m.char_offset, m.char_offset + query_len, is_active));
                 match_ptr += 1;
             }
