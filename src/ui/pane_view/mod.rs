@@ -1,0 +1,186 @@
+pub mod article;
+pub mod scrollbar;
+pub mod search;
+
+pub use search::{
+    compute_search_result_lines_count, count_wrapped_lines, get_search_result_at_line, wrap_text,
+};
+
+use crate::app::{App, PaneContent};
+use crate::theme;
+use ratatui::{
+    layout::{Alignment, Rect},
+    style::{Style, Stylize},
+    text::{Line, Span},
+    widgets::{Block, Padding, Paragraph},
+    Frame,
+};
+
+pub fn render_single_active_pane(f: &mut Frame, app: &mut App, area: Rect) {
+    let active_tab_idx = app.active_tab_idx;
+    let active_pane_idx = app.tabs[active_tab_idx].active_pane_idx;
+    render_pane_at(f, app, active_tab_idx, active_pane_idx, area, true);
+}
+
+pub fn render_panes(f: &mut Frame, app: &mut App, main_area: Rect) {
+    let active_tab_idx = app.active_tab_idx;
+    let rects = app.tabs[active_tab_idx]
+        .layout_root
+        .compute_rects(main_area);
+    let active_pane_idx = app.tabs[active_tab_idx].active_pane_idx;
+
+    for (pane_idx, rect) in rects {
+        let is_active = pane_idx == active_pane_idx;
+        render_pane_at(f, app, active_tab_idx, pane_idx, rect, is_active);
+    }
+}
+
+fn render_pane_at(
+    f: &mut Frame,
+    app: &mut App,
+    tab_idx: usize,
+    pane_idx: usize,
+    rect: Rect,
+    is_active: bool,
+) {
+    let content_width = if app.zen_mode {
+        rect.width.saturating_sub(2) as usize
+    } else {
+        rect.width.saturating_sub(4) as usize
+    };
+
+    let show_footnotes = app.config.reader.show_footnotes;
+    let show_external_links = app.config.reader.show_external_links;
+    let heading_marker = app.config.reader.heading_marker;
+    let code_line_numbers = app.config.reader.code_line_numbers;
+    let pane = &mut app.tabs[tab_idx].panes[pane_idx];
+    pane.ensure_parsed_width(
+        content_width,
+        show_footnotes,
+        show_external_links,
+        heading_marker,
+        code_line_numbers,
+    );
+    pane.viewport_height = if app.zen_mode {
+        rect.height as usize
+    } else {
+        rect.height.saturating_sub(2) as usize
+    };
+
+    let border_color = match &pane.content {
+        PaneContent::SearchResults { .. } => {
+            if is_active {
+                theme::YELLOW
+            } else {
+                theme::DARK_GREY
+            }
+        }
+        _ => {
+            if is_active {
+                theme::PINK
+            } else {
+                theme::DARK_GREY
+            }
+        }
+    };
+
+    let title = match &pane.content {
+        PaneContent::Empty => String::new(),
+        PaneContent::SearchResults { query, .. } => {
+            format!(" search: {} ", query.to_lowercase())
+        }
+        PaneContent::ArticleText { title, .. } => {
+            format!(" {} ", title.to_lowercase())
+        }
+        PaneContent::Error(_) => " error ".to_string(),
+    };
+
+    let border_type = app.config.ui.border_type();
+
+    let block = if app.zen_mode {
+        Block::default().padding(Padding::horizontal(1))
+    } else {
+        Block::bordered()
+            .border_type(border_type)
+            .border_style(Style::default().fg(border_color))
+            .title(title)
+            .padding(Padding::horizontal(1))
+    };
+
+    if pane.is_loading {
+        let vertical_offset = (rect.height.saturating_sub(2) / 2) as usize;
+        let mut lines = Vec::new();
+        for _ in 0..vertical_offset {
+            lines.push(Line::from(""));
+        }
+
+        let spinner = crate::ui::current_spinner_frame();
+
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("{} ", spinner),
+                Style::default().fg(theme::LIME).bold(),
+            ),
+            Span::styled(
+                "loading wikipedia data...",
+                Style::default().fg(theme::BEIGE).bold(),
+            ),
+        ]));
+        let loading_p = Paragraph::new(lines)
+            .block(block)
+            .alignment(Alignment::Center);
+        f.render_widget(loading_p, rect);
+        return;
+    }
+
+    let is_search = matches!(pane.content, PaneContent::SearchResults { .. });
+    let is_empty = matches!(pane.content, PaneContent::Empty);
+    let is_error = matches!(pane.content, PaneContent::Error(_));
+
+    if is_empty {
+        crate::ui::launch_screen::render_launch_screen(f, app, rect, block);
+    } else if is_search {
+        let pane = &app.tabs[tab_idx].panes[pane_idx];
+        if let PaneContent::SearchResults { items, .. } = &pane.content {
+            search::render_search_pane(
+                f,
+                rect,
+                block,
+                pane,
+                items,
+                border_color,
+                is_active,
+                app.zen_mode,
+                app.config.ui.scroll_indicator,
+            );
+        }
+    } else if is_error {
+        let pane = &app.tabs[tab_idx].panes[pane_idx];
+        if let PaneContent::Error(err_msg) = &pane.content {
+            let vertical_offset = (rect.height.saturating_sub(2) / 2) as usize;
+            let mut lines = Vec::new();
+            for _ in 0..vertical_offset {
+                lines.push(Line::from(""));
+            }
+            lines.push(Line::from(Span::styled(
+                format!("error: {}", err_msg),
+                Style::default().fg(theme::RED).bold(),
+            )));
+            let err_p = Paragraph::new(lines)
+                .block(block)
+                .alignment(Alignment::Center);
+            f.render_widget(err_p, rect);
+        }
+    } else {
+        article::render_article_pane(
+            f,
+            app,
+            tab_idx,
+            pane_idx,
+            rect,
+            block,
+            border_color,
+            is_active,
+        );
+    }
+}
