@@ -161,6 +161,20 @@ pub fn compute_daily_feed_modal_area(container_rect: Rect) -> Rect {
     centered_rect(75, 65, container_rect)
 }
 
+const MONTH_NAMES: [&str; 12] = [
+    "january", "february", "march", "april", "may", "june", "july", "august", "september",
+    "october", "november", "december",
+];
+
+fn today_date_str() -> String {
+    let (_y, m, d) = crate::api::daily_feed::utc_today();
+    let month_str = MONTH_NAMES
+        .get(m.saturating_sub(1) as usize)
+        .copied()
+        .unwrap_or("");
+    format!("{} {}", month_str, d)
+}
+
 pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
     let state = match &app.daily_feed_modal {
         Some(s) => s,
@@ -170,17 +184,17 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
     let (icon, title_text, accent_color) = match state.kind {
         DailyFeedKind::News => (
             if app.config.ui.icons { "󰋫" } else { "" },
-            "in the news · today's top stories",
+            "in the news".to_string(),
             theme::TEAL,
         ),
         DailyFeedKind::OnThisDay => (
             if app.config.ui.icons { "󰃭" } else { "" },
-            "on this day · historical milestones",
+            format!("on this day · {}", today_date_str()),
             theme::YELLOW,
         ),
         DailyFeedKind::MostRead => (
             if app.config.ui.icons { "󰄬" } else { "" },
-            "most read · trending articles",
+            "most read".to_string(),
             theme::VIOLET,
         ),
     };
@@ -190,7 +204,7 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
         f,
         modal_area,
         icon,
-        title_text,
+        &title_text,
         accent_color,
         app.config.ui.rounded_borders,
     );
