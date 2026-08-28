@@ -128,9 +128,10 @@ pub fn render_search_pane(
         let item_counts = compute_search_result_lines_count(items, pane.selected_idx, inner_width);
         let total_lines: usize = item_counts.iter().sum();
         let view_start = pane.scroll_offset;
-        let view_end = view_start + pane.viewport_height + 2;
+        let view_len = (pane.viewport_height + 2).min(total_lines.saturating_sub(view_start));
+        let view_end = view_start + view_len;
 
-        let mut lines = Vec::with_capacity(total_lines);
+        let mut rendered_lines = Vec::with_capacity(view_len);
         let mut cur_line = 0;
 
         for (i, item) in items.iter().enumerate() {
@@ -139,16 +140,18 @@ pub fn render_search_pane(
             let item_end = item_start + item_height;
             cur_line = item_end;
 
-            if item_end <= view_start || item_start >= view_end {
-                for _ in 0..item_height {
-                    lines.push(Line::from(""));
-                }
+            if item_end <= view_start {
                 continue;
+            }
+            if item_start >= view_end {
+                break;
             }
 
             let is_selected = i == pane.selected_idx;
             let title_lower = item.title.to_lowercase();
             let snippet_lower = item.snippet.to_lowercase();
+
+            let mut item_lines = Vec::with_capacity(item_height);
 
             if is_selected {
                 let badge_str = format!(" {} ", i + 1);
@@ -156,7 +159,7 @@ pub fn render_search_pane(
                 let title_w = unicode_width::UnicodeWidthStr::width(title_lower.as_str());
                 let pad_1 = inner_width.saturating_sub(badge_w + 1 + title_w);
 
-                lines.push(Line::from(vec![
+                item_lines.push(Line::from(vec![
                     Span::styled(
                         badge_str,
                         Style::default().bg(theme::LIME).fg(theme::BG).bold(),
@@ -174,7 +177,7 @@ pub fn render_search_pane(
                     for s_line in wrap_text(&snippet_lower, wrap_w) {
                         let s_w = unicode_width::UnicodeWidthStr::width(s_line.as_str());
                         let pad_s = inner_width.saturating_sub(3 + s_w);
-                        lines.push(Line::from(vec![
+                        item_lines.push(Line::from(vec![
                             Span::styled("   ", Style::default().bg(theme::LIGHT_BG)),
                             Span::styled(
                                 s_line,
@@ -188,7 +191,7 @@ pub fn render_search_pane(
                     }
                 }
             } else {
-                lines.push(Line::from(vec![
+                item_lines.push(Line::from(vec![
                     Span::styled(
                         format!(" {:>2} ", i + 1),
                         Style::default().fg(theme::DARK_GREY),
@@ -199,18 +202,23 @@ pub fn render_search_pane(
                 if !snippet_lower.is_empty() {
                     let wrap_w = inner_width.saturating_sub(4).max(10);
                     for s_line in wrap_text(&snippet_lower, wrap_w) {
-                        lines.push(Line::from(vec![
+                        item_lines.push(Line::from(vec![
                             Span::raw("    "),
                             Span::styled(s_line, Style::default().fg(theme::GREY)),
                         ]));
                     }
                 }
             }
-            lines.push(Line::from(""));
+            item_lines.push(Line::from(""));
+
+            for (offset, line) in item_lines.into_iter().enumerate() {
+                let line_idx = item_start + offset;
+                if line_idx >= view_start && line_idx < view_end {
+                    rendered_lines.push(line);
+                }
+            }
         }
-        let results_p = Paragraph::new(lines)
-            .block(block)
-            .scroll((pane.scroll_offset as u16, 0));
+        let results_p = Paragraph::new(rendered_lines).block(block);
         f.render_widget(results_p, rect);
 
         render_scroll_indicator(
