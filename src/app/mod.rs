@@ -542,7 +542,7 @@ impl App {
                 }
             }
             NetworkEvent::DailyFeedLoaded(feed) => {
-                self.daily_feed = Some(feed);
+                self.daily_feed = Some(*feed);
             }
             NetworkEvent::StatsLoaded(stats) => {
                 self.wiki_stats = stats;

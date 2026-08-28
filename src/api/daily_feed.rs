@@ -72,6 +72,20 @@ pub struct RecentDeathItem {
     pub target: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct OnThisDayArchive {
+    #[serde(default)]
+    pub selected: Vec<OnThisDayEvent>,
+    #[serde(default)]
+    pub events: Vec<OnThisDayEvent>,
+    #[serde(default)]
+    pub births: Vec<OnThisDayEvent>,
+    #[serde(default)]
+    pub deaths: Vec<OnThisDayEvent>,
+    #[serde(default)]
+    pub holidays: Vec<OnThisDayEvent>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DailyFeed {
     pub tfa: Option<PageSummary>,
@@ -84,6 +98,8 @@ pub struct DailyFeed {
     pub ongoing: Vec<OngoingItem>,
     #[serde(default)]
     pub recent_deaths: Vec<RecentDeathItem>,
+    #[serde(default)]
+    pub onthisday_all: Option<OnThisDayArchive>,
 }
 
 pub fn strip_wikitext_comments(s: &str) -> String {
@@ -295,6 +311,23 @@ pub fn fetch_daily_feed(
                 feed.ongoing = ongoing;
                 feed.recent_deaths = recent_deaths;
             }
+        }
+    }
+
+    let otd_url = format!(
+        "https://en.wikipedia.org/api/rest_v1/feed/onthisday/all/{:02}/{:02}",
+        month, day
+    );
+    if let Ok(otd_resp) = agent
+        .get(&otd_url)
+        .timeout(std::time::Duration::from_secs(timeout))
+        .call()
+    {
+        if let Ok(archive) = otd_resp.into_json::<OnThisDayArchive>() {
+            if !archive.events.is_empty() {
+                feed.onthisday = archive.events.clone();
+            }
+            feed.onthisday_all = Some(archive);
         }
     }
 
