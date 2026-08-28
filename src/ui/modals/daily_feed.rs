@@ -460,23 +460,21 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
         None => return,
     };
 
-    let (icon, title_text, accent_color) = match state.kind {
+    let (icon, title_text) = match state.kind {
         DailyFeedKind::News => (
             if app.config.ui.icons { "󰋫" } else { "" },
             "in the news".to_string(),
-            theme::TEAL,
         ),
         DailyFeedKind::OnThisDay => (
             if app.config.ui.icons { "󰃭" } else { "" },
             format!("on this day · {}", today_date_str()),
-            theme::YELLOW,
         ),
         DailyFeedKind::MostRead => (
             if app.config.ui.icons { "󰄬" } else { "" },
             "most read".to_string(),
-            theme::VIOLET,
         ),
     };
+    let accent_color = theme::BLUE;
 
     let modal_area = compute_daily_feed_modal_area(size, state.kind);
     let modal_block = render_modal_frame_at(
@@ -522,7 +520,7 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                 for (line_idx, line_words) in wrapped_lines.into_iter().enumerate() {
                     let (prefix, prefix_style) = if line_idx == 0 {
                         if is_selected {
-                            (" ▶ ", Style::default().fg(theme::TEAL).bold())
+                            (" ▶ ", Style::default().fg(theme::BLUE).bold())
                         } else {
                             ("   ", Style::default().fg(theme::GREY))
                         }
@@ -592,7 +590,7 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
             if !feed.ongoing.is_empty() {
                 let is_selected = row_counter == selected_idx;
                 let (prefix, prefix_style) = if is_selected {
-                    (" ▶ ", Style::default().fg(theme::TEAL).bold())
+                    (" ▶ ", Style::default().fg(theme::BLUE).bold())
                 } else {
                     ("   ", Style::default().fg(theme::GREY))
                 };
@@ -658,7 +656,7 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
             if !feed.recent_deaths.is_empty() {
                 let is_selected = row_counter == selected_idx;
                 let (prefix, prefix_style) = if is_selected {
-                    (" ▶ ", Style::default().fg(theme::TEAL).bold())
+                    (" ▶ ", Style::default().fg(theme::BLUE).bold())
                 } else {
                     ("   ", Style::default().fg(theme::GREY))
                 };
