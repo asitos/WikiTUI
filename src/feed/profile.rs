@@ -136,8 +136,10 @@ impl FeedProfile {
     pub fn get_active_subcategories(&self) -> Vec<String> {
         let mut subcats = Vec::new();
         for (display_name, label, subcat_list) in POPULAR_CATEGORIES {
-            if self.selected_categories.contains(&label.to_string())
-                || self.selected_categories.contains(&display_name.to_string())
+            if self
+                .selected_categories
+                .iter()
+                .any(|c| c == *label || c == *display_name)
             {
                 for s in *subcat_list {
                     subcats.push(s.to_string());
