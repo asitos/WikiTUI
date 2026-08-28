@@ -98,6 +98,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **switch tabs** | `alt-h` / `alt-l` | switch to previous / next tab |
 | **jump to tab** | `alt-0..9` | switch to tab 1-10 |
 | **categories** | `c` | view categories of current article |
+| **daily feeds (home)** | `f` / `n` / `d` / `t` | open featured article (`f`), news (`n`), on this day (`d`), trending (`t`) |
 | **spoken audio** | `a` / `A` | play/pause / stop spoken audio |
 | **restore session** | `S` | restore previous session (from home tab) |
 | **settings modal** | `,` | open interactive settings modal |
