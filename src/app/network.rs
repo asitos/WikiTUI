@@ -1,0 +1,58 @@
+use crate::api::NetworkCommand;
+use crate::app::App;
+
+impl App {
+    pub fn next_request_id(&mut self) -> u64 {
+        let req_id = self.next_request_id;
+        self.next_request_id = self.next_request_id.wrapping_add(1).max(1);
+        req_id
+    }
+
+    pub fn send_fetch_article(&mut self, pane_id: usize, title: String) {
+        let request_id = self.next_request_id();
+        if let Some(pane) = self.find_pane_mut(pane_id) {
+            pane.current_request_id = request_id;
+        }
+        let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
+            request_id,
+            pane_id,
+            title,
+            timeout: self.config.network.timeout,
+            offline_cache: self.config.network.offline_cache,
+            cache_lifetime: self.config.network.cache_lifetime,
+        });
+    }
+
+    pub fn send_fetch_random_article(&mut self, pane_id: usize) {
+        let request_id = self.next_request_id();
+        if let Some(pane) = self.find_pane_mut(pane_id) {
+            pane.current_request_id = request_id;
+        }
+        let _ = self.cmd_tx.send(NetworkCommand::FetchRandomArticle {
+            request_id,
+            pane_id,
+            timeout: self.config.network.timeout,
+            offline_cache: self.config.network.offline_cache,
+            cache_lifetime: self.config.network.cache_lifetime,
+        });
+    }
+
+    pub fn send_fetch_feed_batch(&self) {
+        let _ = self.cmd_tx.send(NetworkCommand::FetchFeedBatch {
+            timeout: self.config.network.timeout,
+        });
+    }
+
+    pub fn send_fetch_daily_feed(&self) {
+        let _ = self.cmd_tx.send(NetworkCommand::FetchDailyFeed {
+            timeout: self.config.network.timeout,
+            offline_cache: self.config.network.offline_cache,
+        });
+    }
+
+    pub fn send_fetch_stats(&self) {
+        let _ = self.cmd_tx.send(NetworkCommand::FetchStats {
+            timeout: self.config.network.timeout,
+        });
+    }
+}
