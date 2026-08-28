@@ -1,0 +1,184 @@
+use crate::app::App;
+use crate::theme;
+use crate::ui::modals::utils::{
+    centered_rect, create_modal_block, create_selectable_line,
+};
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Style, Stylize},
+    text::{Line, Span},
+    widgets::{Block, Paragraph},
+    Frame,
+};
+
+pub fn compute_saved_lists_viewer_areas(size: Rect) -> (Rect, Rect, Rect) {
+    let container_area = centered_rect(80, 80, size);
+    let inner_area = Rect::new(
+        container_area.x + 1,
+        container_area.y + 1,
+        container_area.width.saturating_sub(2),
+        container_area.height.saturating_sub(2),
+    );
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
+        .split(inner_area);
+    (container_area, chunks[0], chunks[1])
+}
+
+pub fn compute_list_viewer_scroll(
+    cursor_idx: usize,
+    visible_rows: usize,
+    total_items: usize,
+) -> usize {
+    if total_items <= visible_rows || visible_rows == 0 {
+        0
+    } else {
+        cursor_idx
+            .saturating_sub(visible_rows / 2)
+            .min(total_items.saturating_sub(visible_rows))
+    }
+}
+
+pub fn get_saved_lists_viewer_item_at(
+    app: &App,
+    is_right: bool,
+    area: Rect,
+    target_y: u16,
+) -> Option<usize> {
+    if target_y <= area.y || target_y >= area.y + area.height.saturating_sub(1) {
+        return None;
+    }
+    let row_offset = (target_y - (area.y + 1)) as usize;
+    let visible_rows = (area.height.saturating_sub(2)) as usize;
+    if is_right {
+        let selected_list = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx)?;
+        let total = selected_list.articles.len();
+        let scroll =
+            compute_list_viewer_scroll(app.lists_modal.viewer_article_idx, visible_rows, total);
+        let idx = scroll + row_offset;
+        if idx < total {
+            Some(idx)
+        } else {
+            None
+        }
+    } else {
+        let total = app.saved_lists.lists.len();
+        let scroll =
+            compute_list_viewer_scroll(app.lists_modal.viewer_list_idx, visible_rows, total);
+        let idx = scroll + row_offset;
+        if idx < total {
+            Some(idx)
+        } else {
+            None
+        }
+    }
+}
+
+pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
+    let icon = if app.config.ui.icons { "★" } else { "" };
+    let (container_area, left_area, right_area) = compute_saved_lists_viewer_areas(size);
+    f.render_widget(ratatui::widgets::Clear, container_area);
+    let block = create_modal_block(
+        icon,
+        "saved lists & articles",
+        theme::VIOLET,
+        app.config.ui.rounded_borders,
+    );
+    f.render_widget(block, container_area);
+
+    let left_border_color = if !app.lists_modal.viewer_focus_right {
+        theme::VIOLET
+    } else {
+        theme::GREY
+    };
+    let border_type = app.config.ui.border_type();
+    let left_block = Block::bordered()
+        .border_type(border_type)
+        .title(" custom lists ")
+        .border_style(Style::default().fg(left_border_color));
+
+    let mut list_lines = Vec::new();
+    if app.saved_lists.lists.is_empty() {
+        list_lines.push(Line::from(Span::styled(
+            " no lists created yet.",
+            Style::default().fg(theme::GREY).italic(),
+        )));
+    } else {
+        for (idx, list) in app.saved_lists.lists.iter().enumerate() {
+            let is_selected = idx == app.lists_modal.viewer_list_idx;
+            let is_active = !app.lists_modal.viewer_focus_right;
+            let suffix = format!(" ({})", list.articles.len());
+
+            list_lines.push(create_selectable_line(
+                &list.name,
+                is_selected,
+                is_active,
+                theme::VIOLET,
+                Some(&suffix),
+            ));
+        }
+    }
+
+    let left_visible_rows = (left_area.height.saturating_sub(2)) as usize;
+    let left_scroll = compute_list_viewer_scroll(
+        app.lists_modal.viewer_list_idx,
+        left_visible_rows,
+        app.saved_lists.lists.len(),
+    );
+    let left_p = Paragraph::new(list_lines)
+        .block(left_block)
+        .scroll((left_scroll as u16, 0));
+    f.render_widget(left_p, left_area);
+
+    let right_border_color = if app.lists_modal.viewer_focus_right {
+        theme::YELLOW
+    } else {
+        theme::GREY
+    };
+
+    let selected_list = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx);
+    let right_title = selected_list
+        .map(|l| format!(" articles in '{}' ", l.name))
+        .unwrap_or_else(|| " Articles ".to_string());
+
+    let right_block = Block::bordered()
+        .border_type(border_type)
+        .title(right_title)
+        .border_style(Style::default().fg(right_border_color));
+
+    let mut article_lines = Vec::new();
+    let right_total = selected_list.map(|l| l.articles.len()).unwrap_or(0);
+    if let Some(list) = selected_list {
+        if list.articles.is_empty() {
+            article_lines.push(Line::from(Span::styled(
+                " no articles saved in this list.",
+                Style::default().fg(theme::GREY).italic(),
+            )));
+        } else {
+            for (idx, article) in list.articles.iter().enumerate() {
+                let is_selected = idx == app.lists_modal.viewer_article_idx;
+                let is_active = app.lists_modal.viewer_focus_right;
+
+                article_lines.push(create_selectable_line(
+                    article,
+                    is_selected,
+                    is_active,
+                    theme::VIOLET,
+                    None,
+                ));
+            }
+        }
+    }
+
+    let right_visible_rows = (right_area.height.saturating_sub(2)) as usize;
+    let right_scroll = compute_list_viewer_scroll(
+        app.lists_modal.viewer_article_idx,
+        right_visible_rows,
+        right_total,
+    );
+    let right_p = Paragraph::new(article_lines)
+        .block(right_block)
+        .scroll((right_scroll as u16, 0));
+    f.render_widget(right_p, right_area);
+}
