@@ -153,7 +153,7 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('f') => {
                 if matches!(app.active_pane().content, crate::app::PaneContent::Empty) {
                     if let Some(tfa) = app.daily_feed.as_ref().and_then(|f| f.tfa.as_ref()) {
-                        let title = tfa.title.clone();
+                        let title = tfa.display_title();
                         app.open_article(&title);
                     } else {
                         app.send_fetch_daily_feed();

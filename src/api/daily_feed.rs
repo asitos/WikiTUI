@@ -11,10 +11,10 @@ pub struct PageSummary {
 }
 
 impl PageSummary {
-    pub fn display_title(&self) -> &str {
+    pub fn display_title(&self) -> String {
         self.normalizedtitle
-            .as_deref()
-            .unwrap_or(self.title.as_str())
+            .clone()
+            .unwrap_or_else(|| self.title.replace('_', " "))
     }
 }
 
@@ -44,10 +44,10 @@ pub struct MostReadArticle {
 }
 
 impl MostReadArticle {
-    pub fn display_title(&self) -> &str {
+    pub fn display_title(&self) -> String {
         self.normalizedtitle
-            .as_deref()
-            .unwrap_or(self.title.as_str())
+            .clone()
+            .unwrap_or_else(|| self.title.replace('_', " "))
     }
 }
 

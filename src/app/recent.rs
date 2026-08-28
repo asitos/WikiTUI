@@ -12,6 +12,7 @@ impl App {
         std::fs::read_to_string(&path)
             .ok()
             .and_then(|c| serde_json::from_str::<Vec<String>>(&c).ok())
+            .map(|list| list.into_iter().map(|t| t.replace('_', " ")).collect())
             .unwrap_or_default()
     }
 
@@ -26,12 +27,12 @@ impl App {
     }
 
     pub fn record_recent_article(&mut self, title: &str) {
-        let trimmed = title.trim();
-        if trimmed.is_empty() || trimmed.to_lowercase().starts_with("category:") {
+        let clean = title.trim().replace('_', " ");
+        if clean.is_empty() || clean.to_lowercase().starts_with("category:") {
             return;
         }
-        self.recent_articles.retain(|t| t != title);
-        self.recent_articles.insert(0, title.to_string());
+        self.recent_articles.retain(|t| t != &clean);
+        self.recent_articles.insert(0, clean);
         if self.recent_articles.len() > 10 {
             self.recent_articles.truncate(10);
         }
