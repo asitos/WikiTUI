@@ -101,6 +101,14 @@ impl SavedListsStore {
         self.rebuild_cache();
     }
 
+    pub fn clear_list(&mut self, list_id: &str) {
+        if let Some(list) = self.lists.iter_mut().find(|l| l.id == list_id) {
+            list.articles.clear();
+            self.save();
+            self.rebuild_cache();
+        }
+    }
+
     pub fn toggle_article_in_list(&mut self, list_id: &str, title: &str) -> bool {
         let title_trimmed = title.trim();
         if title_trimmed.is_empty() {

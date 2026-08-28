@@ -52,10 +52,7 @@ impl App {
 
     pub fn reset_feed(&mut self) {
         self.feed.reset();
-        if let Some(liked_list) = self.saved_lists.lists.iter_mut().find(|l| l.id == "liked") {
-            liked_list.articles.clear();
-            self.saved_lists.save();
-        }
+        self.saved_lists.clear_list("liked");
         self.onboarding.cursor_idx = 0;
         self.onboarding.selected = vec![
             false, false, false, false, true, false, false, true, true, false, false, true,
