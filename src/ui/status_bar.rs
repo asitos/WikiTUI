@@ -31,6 +31,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             InputMode::Help => (" HELP ", theme::GREY),
             InputMode::Confirm => (" PROMPT ", theme::RED),
             InputMode::Categories => (" CATEGORIES ", theme::TEAL),
+            InputMode::DailyFeedModal => (" FEED ", theme::TEAL),
         }
     };
 
@@ -195,6 +196,31 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                 .fg(theme::TEAL)
                 .add_modifier(Modifier::BOLD),
         )],
+        InputMode::DailyFeedModal => {
+            if let Some(modal) = &app.daily_feed_modal {
+                if modal.kind == crate::ui::modals::DailyFeedKind::OnThisDay {
+                    vec![Span::styled(
+                        "1-4 category · j/k navigate · tab links · enter read · esc close",
+                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                    )]
+                } else if modal.kind == crate::ui::modals::DailyFeedKind::News {
+                    vec![Span::styled(
+                        "j/k navigate · tab links · enter read · esc close",
+                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                    )]
+                } else {
+                    vec![Span::styled(
+                        "j/k navigate · enter read · esc close",
+                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                    )]
+                }
+            } else {
+                vec![Span::styled(
+                    "j/k navigate · enter read · esc close",
+                    Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                )]
+            }
+        }
         InputMode::Normal => {
             if app.audio_player.is_active() {
                 let state_str = match app.audio_player.state {
@@ -242,6 +268,11 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                 && (!active_pane.history_back.is_empty() || !active_pane.history_forward.is_empty())
             {
                 build_history_trail(active_pane)
+            } else if matches!(active_pane.content, PaneContent::Empty) {
+                vec![Span::styled(
+                    "ctrl-s search · F feed · , settings · ? help · q quit",
+                    Style::default().fg(theme::GREY),
+                )]
             } else {
                 let has_spoken =
                     if let PaneContent::ArticleText { parsed_doc, .. } = &active_pane.content {

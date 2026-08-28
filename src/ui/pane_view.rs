@@ -147,7 +147,8 @@ fn render_pane_at(
                 f.render_widget(no_res_p, rect);
             } else {
                 let inner_width = (rect.width as usize).saturating_sub(4).max(20);
-                let item_counts = compute_search_result_lines_count(items, pane.selected_idx, inner_width);
+                let item_counts =
+                    compute_search_result_lines_count(items, pane.selected_idx, inner_width);
                 let total_lines: usize = item_counts.iter().sum();
                 let view_start = pane.scroll_offset;
                 let view_end = view_start + pane.viewport_height + 2;

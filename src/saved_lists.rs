@@ -136,7 +136,8 @@ impl SavedListsStore {
         if title_trimmed.is_empty() {
             return false;
         }
-        self.cached_saved_set.contains(&title_trimmed.to_lowercase())
+        self.cached_saved_set
+            .contains(&title_trimmed.to_lowercase())
     }
 
     pub fn ensure_list(&mut self, id: &str, name: &str) {

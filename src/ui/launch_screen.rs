@@ -40,7 +40,7 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
     let pad_str = " ".repeat(left_pad);
 
     let recent_articles = app.get_continue_reading_articles();
-    let show_recent = !recent_articles.is_empty() && inner_height >= (LOGO.len() + 8);
+    let show_recent = !recent_articles.is_empty() && inner_height >= (LOGO.len() + 10);
     let displayed_count = if show_recent {
         recent_articles.len().min(7)
     } else {
@@ -48,7 +48,7 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
     };
 
     let mut lines = Vec::new();
-    let total_content_height = LOGO.len() + 4 + if show_recent { displayed_count + 2 } else { 0 };
+    let total_content_height = LOGO.len() + 6 + if show_recent { displayed_count + 2 } else { 0 };
     let v_pad = inner_height.saturating_sub(total_content_height) / 2;
 
     for _ in 0..v_pad {
@@ -155,6 +155,51 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
     let mut stats_line = vec![Span::raw(" ".repeat(stats_pad))];
     stats_line.extend(stats_spans);
     lines.push(Line::from(stats_line));
+
+    lines.push(Line::from(""));
+
+    let actions: Vec<(&str, &str)> = if inner_width >= 75 {
+        vec![
+            ("Featured", "f"),
+            ("News", "n"),
+            ("On This Day", "d"),
+            ("Trending", "t"),
+            ("Random", "r"),
+        ]
+    } else if inner_width >= 50 {
+        vec![
+            ("Featured", "f"),
+            ("News", "n"),
+            ("History", "d"),
+            ("Top", "t"),
+            ("Random", "r"),
+        ]
+    } else {
+        vec![("Featured", "f"), ("News", "n"), ("History", "d")]
+    };
+
+    let mut action_spans = Vec::new();
+    for (idx, (label, key)) in actions.iter().enumerate() {
+        if idx > 0 {
+            action_spans.push(Span::raw("    "));
+        }
+        action_spans.push(Span::styled(*label, Style::default().fg(theme::FG)));
+        action_spans.push(Span::styled("[", Style::default().fg(theme::DARK_GREY)));
+        action_spans.push(Span::styled(
+            *key,
+            Style::default().fg(theme::YELLOW).bold(),
+        ));
+        action_spans.push(Span::styled("]", Style::default().fg(theme::DARK_GREY)));
+    }
+
+    let actions_width: usize = action_spans
+        .iter()
+        .map(|s| unicode_width::UnicodeWidthStr::width(s.content.as_ref()))
+        .sum();
+    let actions_pad = (inner_width.saturating_sub(actions_width)) / 2;
+    let mut action_line = vec![Span::raw(" ".repeat(actions_pad))];
+    action_line.extend(action_spans);
+    lines.push(Line::from(action_line));
 
     if show_recent {
         lines.push(Line::from(""));

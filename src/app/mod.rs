@@ -37,6 +37,7 @@ pub enum InputMode {
     Confirm,
     Settings,
     Categories,
+    DailyFeedModal,
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -133,6 +134,8 @@ pub struct App {
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
     pub wiki_stats: crate::api::WikiStatistics,
+    pub daily_feed: Option<crate::api::DailyFeed>,
+    pub daily_feed_modal: Option<crate::ui::modals::DailyFeedModalState>,
     pub recent_articles: Vec<String>,
     pub launch_quote_idx: usize,
     pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
@@ -144,6 +147,20 @@ pub struct App {
 }
 
 impl App {
+    pub fn open_daily_feed_modal(&mut self, kind: crate::ui::modals::DailyFeedKind) {
+        self.daily_feed_modal = Some(crate::ui::modals::DailyFeedModalState {
+            kind,
+            cursor_idx: 0,
+            link_idx: 0,
+            otd_tab: crate::ui::modals::OnThisDayTab::Events,
+        });
+        self.input_mode = InputMode::DailyFeedModal;
+    }
+
+    pub fn close_daily_feed_modal(&mut self) {
+        self.daily_feed_modal = None;
+        self.input_mode = InputMode::Normal;
+    }
     pub fn next_request_id(&mut self) -> u64 {
         let req_id = self.next_request_id;
         self.next_request_id = self.next_request_id.wrapping_add(1).max(1);
@@ -185,6 +202,13 @@ impl App {
         });
     }
 
+    pub fn send_fetch_daily_feed(&self) {
+        let _ = self.cmd_tx.send(NetworkCommand::FetchDailyFeed {
+            timeout: self.config.network.timeout,
+            offline_cache: self.config.network.offline_cache,
+        });
+    }
+
     pub fn send_fetch_stats(&self) {
         let _ = self.cmd_tx.send(NetworkCommand::FetchStats {
             timeout: self.config.network.timeout,
@@ -195,6 +219,16 @@ impl App {
         let config = crate::config::Config::load();
         let _ = cmd_tx.send(NetworkCommand::FetchStats {
             timeout: config.network.timeout,
+        });
+        let (y, m, d) = crate::api::daily_feed::utc_today();
+        let cached_feed = if config.network.offline_cache {
+            crate::api::daily_feed::get_cached_daily_feed(y, m, d)
+        } else {
+            None
+        };
+        let _ = cmd_tx.send(NetworkCommand::FetchDailyFeed {
+            timeout: config.network.timeout,
+            offline_cache: config.network.offline_cache,
         });
         let quote_idx = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -222,6 +256,8 @@ impl App {
             closed_tabs_stack: Vec::new(),
             status_message: None,
             wiki_stats: crate::api::WikiStatistics::default(),
+            daily_feed: cached_feed,
+            daily_feed_modal: None,
             recent_articles: Self::load_recent_articles(),
             launch_quote_idx: quote_idx,
             scroll_drag: None,
@@ -464,7 +500,9 @@ impl App {
                             heading_marker,
                             code_line_numbers,
                         );
-                        pane.scroll_offset = pane.scroll_offset.min(parsed_doc.lines.len().saturating_sub(1));
+                        pane.scroll_offset = pane
+                            .scroll_offset
+                            .min(parsed_doc.lines.len().saturating_sub(1));
                         let initial_link_idx = if !parsed_doc.links.is_empty() {
                             Some(0)
                         } else {
@@ -503,6 +541,9 @@ impl App {
                         || self.saved_lists.is_article_in_list("liked", &item.title);
                     self.feed.add_item(item);
                 }
+            }
+            NetworkEvent::DailyFeedLoaded(feed) => {
+                self.daily_feed = Some(*feed);
             }
             NetworkEvent::StatsLoaded(stats) => {
                 self.wiki_stats = stats;

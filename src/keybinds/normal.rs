@@ -128,7 +128,18 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                 app.enter_local_search_mode();
             }
             KeyCode::Char('n') => {
-                app.next_local_match(term_height);
+                if matches!(app.active_pane().content, crate::app::PaneContent::Empty) {
+                    app.open_daily_feed_modal(crate::ui::modals::DailyFeedKind::News);
+                } else {
+                    app.next_local_match(term_height);
+                }
+            }
+            KeyCode::Char('d') => {
+                if matches!(app.active_pane().content, crate::app::PaneContent::Empty) {
+                    app.open_daily_feed_modal(crate::ui::modals::DailyFeedKind::OnThisDay);
+                } else if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    app.scroll_page_down(term_height);
+                }
             }
             KeyCode::Char('N') => {
                 app.prev_local_match(term_height);
@@ -140,7 +151,16 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                 app.jump_prev_heading(term_height);
             }
             KeyCode::Char('f') => {
-                app.scroll_page_down(term_height);
+                if matches!(app.active_pane().content, crate::app::PaneContent::Empty) {
+                    if let Some(tfa) = app.daily_feed.as_ref().and_then(|f| f.tfa.as_ref()) {
+                        let title = tfa.display_title();
+                        app.open_article(&title);
+                    } else {
+                        app.send_fetch_daily_feed();
+                    }
+                } else {
+                    app.scroll_page_down(term_height);
+                }
             }
             KeyCode::Char('b') => {
                 app.scroll_page_up(term_height);
@@ -246,7 +266,11 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                 app.select_prev_item(term_height);
             }
             KeyCode::Char('t') => {
-                app.activate_selected_in_new_tab();
+                if matches!(app.active_pane().content, crate::app::PaneContent::Empty) {
+                    app.open_daily_feed_modal(crate::ui::modals::DailyFeedKind::MostRead);
+                } else {
+                    app.activate_selected_in_new_tab();
+                }
             }
             KeyCode::Enter if key.modifiers.contains(KeyModifiers::ALT) => {
                 app.activate_selected_in_new_tab();
