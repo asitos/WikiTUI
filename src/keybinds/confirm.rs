@@ -6,9 +6,11 @@ pub fn handle_confirm_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('y') | KeyCode::Enter => match app.confirm_action.take() {
             Some(crate::app::ConfirmAction::DeleteList { list_id, .. }) => {
                 app.saved_lists.delete_list(&list_id);
-                if app.lists_modal.viewer_list_idx > 0 {
-                    app.lists_modal.viewer_list_idx -= 1;
-                }
+                let lists_count = app.saved_lists.lists.len();
+                app.lists_modal.viewer_list_idx = app
+                    .lists_modal
+                    .viewer_list_idx
+                    .min(lists_count.saturating_sub(1));
                 app.lists_modal.viewer_article_idx = 0;
                 app.input_mode = InputMode::SavedListsViewer;
             }
@@ -26,9 +28,16 @@ pub fn handle_confirm_mode(app: &mut App, key: KeyEvent) {
                         }
                     }
                 }
-                if app.lists_modal.viewer_article_idx > 0 {
-                    app.lists_modal.viewer_article_idx -= 1;
-                }
+                let articles_count = app
+                    .saved_lists
+                    .lists
+                    .get(app.lists_modal.viewer_list_idx)
+                    .map(|l| l.articles.len())
+                    .unwrap_or(0);
+                app.lists_modal.viewer_article_idx = app
+                    .lists_modal
+                    .viewer_article_idx
+                    .min(articles_count.saturating_sub(1));
                 app.input_mode = InputMode::SavedListsViewer;
             }
             Some(crate::app::ConfirmAction::ResetFeed) => {
