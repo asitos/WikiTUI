@@ -454,6 +454,112 @@ pub fn wrap_story_spans(chunks: &[StyledChunk], max_width: usize) -> Vec<Vec<(St
     lines
 }
 
+fn normalize_search_str(s: &str) -> String {
+    s.replace(['\u{a0}', '\u{202f}'], " ")
+        .replace(['–', '—', '−'], "-")
+}
+
+pub fn parse_onthisday_event(
+    text: &str,
+    pages: &[crate::api::daily_feed::PageSummary],
+) -> (Vec<StyledChunk>, Vec<String>) {
+    let mut links = Vec::new();
+    let mut match_targets: Vec<(String, String, usize)> = Vec::new();
+
+    for page in pages {
+        let canonical = &page.title;
+        let display = page.display_title();
+        let link_idx = links.len();
+        links.push(canonical.clone());
+
+        let norm_display = normalize_search_str(&display);
+        let base_title = norm_display.split('(').next().unwrap_or(&norm_display).trim();
+        if !base_title.is_empty() {
+            match_targets.push((base_title.to_string(), canonical.clone(), link_idx));
+            for suffix in [" line", " battle", " war", " siege", " treaty", " expedition"] {
+                if let Some(stripped) = base_title.strip_suffix(suffix) {
+                    if stripped.len() >= 3 {
+                        match_targets.push((stripped.to_string(), canonical.clone(), link_idx));
+                    }
+                }
+            }
+        }
+        if base_title != norm_display && !norm_display.is_empty() {
+            match_targets.push((norm_display.to_string(), canonical.clone(), link_idx));
+        }
+    }
+
+    match_targets.sort_by_key(|a| std::cmp::Reverse(a.0.len()));
+    let clean_text = normalize_search_str(text);
+
+    let mut ranges: Vec<(usize, usize, usize, String)> = Vec::new();
+    for (term, canonical, l_idx) in &match_targets {
+        let term_lower = term.to_lowercase();
+        let text_lower = clean_text.to_lowercase();
+
+        let mut start = 0;
+        while let Some(found_idx) = text_lower[start..].find(&term_lower) {
+            let actual_start = start + found_idx;
+            let actual_end = actual_start + term.len();
+
+            let overlaps = ranges.iter().any(|(s, e, _, _)| {
+                (actual_start >= *s && actual_start < *e)
+                    || (actual_end > *s && actual_end <= *e)
+                    || (actual_start <= *s && actual_end >= *e)
+            });
+
+            if !overlaps {
+                ranges.push((actual_start, actual_end, *l_idx, canonical.clone()));
+            }
+            start = actual_start + 1;
+            if start >= clean_text.len() {
+                break;
+            }
+        }
+    }
+
+    ranges.sort_by_key(|r| r.0);
+
+    let mut chunks = Vec::new();
+    let mut last_idx = 0;
+    for (start, end, l_idx, target) in ranges {
+        if start > last_idx {
+            chunks.push(StyledChunk {
+                text: clean_text[last_idx..start].to_string(),
+                style: SpanStyle::Normal,
+            });
+        }
+        chunks.push(StyledChunk {
+            text: clean_text[start..end].to_string(),
+            style: SpanStyle::Link {
+                link_idx: l_idx,
+                title: target,
+            },
+        });
+        last_idx = end;
+    }
+    if last_idx < clean_text.len() {
+        chunks.push(StyledChunk {
+            text: clean_text[last_idx..].to_string(),
+            style: SpanStyle::Normal,
+        });
+    }
+
+    if chunks.iter().all(|c| matches!(c.style, SpanStyle::Normal)) {
+        if let Some(first_page) = pages.first() {
+            chunks = vec![StyledChunk {
+                text: clean_text,
+                style: SpanStyle::Link {
+                    link_idx: 0,
+                    title: first_page.title.clone(),
+                },
+            }];
+        }
+    }
+
+    (chunks, links)
+}
+
 pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
     let state = match &app.daily_feed_modal {
         Some(s) => s,
@@ -723,16 +829,17 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                     Some(y) => format!("{}", y),
                     None => "—".to_string(),
                 };
-                let clean_text = strip_html_tags(&event.text);
-                let chunk = StyledChunk {
-                    text: clean_text,
-                    style: SpanStyle::Normal,
+                let (chunks, event_links) = parse_onthisday_event(&event.text, &event.pages);
+                let active_link_idx = if is_selected {
+                    state.link_idx.min(event_links.len().saturating_sub(1))
+                } else {
+                    0
                 };
                 let badge_prefix = format!("[ {} ] ", year_str);
                 let badge_len = badge_prefix.chars().count();
                 let text_w = avail_w.saturating_sub(badge_len + 3);
 
-                let wrapped_lines = wrap_story_spans(&[chunk], text_w + 3);
+                let wrapped_lines = wrap_story_spans(&chunks, text_w + 3);
                 for (line_idx, line_words) in wrapped_lines.into_iter().enumerate() {
                     let mut spans = Vec::new();
                     if line_idx == 0 {
@@ -754,13 +861,48 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                         spans.push(Span::raw(" ".repeat(pad_len)));
                     }
 
-                    for (text, _) in line_words {
-                        let text_style = if is_selected {
-                            Style::default().fg(theme::FG).bold()
-                        } else {
-                            Style::default().fg(theme::FG)
+                    for (text, style) in line_words {
+                        let span_style = match style {
+                            SpanStyle::Normal => {
+                                if is_selected {
+                                    Style::default().fg(theme::FG).bold()
+                                } else {
+                                    Style::default().fg(theme::FG)
+                                }
+                            }
+                            SpanStyle::Bold => Style::default().fg(theme::FG).bold(),
+                            SpanStyle::Italic => Style::default().fg(theme::GREY).italic(),
+                            SpanStyle::Link { link_idx, .. } => {
+                                if is_selected && link_idx == active_link_idx {
+                                    Style::default()
+                                        .fg(theme::VIOLET)
+                                        .bold()
+                                        .add_modifier(Modifier::UNDERLINED)
+                                } else if app.config.reader.underline_links {
+                                    Style::default()
+                                        .fg(theme::BLUE)
+                                        .add_modifier(Modifier::UNDERLINED)
+                                } else {
+                                    Style::default().fg(theme::BLUE)
+                                }
+                            }
+                            SpanStyle::BoldLink { link_idx, .. } => {
+                                if is_selected && link_idx == active_link_idx {
+                                    Style::default()
+                                        .fg(theme::VIOLET)
+                                        .bold()
+                                        .add_modifier(Modifier::UNDERLINED)
+                                } else if app.config.reader.underline_links {
+                                    Style::default()
+                                        .fg(theme::BLUE)
+                                        .bold()
+                                        .add_modifier(Modifier::UNDERLINED)
+                                } else {
+                                    Style::default().fg(theme::BLUE).bold()
+                                }
+                            }
                         };
-                        spans.push(Span::styled(text, text_style));
+                        spans.push(Span::styled(text, span_style));
                     }
                     lines.push(Line::from(spans));
                 }

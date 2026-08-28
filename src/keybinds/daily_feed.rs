@@ -1,36 +1,49 @@
 use crate::app::{App, InputMode};
 use crate::ui::modals::{
-    get_feed_entries, get_ongoing_links, get_recent_deaths_links, parse_story_html, DailyFeedKind,
+    get_feed_entries, get_ongoing_links, get_recent_deaths_links, parse_onthisday_event,
+    parse_story_html, DailyFeedKind,
 };
 use crossterm::event::{KeyCode, KeyEvent};
 
-fn get_news_row_links(app: &App, cursor_idx: usize) -> Vec<String> {
+fn get_modal_row_links(app: &App, kind: DailyFeedKind, cursor_idx: usize) -> Vec<String> {
     let feed = match &app.daily_feed {
         Some(f) => f,
         None => return Vec::new(),
     };
-    if cursor_idx < feed.news.len() {
-        if let Some(item) = feed.news.get(cursor_idx) {
-            let raw = item.story.as_deref().unwrap_or("");
-            let (_, links) = parse_story_html(raw);
-            return links;
+    match kind {
+        DailyFeedKind::News => {
+            if cursor_idx < feed.news.len() {
+                if let Some(item) = feed.news.get(cursor_idx) {
+                    let raw = item.story.as_deref().unwrap_or("");
+                    let (_, links) = parse_story_html(raw);
+                    return links;
+                }
+            }
+            let ongoing_row = feed.news.len();
+            if !feed.ongoing.is_empty() && cursor_idx == ongoing_row {
+                return get_ongoing_links(&feed.ongoing)
+                    .into_iter()
+                    .map(|(target, _)| target)
+                    .collect();
+            }
+            let deaths_row = feed.news.len() + (if !feed.ongoing.is_empty() { 1 } else { 0 });
+            if !feed.recent_deaths.is_empty() && cursor_idx == deaths_row {
+                return get_recent_deaths_links(&feed.recent_deaths)
+                    .into_iter()
+                    .map(|(target, _)| target)
+                    .collect();
+            }
+            Vec::new()
         }
+        DailyFeedKind::OnThisDay => {
+            if let Some(event) = feed.onthisday.get(cursor_idx) {
+                let (_, links) = parse_onthisday_event(&event.text, &event.pages);
+                return links;
+            }
+            Vec::new()
+        }
+        DailyFeedKind::MostRead => Vec::new(),
     }
-    let ongoing_row = feed.news.len();
-    if !feed.ongoing.is_empty() && cursor_idx == ongoing_row {
-        return get_ongoing_links(&feed.ongoing)
-            .into_iter()
-            .map(|(target, _)| target)
-            .collect();
-    }
-    let deaths_row = feed.news.len() + (if !feed.ongoing.is_empty() { 1 } else { 0 });
-    if !feed.recent_deaths.is_empty() && cursor_idx == deaths_row {
-        return get_recent_deaths_links(&feed.recent_deaths)
-            .into_iter()
-            .map(|(target, _)| target)
-            .collect();
-    }
-    Vec::new()
 }
 
 pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
@@ -82,8 +95,8 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Tab | KeyCode::Char('l') | KeyCode::Right => {
-            if state.kind == DailyFeedKind::News {
-                let links = get_news_row_links(app, state.cursor_idx);
+            if state.kind == DailyFeedKind::News || state.kind == DailyFeedKind::OnThisDay {
+                let links = get_modal_row_links(app, state.kind, state.cursor_idx);
                 let total_links = links.len();
                 if total_links > 0 {
                     if let Some(modal) = &mut app.daily_feed_modal {
@@ -93,8 +106,8 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::BackTab | KeyCode::Char('h') | KeyCode::Left => {
-            if state.kind == DailyFeedKind::News {
-                let links = get_news_row_links(app, state.cursor_idx);
+            if state.kind == DailyFeedKind::News || state.kind == DailyFeedKind::OnThisDay {
+                let links = get_modal_row_links(app, state.kind, state.cursor_idx);
                 let total_links = links.len();
                 if total_links > 0 {
                     if let Some(modal) = &mut app.daily_feed_modal {
@@ -108,8 +121,10 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Enter => {
-            let target = if state.kind == DailyFeedKind::News {
-                let links = get_news_row_links(app, state.cursor_idx);
+            let target = if state.kind == DailyFeedKind::News
+                || state.kind == DailyFeedKind::OnThisDay
+            {
+                let links = get_modal_row_links(app, state.kind, state.cursor_idx);
                 links
                     .get(state.link_idx)
                     .cloned()
@@ -132,8 +147,10 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('t') => {
-            let target = if state.kind == DailyFeedKind::News {
-                let links = get_news_row_links(app, state.cursor_idx);
+            let target = if state.kind == DailyFeedKind::News
+                || state.kind == DailyFeedKind::OnThisDay
+            {
+                let links = get_modal_row_links(app, state.kind, state.cursor_idx);
                 links
                     .get(state.link_idx)
                     .cloned()
