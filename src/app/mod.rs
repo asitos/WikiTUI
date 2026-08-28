@@ -151,6 +151,7 @@ impl App {
         self.daily_feed_modal = Some(crate::ui::modals::DailyFeedModalState {
             kind,
             cursor_idx: 0,
+            link_idx: 0,
         });
         self.input_mode = InputMode::DailyFeedModal;
     }
