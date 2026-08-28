@@ -3,3 +3,4 @@
 release-artifacts/
 *.tar.gz
 *.zip
+/.SRCINFO
