@@ -17,7 +17,7 @@ pub fn compute_tab_titles(app: &App) -> Vec<String> {
             let show_icons = app.config.ui.icons;
             let (icon, raw_title, is_saved) = if is_loading {
                 (
-                    crate::ui::current_spinner_frame().to_string(),
+                    crate::ui::current_spinner_frame(),
                     "loading...".to_string(),
                     false,
                 )
@@ -39,27 +39,27 @@ pub fn compute_tab_titles(app: &App) -> Vec<String> {
                         } else {
                             ""
                         };
-                        (icon_str.to_string(), title.to_lowercase(), saved)
+                        (icon_str, title.to_lowercase(), saved)
                     }
                     PaneContent::SearchResults { query, .. } => (
-                        if show_icons { "󰍉" } else { "" }.to_string(),
+                        if show_icons { "󰍉" } else { "" },
                         format!("search: {}", query.to_lowercase()),
                         false,
                     ),
                     PaneContent::Error(_) => (
-                        if show_icons { "󰅚" } else { "" }.to_string(),
+                        if show_icons { "󰅚" } else { "" },
                         "error".to_string(),
                         false,
                     ),
                     PaneContent::Empty => (
-                        if show_icons { "󰋜" } else { "" }.to_string(),
+                        if show_icons { "󰋜" } else { "" },
                         tab.name.to_lowercase(),
                         false,
                     ),
                 }
             } else {
                 (
-                    if show_icons { "󰋜" } else { "" }.to_string(),
+                    if show_icons { "󰋜" } else { "" },
                     tab.name.to_lowercase(),
                     false,
                 )

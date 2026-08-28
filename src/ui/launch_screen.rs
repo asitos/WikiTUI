@@ -57,7 +57,7 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
 
     for &line in LOGO {
         lines.push(Line::from(vec![
-            Span::raw(pad_str.clone()),
+            Span::raw(&pad_str),
             Span::styled(line, Style::default().fg(theme::PINK).bold()),
         ]));
     }
