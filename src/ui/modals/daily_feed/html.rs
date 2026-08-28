@@ -1,4 +1,5 @@
 use super::types::{SpanStyle, StyledChunk};
+use crate::parser::utils::decode_html_entities;
 
 pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
     let mut chunks = Vec::new();
@@ -30,16 +31,7 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
             (None, false, true) => SpanStyle::Italic,
             (None, false, false) => SpanStyle::Normal,
         };
-        let decoded = current_text
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'")
-            .replace("&#39;", "'")
-            .replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&nbsp;", " ")
-            .replace("&ndash;", "–")
-            .replace("&mdash;", "—");
+        let decoded = decode_html_entities(current_text);
         chunks.push(StyledChunk {
             text: decoded,
             style,
@@ -191,16 +183,7 @@ pub fn strip_html_tags(input: &str) -> String {
         result.push(c);
     }
 
-    let decoded = result
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
-        .replace("&#39;", "'")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&nbsp;", " ")
-        .replace("&ndash;", "–")
-        .replace("&mdash;", "—");
+    let decoded = decode_html_entities(&result);
 
     decoded.split_whitespace().collect::<Vec<_>>().join(" ")
 }
