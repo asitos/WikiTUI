@@ -1,4 +1,5 @@
 pub mod categories;
+pub mod daily_feed;
 pub mod help;
 pub mod lists;
 pub mod onboarding;
@@ -8,6 +9,10 @@ pub mod toc;
 pub mod utils;
 
 pub use categories::{compute_categories_modal_area, render_categories_modal};
+pub use daily_feed::{
+    compute_daily_feed_modal_area, get_feed_entries, render_daily_feed_modal, DailyFeedKind,
+    DailyFeedModalState, FeedEntry,
+};
 pub use help::{compute_help_modal_area, render_help_modal};
 pub use lists::{
     compute_confirm_modal_area, compute_create_new_list_modal_area,

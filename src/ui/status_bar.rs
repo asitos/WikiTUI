@@ -31,6 +31,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             InputMode::Help => (" HELP ", theme::GREY),
             InputMode::Confirm => (" PROMPT ", theme::RED),
             InputMode::Categories => (" CATEGORIES ", theme::TEAL),
+            InputMode::DailyFeedModal => (" FEED ", theme::TEAL),
         }
     };
 
@@ -191,6 +192,12 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
         )],
         InputMode::Categories => vec![Span::styled(
             "j/k navigate · enter open category · y copy URL · esc close",
+            Style::default()
+                .fg(theme::TEAL)
+                .add_modifier(Modifier::BOLD),
+        )],
+        InputMode::DailyFeedModal => vec![Span::styled(
+            "j/k navigate · enter read · t new tab · esc close",
             Style::default()
                 .fg(theme::TEAL)
                 .add_modifier(Modifier::BOLD),

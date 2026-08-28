@@ -97,4 +97,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.input_mode == InputMode::Categories {
         modals::render_categories_modal(f, app, size);
     }
+
+    if app.input_mode == InputMode::DailyFeedModal {
+        modals::render_daily_feed_modal(f, app, size);
+    }
 }

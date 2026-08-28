@@ -1,5 +1,6 @@
 pub mod categories;
 pub mod confirm;
+pub mod daily_feed;
 pub mod lists;
 pub mod normal;
 pub mod onboarding;
@@ -18,6 +19,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, term_width: u16, term_heig
         InputMode::Confirm => confirm::handle_confirm_mode(app, key),
         InputMode::Settings => settings::handle_settings_mode(app, key),
         InputMode::Categories => categories::handle_categories_mode(app, key),
+        InputMode::DailyFeedModal => daily_feed::handle_daily_feed_mode(app, key),
         InputMode::Help => match key.code {
             KeyCode::Char('?') | KeyCode::Esc | KeyCode::Char('q') => {
                 app.input_mode = InputMode::Normal;

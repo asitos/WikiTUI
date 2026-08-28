@@ -37,6 +37,7 @@ pub enum InputMode {
     Confirm,
     Settings,
     Categories,
+    DailyFeedModal,
 }
 
 pub(crate) fn is_article_link(title: &str) -> bool {
@@ -134,6 +135,7 @@ pub struct App {
     pub status_message: Option<(String, std::time::Instant)>,
     pub wiki_stats: crate::api::WikiStatistics,
     pub daily_feed: Option<crate::api::DailyFeed>,
+    pub daily_feed_modal: Option<crate::ui::modals::DailyFeedModalState>,
     pub recent_articles: Vec<String>,
     pub launch_quote_idx: usize,
     pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
@@ -145,6 +147,18 @@ pub struct App {
 }
 
 impl App {
+    pub fn open_daily_feed_modal(&mut self, kind: crate::ui::modals::DailyFeedKind) {
+        self.daily_feed_modal = Some(crate::ui::modals::DailyFeedModalState {
+            kind,
+            cursor_idx: 0,
+        });
+        self.input_mode = InputMode::DailyFeedModal;
+    }
+
+    pub fn close_daily_feed_modal(&mut self) {
+        self.daily_feed_modal = None;
+        self.input_mode = InputMode::Normal;
+    }
     pub fn next_request_id(&mut self) -> u64 {
         let req_id = self.next_request_id;
         self.next_request_id = self.next_request_id.wrapping_add(1).max(1);
@@ -241,6 +255,7 @@ impl App {
             status_message: None,
             wiki_stats: crate::api::WikiStatistics::default(),
             daily_feed: cached_feed,
+            daily_feed_modal: None,
             recent_articles: Self::load_recent_articles(),
             launch_quote_idx: quote_idx,
             scroll_drag: None,
