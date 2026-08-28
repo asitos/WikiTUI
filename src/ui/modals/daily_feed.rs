@@ -378,7 +378,8 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
 pub fn compute_daily_feed_modal_area(container_rect: Rect, kind: DailyFeedKind) -> Rect {
     match kind {
         DailyFeedKind::MostRead => centered_rect(50, 57, container_rect),
-        DailyFeedKind::News | DailyFeedKind::OnThisDay => centered_rect(75, 65, container_rect),
+        DailyFeedKind::OnThisDay => centered_rect(75, 69, container_rect),
+        DailyFeedKind::News => centered_rect(75, 65, container_rect),
     }
 }
 
@@ -811,6 +812,47 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
             Some(f) => f,
             None => return,
         };
+
+        let selected_event = feed.onthisday.get(selected_idx);
+        let focused_page = selected_event.and_then(|ev| {
+            let (_, event_links) = parse_onthisday_event(&ev.text, &ev.pages);
+            let active_link_idx = state.link_idx.min(event_links.len().saturating_sub(1));
+            let target = event_links.get(active_link_idx)?;
+            ev.pages
+                .iter()
+                .find(|p| &p.title == target || p.display_title() == *target)
+                .or_else(|| ev.pages.first())
+        });
+
+        let mut modal_block = modal_block;
+        if let Some(page) = focused_page {
+            if let Some(desc) = page.description.as_deref().filter(|d| !d.is_empty()) {
+                let icon = if app.config.ui.icons { "󰋼 " } else { "" };
+                let max_desc_len =
+                    (modal_area.width as usize).saturating_sub(page.display_title().len() + 10);
+                let clean_desc = if desc.len() > max_desc_len && max_desc_len > 3 {
+                    let byte_end = desc
+                        .char_indices()
+                        .nth(max_desc_len.saturating_sub(3))
+                        .map(|(i, _)| i)
+                        .unwrap_or(desc.len());
+                    format!("{}...", &desc[..byte_end])
+                } else {
+                    desc.to_string()
+                };
+                let footer_line = Line::from(vec![
+                    Span::styled(
+                        format!(" {}{}: ", icon, page.display_title()),
+                        Style::default().fg(theme::BLUE).bold(),
+                    ),
+                    Span::styled(
+                        format!("{} ", clean_desc),
+                        Style::default().fg(theme::GREY).italic(),
+                    ),
+                ]);
+                modal_block = modal_block.title_bottom(footer_line);
+            }
+        }
 
         let mut lines = Vec::new();
         let mut line_offsets = Vec::new();
