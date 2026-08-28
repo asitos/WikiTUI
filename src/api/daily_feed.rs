@@ -63,7 +63,7 @@ pub struct OngoingItem {
     pub display: String,
     pub target: String,
     #[serde(default)]
-    pub sub_events: Vec<(String, String)>, // (target, display)
+    pub sub_events: Vec<(String, String)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -278,7 +278,6 @@ pub fn fetch_daily_feed(
         .into_json()
         .map_err(|e| format!("Failed to parse daily feed: {}", e))?;
 
-    // Also fetch ITN footer for Ongoing and Recent Deaths
     let itn_url = "https://en.wikipedia.org/w/api.php?action=parse&page=Template:In_the_news&prop=wikitext&format=json";
     if let Ok(itn_resp) = agent
         .get(itn_url)

@@ -120,9 +120,11 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
                     .map(|e| e.target_article.clone())
             };
 
-            if let Some(target) =
-                target.or_else(|| entries.get(state.cursor_idx).map(|e| e.target_article.clone()))
-            {
+            if let Some(target) = target.or_else(|| {
+                entries
+                    .get(state.cursor_idx)
+                    .map(|e| e.target_article.clone())
+            }) {
                 if !target.is_empty() {
                     app.close_daily_feed_modal();
                     app.open_article(&target);
@@ -142,9 +144,11 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
                     .map(|e| e.target_article.clone())
             };
 
-            if let Some(target) =
-                target.or_else(|| entries.get(state.cursor_idx).map(|e| e.target_article.clone()))
-            {
+            if let Some(target) = target.or_else(|| {
+                entries
+                    .get(state.cursor_idx)
+                    .map(|e| e.target_article.clone())
+            }) {
                 if !target.is_empty() {
                     app.close_daily_feed_modal();
                     if !matches!(app.active_pane().content, crate::app::PaneContent::Empty) {

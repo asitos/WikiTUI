@@ -175,11 +175,7 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             ("Random", "r"),
         ]
     } else {
-        vec![
-            ("Featured", "f"),
-            ("News", "n"),
-            ("History", "d"),
-        ]
+        vec![("Featured", "f"), ("News", "n"), ("History", "d")]
     };
 
     let mut action_spans = Vec::new();
@@ -189,7 +185,10 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
         }
         action_spans.push(Span::styled(*label, Style::default().fg(theme::FG)));
         action_spans.push(Span::styled("[", Style::default().fg(theme::DARK_GREY)));
-        action_spans.push(Span::styled(*key, Style::default().fg(theme::YELLOW).bold()));
+        action_spans.push(Span::styled(
+            *key,
+            Style::default().fg(theme::YELLOW).bold(),
+        ));
         action_spans.push(Span::styled("]", Style::default().fg(theme::DARK_GREY)));
     }
 

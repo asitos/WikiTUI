@@ -130,19 +130,49 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
 
             let tag_lower = tag.to_lowercase();
             if tag_lower.starts_with("b") && !tag_lower.starts_with("br") {
-                flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                flush(
+                    &mut chunks,
+                    &mut current_text,
+                    in_bold,
+                    in_italic,
+                    &current_link,
+                );
                 in_bold = true;
             } else if tag_lower == "/b" {
-                flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                flush(
+                    &mut chunks,
+                    &mut current_text,
+                    in_bold,
+                    in_italic,
+                    &current_link,
+                );
                 in_bold = false;
             } else if tag_lower.starts_with("i") {
-                flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                flush(
+                    &mut chunks,
+                    &mut current_text,
+                    in_bold,
+                    in_italic,
+                    &current_link,
+                );
                 in_italic = true;
             } else if tag_lower == "/i" {
-                flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                flush(
+                    &mut chunks,
+                    &mut current_text,
+                    in_bold,
+                    in_italic,
+                    &current_link,
+                );
                 in_italic = false;
             } else if tag_lower.starts_with("a ") || tag_lower == "a" {
-                flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                flush(
+                    &mut chunks,
+                    &mut current_text,
+                    in_bold,
+                    in_italic,
+                    &current_link,
+                );
                 let title = if let Some(pos) = tag.find("title=\"") {
                     let rest = &tag[pos + 7..];
                     rest.split('"').next().unwrap_or("").to_string()
@@ -156,7 +186,13 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
                 links.push(title.clone());
                 current_link = Some((l_idx, title));
             } else if tag_lower == "/a" {
-                flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                flush(
+                    &mut chunks,
+                    &mut current_text,
+                    in_bold,
+                    in_italic,
+                    &current_link,
+                );
                 current_link = None;
             }
             continue;
@@ -165,7 +201,13 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
         current_text.push(c);
     }
 
-    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+    flush(
+        &mut chunks,
+        &mut current_text,
+        in_bold,
+        in_italic,
+        &current_link,
+    );
     (chunks, links)
 }
 
@@ -217,9 +259,7 @@ pub fn strip_html_tags(input: &str) -> String {
     decoded.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-pub fn get_ongoing_links(
-    ongoing: &[crate::api::daily_feed::OngoingItem],
-) -> Vec<(String, String)> {
+pub fn get_ongoing_links(ongoing: &[crate::api::daily_feed::OngoingItem]) -> Vec<(String, String)> {
     let mut links = Vec::new();
     for og in ongoing {
         links.push((og.target.clone(), og.display.clone()));
@@ -343,8 +383,18 @@ pub fn compute_daily_feed_modal_area(container_rect: Rect, kind: DailyFeedKind) 
 }
 
 const MONTH_NAMES: [&str; 12] = [
-    "january", "february", "march", "april", "may", "june", "july", "august", "september",
-    "october", "november", "december",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
 ];
 
 fn today_date_str() -> String {
@@ -356,10 +406,7 @@ fn today_date_str() -> String {
     format!("{} {}", month_str, d)
 }
 
-pub fn wrap_story_spans(
-    chunks: &[StyledChunk],
-    max_width: usize,
-) -> Vec<Vec<(String, SpanStyle)>> {
+pub fn wrap_story_spans(chunks: &[StyledChunk], max_width: usize) -> Vec<Vec<(String, SpanStyle)>> {
     let mut lines: Vec<Vec<(String, SpanStyle)>> = Vec::new();
     let mut current_line: Vec<(String, SpanStyle)> = Vec::new();
     let mut current_line_len = 0;
@@ -533,7 +580,6 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                 row_counter += 1;
             }
 
-            // Divider between top headlines and Ongoing / Recent deaths
             if !feed.ongoing.is_empty() || !feed.recent_deaths.is_empty() {
                 let div_w = avail_w.saturating_sub(2);
                 lines.push(Line::from(vec![
@@ -543,7 +589,6 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                 lines.push(Line::from(""));
             }
 
-            // Ongoing events row
             if !feed.ongoing.is_empty() {
                 let is_selected = row_counter == selected_idx;
                 let (prefix, prefix_style) = if is_selected {
@@ -610,7 +655,6 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                 row_counter += 1;
             }
 
-            // Recent deaths row
             if !feed.recent_deaths.is_empty() {
                 let is_selected = row_counter == selected_idx;
                 let (prefix, prefix_style) = if is_selected {
@@ -624,7 +668,9 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                 ];
 
                 let active_link_idx = if is_selected {
-                    state.link_idx.min(feed.recent_deaths.len().saturating_sub(1))
+                    state
+                        .link_idx
+                        .min(feed.recent_deaths.len().saturating_sub(1))
                 } else {
                     0
                 };

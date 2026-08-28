@@ -499,7 +499,9 @@ impl App {
                             heading_marker,
                             code_line_numbers,
                         );
-                        pane.scroll_offset = pane.scroll_offset.min(parsed_doc.lines.len().saturating_sub(1));
+                        pane.scroll_offset = pane
+                            .scroll_offset
+                            .min(parsed_doc.lines.len().saturating_sub(1));
                         let initial_link_idx = if !parsed_doc.links.is_empty() {
                             Some(0)
                         } else {
