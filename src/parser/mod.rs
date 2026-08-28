@@ -74,5 +74,16 @@ pub fn parse_wikipedia_html(
         })
         .collect();
 
+    doc.links
+        .sort_by_key(|l| l.span_indices.first().map(|(line, _)| *line).unwrap_or(0));
+    debug_assert!(
+        doc.links.windows(2).all(|w| {
+            let l1 = w[0].span_indices.first().map(|(l, _)| *l).unwrap_or(0);
+            let l2 = w[1].span_indices.first().map(|(l, _)| *l).unwrap_or(0);
+            l1 <= l2
+        }),
+        "Link span indices must be monotonically sorted"
+    );
+
     doc
 }
