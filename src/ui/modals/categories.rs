@@ -37,7 +37,7 @@ pub fn render_categories_modal(f: &mut Frame, app: &App, size: Rect) {
     );
 
     let inner_height = modal_area.height.saturating_sub(2) as usize;
-    let selected_idx = app.categories_cursor_idx.min(total.saturating_sub(1));
+    let selected_idx = app.categories_modal.cursor_idx.min(total.saturating_sub(1));
 
     let scroll = if total <= inner_height || inner_height == 0 {
         0

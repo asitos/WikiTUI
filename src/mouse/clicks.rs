@@ -150,7 +150,7 @@ fn handle_modal_left_click(
                 if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
                     let total = parsed_doc.categories.len();
                     let inner_height = area.height.saturating_sub(2) as usize;
-                    let selected_idx = app.categories_cursor_idx.min(total.saturating_sub(1));
+                    let selected_idx = app.categories_modal.cursor_idx.min(total.saturating_sub(1));
                     let scroll = if total <= inner_height || inner_height == 0 {
                         0
                     } else {
@@ -170,7 +170,7 @@ fn handle_modal_left_click(
                 };
 
             if let Some((clicked_idx, cat_title)) = hit {
-                app.categories_cursor_idx = clicked_idx;
+                app.categories_modal.cursor_idx = clicked_idx;
                 app.input_mode = InputMode::Normal;
                 app.open_article(&cat_title);
             }

@@ -16,8 +16,8 @@ pub use pane::{LocalMatch, Pane, PaneContent};
 pub use settings::SettingItem;
 pub use tab::Tab;
 pub use types::{
-    is_article_link, ClosedTabState, ConfirmAction, InputMode, ListsModalState,
-    OnboardingModalState, SearchModalState, SettingsModalState,
+    is_article_link, CategoriesModalState, ClosedTabState, ConfirmAction, InputMode,
+    ListsModalState, OnboardingModalState, SearchModalState, SettingsModalState,
 };
 
 use crate::api::NetworkCommand;
@@ -42,7 +42,7 @@ pub struct App {
     pub config_last_mtime: Option<std::time::SystemTime>,
     pub last_config_check: std::time::Instant,
     pub settings_modal: SettingsModalState,
-    pub categories_cursor_idx: usize,
+    pub categories_modal: CategoriesModalState,
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
     pub wiki_stats: crate::api::WikiStatistics,
@@ -96,7 +96,7 @@ impl App {
             config_last_mtime: crate::config::Config::get_modified_time(),
             last_config_check: std::time::Instant::now(),
             settings_modal: SettingsModalState::default(),
-            categories_cursor_idx: 0,
+            categories_modal: CategoriesModalState::default(),
             closed_tabs_stack: Vec::new(),
             status_message: None,
             wiki_stats: crate::api::WikiStatistics::default(),
@@ -255,7 +255,7 @@ impl App {
         }
 
         if matches!(self.active_pane().content, PaneContent::ArticleText { .. }) {
-            self.categories_cursor_idx = 0;
+            self.categories_modal.cursor_idx = 0;
             self.input_mode = InputMode::Categories;
         }
     }

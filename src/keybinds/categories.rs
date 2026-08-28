@@ -10,15 +10,15 @@ pub fn handle_categories_mode(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab => {
             if categories_count > 0 {
-                app.categories_cursor_idx = (app.categories_cursor_idx + 1) % categories_count;
+                app.categories_modal.cursor_idx = (app.categories_modal.cursor_idx + 1) % categories_count;
             }
         }
         KeyCode::Up | KeyCode::Char('k') | KeyCode::BackTab => {
             if categories_count > 0 {
-                if app.categories_cursor_idx == 0 {
-                    app.categories_cursor_idx = categories_count.saturating_sub(1);
+                if app.categories_modal.cursor_idx == 0 {
+                    app.categories_modal.cursor_idx = categories_count.saturating_sub(1);
                 } else {
-                    app.categories_cursor_idx -= 1;
+                    app.categories_modal.cursor_idx -= 1;
                 }
             }
         }
@@ -27,7 +27,7 @@ pub fn handle_categories_mode(app: &mut App, key: KeyEvent) {
                 if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
                     parsed_doc
                         .categories
-                        .get(app.categories_cursor_idx)
+                        .get(app.categories_modal.cursor_idx)
                         .map(|cat| format!("Category:{}", cat))
                 } else {
                     None
@@ -43,7 +43,7 @@ pub fn handle_categories_mode(app: &mut App, key: KeyEvent) {
                 if let PaneContent::ArticleText { parsed_doc, .. } = &app.active_pane().content {
                     parsed_doc
                         .categories
-                        .get(app.categories_cursor_idx)
+                        .get(app.categories_modal.cursor_idx)
                         .map(|cat| {
                             format!(
                                 "https://en.wikipedia.org/wiki/Category:{}",

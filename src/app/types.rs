@@ -55,6 +55,11 @@ pub struct SettingsModalState {
     pub cursor_idx: usize,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct CategoriesModalState {
+    pub cursor_idx: usize,
+}
+
 #[derive(Clone, Debug)]
 pub struct OnboardingModalState {
     pub cursor_idx: usize,

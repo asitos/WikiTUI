@@ -146,13 +146,13 @@ fn handle_modal_scroll(app: &mut App, delta: i32, col: u16, row: u16, size: Rect
             };
             if total > 0 {
                 if delta < 0 {
-                    app.categories_cursor_idx = if app.categories_cursor_idx == 0 {
+                    app.categories_modal.cursor_idx = if app.categories_modal.cursor_idx == 0 {
                         total - 1
                     } else {
-                        app.categories_cursor_idx - 1
+                        app.categories_modal.cursor_idx - 1
                     };
                 } else {
-                    app.categories_cursor_idx = (app.categories_cursor_idx + 1) % total;
+                    app.categories_modal.cursor_idx = (app.categories_modal.cursor_idx + 1) % total;
                 }
             }
             true
