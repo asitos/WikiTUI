@@ -5,7 +5,7 @@ use ratatui::{
     layout::Rect,
     style::{Modifier, Style, Stylize},
     text::{Line, Span},
-    widgets::{Paragraph, Wrap},
+    widgets::Paragraph,
     Frame,
 };
 
@@ -310,6 +310,57 @@ fn today_date_str() -> String {
     format!("{} {}", month_str, d)
 }
 
+pub fn wrap_story_spans(
+    chunks: &[StyledChunk],
+    max_width: usize,
+) -> Vec<Vec<(String, SpanStyle)>> {
+    let mut lines: Vec<Vec<(String, SpanStyle)>> = Vec::new();
+    let mut current_line: Vec<(String, SpanStyle)> = Vec::new();
+    let mut current_line_len = 0;
+    let target_width = max_width.saturating_sub(4);
+
+    for chunk in chunks {
+        let mut word = String::new();
+        for ch in chunk.text.chars() {
+            if ch == ' ' {
+                if !word.is_empty() {
+                    let word_len = word.chars().count();
+                    if current_line_len + word_len > target_width && current_line_len > 0 {
+                        lines.push(current_line);
+                        current_line = Vec::new();
+                        current_line_len = 0;
+                    }
+                    current_line.push((word.clone(), chunk.style.clone()));
+                    current_line_len += word_len;
+                    word.clear();
+                }
+                if current_line_len > 0 && current_line_len < target_width {
+                    current_line.push((" ".to_string(), chunk.style.clone()));
+                    current_line_len += 1;
+                }
+            } else {
+                word.push(ch);
+            }
+        }
+        if !word.is_empty() {
+            let word_len = word.chars().count();
+            if current_line_len + word_len > target_width && current_line_len > 0 {
+                lines.push(current_line);
+                current_line = Vec::new();
+                current_line_len = 0;
+            }
+            current_line.push((word, chunk.style.clone()));
+            current_line_len += word_len;
+        }
+    }
+
+    if !current_line.is_empty() {
+        lines.push(current_line);
+    }
+
+    lines
+}
+
 pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
     let state = match &app.daily_feed_modal {
         Some(s) => s,
@@ -362,15 +413,9 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                 Style::default().fg(theme::GREY).italic(),
             )]));
         } else {
+            let avail_w = (modal_area.width as usize).saturating_sub(4);
             for (idx, item) in feed.news.iter().enumerate() {
                 let is_selected = idx == selected_idx;
-                let prefix = if is_selected { "▶ " } else { "  " };
-                let prefix_style = if is_selected {
-                    Style::default().fg(theme::TEAL).bold()
-                } else {
-                    Style::default().fg(theme::GREY)
-                };
-
                 let raw_story = item.story.as_deref().unwrap_or("");
                 let (chunks, story_links) = parse_story_html(raw_story);
                 let active_link_idx = if is_selected {
@@ -379,60 +424,69 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                     0
                 };
 
-                let mut spans = vec![Span::styled(prefix, prefix_style)];
-                for chunk in chunks {
-                    let style = match chunk.style {
-                        SpanStyle::Normal => {
-                            if is_selected {
-                                Style::default().fg(theme::FG).bold()
-                            } else {
-                                Style::default().fg(theme::FG)
-                            }
+                let wrapped_lines = wrap_story_spans(&chunks, avail_w);
+                for (line_idx, line_words) in wrapped_lines.into_iter().enumerate() {
+                    let (prefix, prefix_style) = if line_idx == 0 {
+                        if is_selected {
+                            (" ▶ ", Style::default().fg(theme::TEAL).bold())
+                        } else {
+                            ("   ", Style::default().fg(theme::GREY))
                         }
-                        SpanStyle::Bold => Style::default().fg(theme::FG).bold(),
-                        SpanStyle::Italic => Style::default().fg(theme::GREY).italic(),
-                        SpanStyle::Link { link_idx, .. } => {
-                            if is_selected && link_idx == active_link_idx {
-                                Style::default()
-                                    .fg(theme::VIOLET)
-                                    .bold()
-                                    .add_modifier(Modifier::UNDERLINED)
-                            } else if app.config.reader.underline_links {
-                                Style::default()
-                                    .fg(theme::BLUE)
-                                    .add_modifier(Modifier::UNDERLINED)
-                            } else {
-                                Style::default().fg(theme::BLUE)
-                            }
-                        }
-                        SpanStyle::BoldLink { link_idx, .. } => {
-                            if is_selected && link_idx == active_link_idx {
-                                Style::default()
-                                    .fg(theme::VIOLET)
-                                    .bold()
-                                    .add_modifier(Modifier::UNDERLINED)
-                            } else if app.config.reader.underline_links {
-                                Style::default()
-                                    .fg(theme::BLUE)
-                                    .bold()
-                                    .add_modifier(Modifier::UNDERLINED)
-                            } else {
-                                Style::default().fg(theme::BLUE).bold()
-                            }
-                        }
+                    } else {
+                        ("   ", Style::default().fg(theme::GREY))
                     };
-                    spans.push(Span::styled(chunk.text, style));
-                }
 
-                lines.push(Line::from(spans));
+                    let mut spans = vec![Span::styled(prefix, prefix_style)];
+                    for (text, style) in line_words {
+                        let span_style = match style {
+                            SpanStyle::Normal => {
+                                if is_selected {
+                                    Style::default().fg(theme::FG).bold()
+                                } else {
+                                    Style::default().fg(theme::FG)
+                                }
+                            }
+                            SpanStyle::Bold => Style::default().fg(theme::FG).bold(),
+                            SpanStyle::Italic => Style::default().fg(theme::GREY).italic(),
+                            SpanStyle::Link { link_idx, .. } => {
+                                if is_selected && link_idx == active_link_idx {
+                                    Style::default()
+                                        .fg(theme::VIOLET)
+                                        .bold()
+                                        .add_modifier(Modifier::UNDERLINED)
+                                } else if app.config.reader.underline_links {
+                                    Style::default()
+                                        .fg(theme::BLUE)
+                                        .add_modifier(Modifier::UNDERLINED)
+                                } else {
+                                    Style::default().fg(theme::BLUE)
+                                }
+                            }
+                            SpanStyle::BoldLink { link_idx, .. } => {
+                                if is_selected && link_idx == active_link_idx {
+                                    Style::default()
+                                        .fg(theme::VIOLET)
+                                        .bold()
+                                        .add_modifier(Modifier::UNDERLINED)
+                                } else if app.config.reader.underline_links {
+                                    Style::default()
+                                        .fg(theme::BLUE)
+                                        .bold()
+                                        .add_modifier(Modifier::UNDERLINED)
+                                } else {
+                                    Style::default().fg(theme::BLUE).bold()
+                                }
+                            }
+                        };
+                        spans.push(Span::styled(text, span_style));
+                    }
+                    lines.push(Line::from(spans));
+                }
                 lines.push(Line::from(""));
             }
         }
 
-        let p = Paragraph::new(lines)
-            .block(modal_block)
-            .wrap(Wrap { trim: true });
-
+        let p = Paragraph::new(lines).block(modal_block);
         f.render_widget(p, modal_area);
         return;
     }
