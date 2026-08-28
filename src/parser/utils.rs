@@ -19,7 +19,7 @@ pub fn url_decode(s: &str) -> String {
         }
         i += 1;
     }
-    String::from_utf8_lossy(&bytes).to_string()
+    String::from_utf8(bytes).unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned())
 }
 
 pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
