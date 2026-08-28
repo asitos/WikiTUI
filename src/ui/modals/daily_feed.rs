@@ -157,8 +157,11 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
     }
 }
 
-pub fn compute_daily_feed_modal_area(container_rect: Rect) -> Rect {
-    centered_rect(75, 65, container_rect)
+pub fn compute_daily_feed_modal_area(container_rect: Rect, kind: DailyFeedKind) -> Rect {
+    match kind {
+        DailyFeedKind::MostRead => centered_rect(50, 60, container_rect),
+        DailyFeedKind::News | DailyFeedKind::OnThisDay => centered_rect(75, 65, container_rect),
+    }
 }
 
 const MONTH_NAMES: [&str; 12] = [
@@ -199,7 +202,7 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
         ),
     };
 
-    let modal_area = compute_daily_feed_modal_area(size);
+    let modal_area = compute_daily_feed_modal_area(size, state.kind);
     let modal_block = render_modal_frame_at(
         f,
         modal_area,
