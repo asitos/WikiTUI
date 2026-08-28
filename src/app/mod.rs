@@ -17,7 +17,7 @@ pub use settings::SettingItem;
 pub use tab::Tab;
 pub use types::{
     is_article_link, ClosedTabState, ConfirmAction, InputMode, ListsModalState,
-    OnboardingModalState, SearchModalState,
+    OnboardingModalState, SearchModalState, SettingsModalState,
 };
 
 use crate::api::NetworkCommand;
@@ -41,7 +41,7 @@ pub struct App {
     pub config: crate::config::Config,
     pub config_last_mtime: Option<std::time::SystemTime>,
     pub last_config_check: std::time::Instant,
-    pub settings_cursor_idx: usize,
+    pub settings_modal: SettingsModalState,
     pub categories_cursor_idx: usize,
     pub closed_tabs_stack: Vec<ClosedTabState>,
     pub status_message: Option<(String, std::time::Instant)>,
@@ -95,7 +95,7 @@ impl App {
             config,
             config_last_mtime: crate::config::Config::get_modified_time(),
             last_config_check: std::time::Instant::now(),
-            settings_cursor_idx: 0,
+            settings_modal: SettingsModalState::default(),
             categories_cursor_idx: 0,
             closed_tabs_stack: Vec::new(),
             status_message: None,

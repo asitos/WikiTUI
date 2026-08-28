@@ -9,16 +9,16 @@ pub fn handle_settings_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('j') | KeyCode::Down => {
             let total = SettingItem::ALL.len();
             if total > 0 {
-                app.settings_cursor_idx = (app.settings_cursor_idx + 1) % total;
+                app.settings_modal.cursor_idx = (app.settings_modal.cursor_idx + 1) % total;
             }
         }
         KeyCode::Char('k') | KeyCode::Up => {
             let total = SettingItem::ALL.len();
             if total > 0 {
-                app.settings_cursor_idx = if app.settings_cursor_idx == 0 {
+                app.settings_modal.cursor_idx = if app.settings_modal.cursor_idx == 0 {
                     total - 1
                 } else {
-                    app.settings_cursor_idx - 1
+                    app.settings_modal.cursor_idx - 1
                 };
             }
         }

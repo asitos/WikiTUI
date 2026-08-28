@@ -43,13 +43,13 @@ fn handle_modal_scroll(app: &mut App, delta: i32, col: u16, row: u16, size: Rect
             let total = SettingItem::ALL.len();
             if total > 0 {
                 if delta < 0 {
-                    app.settings_cursor_idx = if app.settings_cursor_idx == 0 {
+                    app.settings_modal.cursor_idx = if app.settings_modal.cursor_idx == 0 {
                         total - 1
                     } else {
-                        app.settings_cursor_idx - 1
+                        app.settings_modal.cursor_idx - 1
                     };
                 } else {
-                    app.settings_cursor_idx = (app.settings_cursor_idx + 1) % total;
+                    app.settings_modal.cursor_idx = (app.settings_modal.cursor_idx + 1) % total;
                 }
             }
             true

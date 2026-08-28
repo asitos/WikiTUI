@@ -42,7 +42,7 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
             current_section = section;
         }
 
-        let is_focused = idx == app.settings_cursor_idx;
+        let is_focused = idx == app.settings_modal.cursor_idx;
         let prefix = if is_focused { " ▶ " } else { "   " };
         let prefix_style = if is_focused {
             Style::default().fg(theme::YELLOW).bold()
@@ -163,7 +163,7 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
     }
 
     lines.push(Line::from(""));
-    let focused_item = SettingItem::ALL.get(app.settings_cursor_idx).copied();
+    let focused_item = SettingItem::ALL.get(app.settings_modal.cursor_idx).copied();
     if let Some(item) = focused_item {
         lines.push(Line::from(vec![
             Span::styled("   ", Style::default()),

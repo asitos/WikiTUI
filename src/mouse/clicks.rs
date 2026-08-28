@@ -93,7 +93,7 @@ fn handle_modal_left_click(
         if let Some((idx, item, val_start_x)) =
             crate::ui::modals::settings::get_setting_row_at(inner, row)
         {
-            app.settings_cursor_idx = idx;
+            app.settings_modal.cursor_idx = idx;
             let is_numeric = matches!(
                 item,
                 crate::app::SettingItem::ScrollLines

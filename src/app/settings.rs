@@ -123,7 +123,7 @@ impl SettingItem {
 
 impl App {
     pub fn adjust_selected_setting(&mut self, delta: i32) {
-        if let Some(item) = SettingItem::ALL.get(self.settings_cursor_idx).copied() {
+        if let Some(item) = SettingItem::ALL.get(self.settings_modal.cursor_idx).copied() {
             match item {
                 SettingItem::ScrollLines => {
                     let cur = self.config.reader.scroll_lines as i32;
@@ -245,7 +245,7 @@ impl App {
     }
 
     pub fn reset_selected_setting(&mut self) {
-        if let Some(item) = SettingItem::ALL.get(self.settings_cursor_idx).copied() {
+        if let Some(item) = SettingItem::ALL.get(self.settings_modal.cursor_idx).copied() {
             let default_config = Config::default();
             match item {
                 SettingItem::LikedReadonly => {
