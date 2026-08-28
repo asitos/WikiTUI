@@ -1,0 +1,422 @@
+use super::banners;
+use super::blocks::wrap_and_append_block;
+use super::categories;
+use super::codeblocks;
+use super::elements;
+use super::sections::{heading_info, is_references_heading, is_references_id};
+use super::spoken;
+use super::tables;
+use super::types::{ParsedDocument, StyledToken};
+use super::utils::{
+    decode_html_entities, extract_title_from_href, to_subscript_str, to_superscript_str,
+};
+use crate::theme;
+use ratatui::style::{Modifier, Style};
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn process_node<'a>(
+    node: &'a tl::Node<'a>,
+    parser: &'a tl::Parser<'a>,
+    parent_style: Style,
+    parent_link: Option<String>,
+    current_tokens: &mut Vec<StyledToken>,
+    doc: &mut ParsedDocument,
+    max_width: usize,
+    list_item_idx: Option<usize>,
+    show_footnotes: bool,
+    show_external_links: bool,
+    skipping_external_section: &mut bool,
+    skipping_references_section: &mut bool,
+    is_sup: bool,
+    is_sub: bool,
+    heading_marker: bool,
+    code_line_numbers: bool,
+) {
+    match node {
+        tl::Node::Raw(bytes) => {
+            if *skipping_external_section || *skipping_references_section {
+                return;
+            }
+            let raw_text = bytes.as_utf8_str();
+            let decoded_text = decode_html_entities(&raw_text);
+            let transformed = if is_sup {
+                to_superscript_str(&decoded_text)
+            } else if is_sub {
+                to_subscript_str(&decoded_text)
+            } else {
+                decoded_text
+            };
+            let cleaned_text = transformed.replace(['\n', '\r', '\t'], " ");
+            if !cleaned_text.trim().is_empty() {
+                current_tokens.push(StyledToken {
+                    text: cleaned_text,
+                    style: parent_style,
+                    link_target: parent_link,
+                });
+            }
+        }
+        tl::Node::Tag(tag) => {
+            let tag_name_cow = tag.name().as_utf8_str();
+            let tag_name = tag_name_cow.as_ref();
+
+            if matches!(
+                tag_name,
+                "style"
+                    | "script"
+                    | "noscript"
+                    | "head"
+                    | "template"
+                    | "link"
+                    | "meta"
+                    | "annotation"
+            ) {
+                return;
+            }
+
+            let class_attr = tag
+                .attributes()
+                .get("class")
+                .flatten()
+                .map(|b| decode_html_entities(&b.as_utf8_str()));
+            let id_attr = tag
+                .attributes()
+                .get("id")
+                .flatten()
+                .map(|b| decode_html_entities(&b.as_utf8_str()));
+
+            if spoken::is_spoken_wikipedia_tag(tag, parser) {
+                if let Some(spoken_audio) = spoken::extract_spoken_audio(tag, parser) {
+                    if doc.spoken_audio.is_none() {
+                        doc.spoken_audio = Some(spoken_audio);
+                    }
+                }
+                return;
+            }
+
+            if categories::is_category_links_tag(tag, parser) {
+                categories::extract_categories_from_tag(tag, parser, &mut doc.categories);
+                return;
+            }
+
+            if let Some((level, title, id_opt)) = heading_info(tag, parser) {
+                let lower_title = title.to_lowercase();
+                let lower_id = id_opt.as_deref().unwrap_or("").to_lowercase();
+
+                let is_ext = !show_external_links
+                    && (lower_title.starts_with("external link")
+                        || lower_title.starts_with("external_link")
+                        || lower_id == "external_links"
+                        || lower_id == "external-links"
+                        || lower_id == "externallinks");
+
+                let is_refs = !show_footnotes
+                    && (is_references_heading(&title) || is_references_id(&lower_id));
+
+                if is_ext {
+                    *skipping_external_section = true;
+                    *skipping_references_section = false;
+                    return;
+                }
+                if is_refs {
+                    *skipping_references_section = true;
+                    *skipping_external_section = false;
+                    return;
+                }
+
+                if level <= 2 {
+                    *skipping_external_section = false;
+                    *skipping_references_section = false;
+                } else if *skipping_external_section || *skipping_references_section {
+                    return;
+                }
+            } else if *skipping_external_section || *skipping_references_section {
+                return;
+            }
+
+            if !show_external_links {
+                if let Some(ref id_str) = id_attr {
+                    let lower = id_str.to_lowercase();
+                    if lower == "external_links"
+                        || lower == "external-links"
+                        || lower == "externallinks"
+                    {
+                        *skipping_external_section = true;
+                        return;
+                    }
+                }
+            }
+
+            if !show_footnotes {
+                if let Some(ref id_str) = id_attr {
+                    if is_references_id(id_str) {
+                        if !id_str.starts_with("cite_note") && !id_str.starts_with("cite_ref") {
+                            *skipping_references_section = true;
+                        }
+                        return;
+                    }
+                }
+            }
+
+            if let Some(ref class_str) = class_attr {
+                if let Some(banner_type) = banners::classify_ambox_class(class_str.as_ref()) {
+                    banners::render_ambox_banner(
+                        tag,
+                        parser,
+                        current_tokens,
+                        doc,
+                        max_width,
+                        banner_type,
+                    );
+                    return;
+                }
+            }
+
+            if let Some(ref class_str) = class_attr {
+                if class_str.split_whitespace().any(|cls| {
+                    matches!(
+                        cls,
+                        "sidebar"
+                            | "infobox"
+                            | "navbox"
+                            | "mw-empty-elt"
+                            | "noprint"
+                            | "hatnote"
+                            | "mw-jump-link"
+                            | "catlinks"
+                            | "vector-menu"
+                            | "asbox"
+                            | "stub"
+                            | "cite-accessibility-label"
+                            | "visually-hidden"
+                            | "sr-only"
+                    ) || (!show_footnotes
+                        && matches!(
+                            cls,
+                            "reference"
+                                | "reflist"
+                                | "references"
+                                | "mw-references-wrap"
+                                | "references-wrap"
+                        ))
+                }) {
+                    return;
+                }
+            }
+
+            if !show_footnotes {
+                if let Some(ref id_str) = id_attr {
+                    if id_str.starts_with("cite_note")
+                        || id_str.starts_with("cite_ref")
+                        || id_str == "mw-references-wrap"
+                    {
+                        return;
+                    }
+                }
+            }
+
+            if tag_name == "table" {
+                if !current_tokens.is_empty() {
+                    wrap_and_append_block(current_tokens, doc, max_width);
+                    current_tokens.clear();
+                }
+                tables::render_table(tag, parser, doc, max_width, show_footnotes);
+                return;
+            }
+
+            if tag_name == "pre" {
+                if !current_tokens.is_empty() {
+                    wrap_and_append_block(current_tokens, doc, max_width);
+                    current_tokens.clear();
+                }
+                let lang = codeblocks::extract_language(tag);
+                codeblocks::render_code_block(tag, parser, doc, max_width, lang, code_line_numbers);
+                return;
+            }
+
+            if let Some(ref class_str) = class_attr {
+                if class_str.contains("mw-highlight") {
+                    if !current_tokens.is_empty() {
+                        wrap_and_append_block(current_tokens, doc, max_width);
+                        current_tokens.clear();
+                    }
+                    let lang = codeblocks::extract_language(tag);
+                    for child_handle in tag.children().top().iter() {
+                        if let Some(tl::Node::Tag(pre_tag)) = child_handle.get(parser) {
+                            if pre_tag.name().as_utf8_str() == "pre" {
+                                codeblocks::render_code_block(
+                                    pre_tag,
+                                    parser,
+                                    doc,
+                                    max_width,
+                                    lang,
+                                    code_line_numbers,
+                                );
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            let is_block_element = matches!(
+                tag_name,
+                "p" | "h1"
+                    | "h2"
+                    | "h3"
+                    | "h4"
+                    | "h5"
+                    | "h6"
+                    | "li"
+                    | "ul"
+                    | "ol"
+                    | "div"
+                    | "section"
+                    | "blockquote"
+            );
+
+            if is_block_element && !current_tokens.is_empty() {
+                wrap_and_append_block(current_tokens, doc, max_width);
+                current_tokens.clear();
+            }
+
+            if let Some(ref id_str) = id_attr {
+                if id_str.starts_with("cite_note") || id_str.starts_with("cite_ref") {
+                    doc.reference_targets
+                        .entry(id_str.to_string())
+                        .or_insert_with(|| doc.lines.len());
+                }
+            }
+
+            let mut current_style = parent_style;
+            let mut current_link = parent_link.clone();
+
+            match tag_name {
+                "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
+                    current_style = elements::handle_heading_tag(
+                        tag,
+                        parser,
+                        tag_name,
+                        doc,
+                        current_tokens,
+                        heading_marker,
+                        current_style,
+                    );
+                }
+                "b" | "strong" => {
+                    current_style = current_style.add_modifier(Modifier::BOLD);
+                }
+                "i" | "em" => {
+                    current_style = current_style.add_modifier(Modifier::ITALIC);
+                }
+                "code" | "kbd" | "samp" | "tt" => {
+                    current_style = current_style.fg(theme::ORANGE);
+                }
+                "abbr" => {
+                    current_style = current_style.add_modifier(Modifier::UNDERLINED);
+                }
+                "a" => {
+                    current_style = current_style.fg(theme::BLUE);
+                    if let Some(href) = tag
+                        .attributes()
+                        .get("href")
+                        .flatten()
+                        .map(|b| b.as_utf8_str())
+                    {
+                        if let Some(title) = extract_title_from_href(href.as_ref()) {
+                            let is_external =
+                                title.starts_with("http://") || title.starts_with("https://");
+                            if is_external {
+                                current_style = current_style.fg(theme::TEAL);
+                            }
+                            current_link = Some(title);
+                        }
+                    } else if let Some(title_attr) = tag
+                        .attributes()
+                        .get("title")
+                        .flatten()
+                        .map(|b| decode_html_entities(&b.as_utf8_str()))
+                    {
+                        current_link = Some(title_attr);
+                    }
+                }
+                "li" => {
+                    let prefix = if let Some(idx) = list_item_idx {
+                        format!("{}. ", idx)
+                    } else {
+                        "• ".to_string()
+                    };
+                    current_tokens.push(StyledToken {
+                        text: prefix,
+                        style: Style::default().fg(theme::GREY),
+                        link_target: None,
+                    });
+                }
+                "img" => {
+                    if let Some(token) =
+                        elements::handle_img_tag(tag, class_attr.as_deref(), &current_link)
+                    {
+                        current_tokens.push(token);
+                    }
+                }
+                _ => {}
+            }
+
+            let is_ordered_list = tag_name == "ol";
+            let mut item_counter = 1;
+            let current_is_sup = is_sup || tag_name == "sup";
+            let current_is_sub = is_sub || tag_name == "sub";
+
+            for child_handle in tag.children().top().iter() {
+                if let Some(child_node) = child_handle.get(parser) {
+                    let child_list_idx = if is_ordered_list {
+                        if let tl::Node::Tag(child_tag) = child_node {
+                            if child_tag.name().as_utf8_str() == "li" {
+                                let idx = item_counter;
+                                item_counter += 1;
+                                Some(idx)
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+
+                    process_node(
+                        child_node,
+                        parser,
+                        current_style,
+                        current_link.clone(),
+                        current_tokens,
+                        doc,
+                        max_width,
+                        child_list_idx,
+                        show_footnotes,
+                        show_external_links,
+                        skipping_external_section,
+                        skipping_references_section,
+                        current_is_sup,
+                        current_is_sub,
+                        heading_marker,
+                        code_line_numbers,
+                    );
+                }
+            }
+
+            if tag_name == "a" {
+                if let Some(ref target) = current_link {
+                    current_tokens
+                        .extend(elements::handle_external_link_pill(target, &current_link));
+                }
+            }
+
+            if is_block_element && !current_tokens.is_empty() {
+                wrap_and_append_block(current_tokens, doc, max_width);
+                current_tokens.clear();
+            }
+        }
+        tl::Node::Comment(_) => {}
+    }
+}
