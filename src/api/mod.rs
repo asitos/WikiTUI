@@ -1,9 +1,11 @@
 pub mod article;
+pub mod daily_feed;
 pub mod feed;
 pub mod random;
 pub mod search;
 pub mod stats;
 
+pub use daily_feed::DailyFeed;
 pub use stats::WikiStatistics;
 
 use crate::feed::algorithm::FeedItem;
