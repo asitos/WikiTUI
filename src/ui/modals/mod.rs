@@ -12,7 +12,7 @@ pub use categories::{compute_categories_modal_area, render_categories_modal};
 pub use daily_feed::{
     compute_daily_feed_modal_area, get_feed_entries, get_ongoing_links, get_recent_deaths_links,
     parse_onthisday_event, parse_story_html, render_daily_feed_modal, DailyFeedKind,
-    DailyFeedModalState, FeedEntry,
+    DailyFeedModalState, FeedEntry, OnThisDayTab,
 };
 pub use help::{compute_help_modal_area, render_help_modal};
 pub use lists::{

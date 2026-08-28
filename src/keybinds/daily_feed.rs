@@ -1,7 +1,7 @@
 use crate::app::{App, InputMode};
 use crate::ui::modals::{
     get_feed_entries, get_ongoing_links, get_recent_deaths_links, parse_onthisday_event,
-    parse_story_html, DailyFeedKind,
+    parse_story_html, DailyFeedKind, OnThisDayTab,
 };
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -36,7 +36,29 @@ fn get_modal_row_links(app: &App, kind: DailyFeedKind, cursor_idx: usize) -> Vec
             Vec::new()
         }
         DailyFeedKind::OnThisDay => {
-            if let Some(event) = feed.onthisday.get(cursor_idx) {
+            let otd_tab = app
+                .daily_feed_modal
+                .as_ref()
+                .map(|m| m.otd_tab)
+                .unwrap_or_default();
+            let events_slice: &[crate::api::daily_feed::OnThisDayEvent] =
+                if let Some(arch) = &feed.onthisday_all {
+                    match otd_tab {
+                        OnThisDayTab::Events => {
+                            if !arch.events.is_empty() {
+                                &arch.events
+                            } else {
+                                &feed.onthisday
+                            }
+                        }
+                        OnThisDayTab::Births => &arch.births,
+                        OnThisDayTab::Deaths => &arch.deaths,
+                        OnThisDayTab::Holidays => &arch.holidays,
+                    }
+                } else {
+                    &feed.onthisday
+                };
+            if let Some(event) = events_slice.get(cursor_idx) {
                 let (_, links) = parse_onthisday_event(&event.text, &event.pages);
                 return links;
             }
@@ -173,6 +195,58 @@ pub fn handle_daily_feed_mode(app: &mut App, key: KeyEvent) {
                     }
                     app.open_article(&target);
                 }
+            }
+        }
+        KeyCode::Char('1') if state.kind == DailyFeedKind::OnThisDay => {
+            if let Some(modal) = &mut app.daily_feed_modal {
+                modal.otd_tab = OnThisDayTab::Events;
+                modal.cursor_idx = 0;
+                modal.link_idx = 0;
+            }
+        }
+        KeyCode::Char('2') if state.kind == DailyFeedKind::OnThisDay => {
+            if let Some(modal) = &mut app.daily_feed_modal {
+                modal.otd_tab = OnThisDayTab::Births;
+                modal.cursor_idx = 0;
+                modal.link_idx = 0;
+            }
+        }
+        KeyCode::Char('3') if state.kind == DailyFeedKind::OnThisDay => {
+            if let Some(modal) = &mut app.daily_feed_modal {
+                modal.otd_tab = OnThisDayTab::Deaths;
+                modal.cursor_idx = 0;
+                modal.link_idx = 0;
+            }
+        }
+        KeyCode::Char('4') if state.kind == DailyFeedKind::OnThisDay => {
+            if let Some(modal) = &mut app.daily_feed_modal {
+                modal.otd_tab = OnThisDayTab::Holidays;
+                modal.cursor_idx = 0;
+                modal.link_idx = 0;
+            }
+        }
+        KeyCode::Char(']') if state.kind == DailyFeedKind::OnThisDay => {
+            if let Some(modal) = &mut app.daily_feed_modal {
+                modal.otd_tab = match modal.otd_tab {
+                    OnThisDayTab::Events => OnThisDayTab::Births,
+                    OnThisDayTab::Births => OnThisDayTab::Deaths,
+                    OnThisDayTab::Deaths => OnThisDayTab::Holidays,
+                    OnThisDayTab::Holidays => OnThisDayTab::Events,
+                };
+                modal.cursor_idx = 0;
+                modal.link_idx = 0;
+            }
+        }
+        KeyCode::Char('[') if state.kind == DailyFeedKind::OnThisDay => {
+            if let Some(modal) = &mut app.daily_feed_modal {
+                modal.otd_tab = match modal.otd_tab {
+                    OnThisDayTab::Events => OnThisDayTab::Holidays,
+                    OnThisDayTab::Births => OnThisDayTab::Events,
+                    OnThisDayTab::Deaths => OnThisDayTab::Births,
+                    OnThisDayTab::Holidays => OnThisDayTab::Deaths,
+                };
+                modal.cursor_idx = 0;
+                modal.link_idx = 0;
             }
         }
         _ => {}

@@ -16,11 +16,21 @@ pub enum DailyFeedKind {
     MostRead,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum OnThisDayTab {
+    #[default]
+    Events,
+    Births,
+    Deaths,
+    Holidays,
+}
+
 #[derive(Clone, Debug)]
 pub struct DailyFeedModalState {
     pub kind: DailyFeedKind,
     pub cursor_idx: usize,
     pub link_idx: usize,
+    pub otd_tab: OnThisDayTab,
 }
 
 impl Default for DailyFeedModalState {
@@ -29,6 +39,7 @@ impl Default for DailyFeedModalState {
             kind: DailyFeedKind::News,
             cursor_idx: 0,
             link_idx: 0,
+            otd_tab: OnThisDayTab::Events,
         }
     }
 }
@@ -331,8 +342,31 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
             entries
         }
         DailyFeedKind::OnThisDay => {
+            let otd_tab = app
+                .daily_feed_modal
+                .as_ref()
+                .map(|m| m.otd_tab)
+                .unwrap_or_default();
+            let events_slice: &[crate::api::daily_feed::OnThisDayEvent] =
+                if let Some(archive) = &feed.onthisday_all {
+                    match otd_tab {
+                        OnThisDayTab::Events => {
+                            if !archive.events.is_empty() {
+                                &archive.events
+                            } else {
+                                &feed.onthisday
+                            }
+                        }
+                        OnThisDayTab::Births => &archive.births,
+                        OnThisDayTab::Deaths => &archive.deaths,
+                        OnThisDayTab::Holidays => &archive.holidays,
+                    }
+                } else {
+                    &feed.onthisday
+                };
+
             let mut entries = Vec::new();
-            for event in &feed.onthisday {
+            for event in events_slice {
                 let target = event
                     .pages
                     .first()
@@ -344,7 +378,7 @@ pub fn get_feed_entries(app: &App, kind: DailyFeedKind) -> Vec<FeedEntry> {
                 let year_str = match event.year {
                     Some(y) if y < 0 => format!("{} BC", y.abs()),
                     Some(y) => format!("{}", y),
-                    None => "—".to_string(),
+                    None => "Holiday".to_string(),
                 };
                 let clean_text = strip_html_tags(&event.text);
                 let display = format!("[ {} ]  {}", year_str, clean_text);
@@ -813,7 +847,25 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
             None => return,
         };
 
-        let selected_event = feed.onthisday.get(selected_idx);
+        let archive = feed.onthisday_all.as_ref();
+        let events_slice: &[crate::api::daily_feed::OnThisDayEvent] = if let Some(arch) = archive {
+            match state.otd_tab {
+                OnThisDayTab::Events => {
+                    if !arch.events.is_empty() {
+                        &arch.events
+                    } else {
+                        &feed.onthisday
+                    }
+                }
+                OnThisDayTab::Births => &arch.births,
+                OnThisDayTab::Deaths => &arch.deaths,
+                OnThisDayTab::Holidays => &arch.holidays,
+            }
+        } else {
+            &feed.onthisday
+        };
+
+        let selected_event = events_slice.get(selected_idx);
         let focused_page = selected_event.and_then(|ev| {
             let (_, event_links) = parse_onthisday_event(&ev.text, &ev.pages);
             let active_link_idx = state.link_idx.min(event_links.len().saturating_sub(1));
@@ -855,15 +907,71 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
         }
 
         let mut lines = Vec::new();
+        let avail_w = (modal_area.width as usize).saturating_sub(4);
+
+        let (ev_count, b_count, d_count, h_count) = if let Some(arch) = archive {
+            (
+                if !arch.events.is_empty() {
+                    arch.events.len()
+                } else {
+                    feed.onthisday.len()
+                },
+                arch.births.len(),
+                arch.deaths.len(),
+                arch.holidays.len(),
+            )
+        } else {
+            (feed.onthisday.len(), 0, 0, 0)
+        };
+
+        let tabs = [
+            (OnThisDayTab::Events, "1", "Events", ev_count),
+            (OnThisDayTab::Births, "2", "Births", b_count),
+            (OnThisDayTab::Deaths, "3", "Deaths", d_count),
+            (OnThisDayTab::Holidays, "4", "Holidays", h_count),
+        ];
+
+        let mut tab_spans = vec![Span::raw("  ")];
+        for (i, (t, num, label, count)) in tabs.iter().enumerate() {
+            if i > 0 {
+                tab_spans.push(Span::styled("   ", Style::default().fg(theme::DARK_GREY)));
+            }
+            let is_active = state.otd_tab == *t;
+            if is_active {
+                tab_spans.push(Span::styled(
+                    format!("[{}] {} ({})", num, label, count),
+                    Style::default()
+                        .fg(theme::BLUE)
+                        .bold()
+                        .add_modifier(Modifier::UNDERLINED),
+                ));
+            } else {
+                tab_spans.push(Span::styled(
+                    format!("[{}] ", num),
+                    Style::default().fg(theme::DARK_GREY),
+                ));
+                tab_spans.push(Span::styled(
+                    format!("{} ({})", label, count),
+                    Style::default().fg(theme::GREY),
+                ));
+            }
+        }
+        lines.push(Line::from(tab_spans));
+        let div_w = avail_w.saturating_sub(2);
+        lines.push(Line::from(vec![
+            Span::raw("  "),
+            Span::styled("─".repeat(div_w), Style::default().fg(theme::DARK_GREY)),
+        ]));
+        lines.push(Line::from(""));
+
         let mut line_offsets = Vec::new();
-        if feed.onthisday.is_empty() {
+        if events_slice.is_empty() {
             lines.push(Line::from(vec![Span::styled(
-                "  no historical milestones available.",
+                "  no entries available in this category.",
                 Style::default().fg(theme::GREY).italic(),
             )]));
         } else {
-            let avail_w = (modal_area.width as usize).saturating_sub(4);
-            for (idx, event) in feed.onthisday.iter().enumerate() {
+            for (idx, event) in events_slice.iter().enumerate() {
                 line_offsets.push(lines.len());
                 let is_selected = idx == selected_idx;
                 let current_year = crate::api::daily_feed::utc_today().0 as i32;
@@ -880,7 +988,7 @@ pub fn render_daily_feed_modal(f: &mut Frame, app: &App, size: Rect) {
                             (format!("{}", y), format!("({} yrs ago) ", yrs))
                         }
                     }
-                    None => ("—".to_string(), String::new()),
+                    None => ("Holiday".to_string(), String::new()),
                 };
                 let (chunks, event_links) = parse_onthisday_event(&event.text, &event.pages);
                 let active_link_idx = if is_selected {

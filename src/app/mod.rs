@@ -152,6 +152,7 @@ impl App {
             kind,
             cursor_idx: 0,
             link_idx: 0,
+            otd_tab: crate::ui::modals::OnThisDayTab::Events,
         });
         self.input_mode = InputMode::DailyFeedModal;
     }

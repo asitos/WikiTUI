@@ -196,12 +196,31 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                 .fg(theme::TEAL)
                 .add_modifier(Modifier::BOLD),
         )],
-        InputMode::DailyFeedModal => vec![Span::styled(
-            "j/k navigate · enter read · t new tab · esc close",
-            Style::default()
-                .fg(theme::TEAL)
-                .add_modifier(Modifier::BOLD),
-        )],
+        InputMode::DailyFeedModal => {
+            if let Some(modal) = &app.daily_feed_modal {
+                if modal.kind == crate::ui::modals::DailyFeedKind::OnThisDay {
+                    vec![Span::styled(
+                        "1-4 category · j/k navigate · tab links · enter read · esc close",
+                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                    )]
+                } else if modal.kind == crate::ui::modals::DailyFeedKind::News {
+                    vec![Span::styled(
+                        "j/k navigate · tab links · enter read · esc close",
+                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                    )]
+                } else {
+                    vec![Span::styled(
+                        "j/k navigate · enter read · esc close",
+                        Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                    )]
+                }
+            } else {
+                vec![Span::styled(
+                    "j/k navigate · enter read · esc close",
+                    Style::default().fg(theme::BLUE).add_modifier(Modifier::BOLD),
+                )]
+            }
+        }
         InputMode::Normal => {
             if app.audio_player.is_active() {
                 let state_str = match app.audio_player.state {
