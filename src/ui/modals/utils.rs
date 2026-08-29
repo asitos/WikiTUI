@@ -79,37 +79,6 @@ pub fn render_modal_container_at(
     inner
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn render_modal_frame(
-    f: &mut ratatui::Frame,
-    size: Rect,
-    percent_x: u16,
-    percent_y: u16,
-    icon: &str,
-    title: &str,
-    border_color: Color,
-    rounded: bool,
-) -> (Rect, Block<'static>) {
-    let area = centered_rect(percent_x, percent_y, size);
-    let block = render_modal_frame_at(f, area, icon, title, border_color, rounded);
-    (area, block)
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn render_modal_container(
-    f: &mut ratatui::Frame,
-    size: Rect,
-    percent_x: u16,
-    percent_y: u16,
-    icon: &str,
-    title: &str,
-    border_color: Color,
-    rounded: bool,
-) -> Rect {
-    let area = centered_rect(percent_x, percent_y, size);
-    render_modal_container_at(f, area, icon, title, border_color, rounded)
-}
-
 pub fn create_checkbox_line(
     label: &str,
     is_focused: bool,
