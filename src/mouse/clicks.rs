@@ -312,11 +312,12 @@ fn handle_modal_left_click(
             && row >= container_area.y
             && row < container_area.y + container_area.height
         {
-            if col > left_area.x
-                && col < left_area.x + left_area.width.saturating_sub(1)
-                && row > left_area.y
-                && row < left_area.y + left_area.height.saturating_sub(1)
+            if col >= left_area.x
+                && col < left_area.x + left_area.width
+                && row >= left_area.y
+                && row < left_area.y + left_area.height
             {
+                app.lists_modal.viewer_focus_right = false;
                 if let Some(clicked_list_idx) =
                     crate::ui::modals::lists::get_saved_lists_viewer_item_at(
                         app, false, left_area, row,
@@ -324,16 +325,16 @@ fn handle_modal_left_click(
                 {
                     app.lists_modal.viewer_list_idx = clicked_list_idx;
                     app.lists_modal.viewer_article_idx = 0;
-                    app.lists_modal.viewer_focus_right = false;
                 }
                 return true;
             }
 
-            if col > right_area.x
-                && col < right_area.x + right_area.width.saturating_sub(1)
-                && row > right_area.y
-                && row < right_area.y + right_area.height.saturating_sub(1)
+            if col >= right_area.x
+                && col < right_area.x + right_area.width
+                && row >= right_area.y
+                && row < right_area.y + right_area.height
             {
+                app.lists_modal.viewer_focus_right = true;
                 if let Some(clicked_art_idx) =
                     crate::ui::modals::lists::get_saved_lists_viewer_item_at(
                         app, true, right_area, row,
@@ -342,7 +343,6 @@ fn handle_modal_left_click(
                     if let Some(list) = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx) {
                         if clicked_art_idx < list.articles.len() {
                             app.lists_modal.viewer_article_idx = clicked_art_idx;
-                            app.lists_modal.viewer_focus_right = true;
                             let title = list.articles[clicked_art_idx].clone();
                             app.input_mode = InputMode::Normal;
                             app.open_article(&title);
