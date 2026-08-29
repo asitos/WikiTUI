@@ -83,6 +83,8 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     )];
     let right_width = right_text.chars().count() as u16 + 3;
 
+    let center_width = (area.width as usize).saturating_sub((left_width + right_width) as usize);
+
     // center segment
     let center_spans = if let Some((ref msg, time)) = app.status_message {
         if time.elapsed().as_secs_f32() < 3.0 {
@@ -93,10 +95,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                     .add_modifier(Modifier::BOLD),
             )]
         } else {
-            get_center_spans(app, active_pane)
+            get_center_spans(app, active_pane, center_width)
         }
     } else {
-        get_center_spans(app, active_pane)
+        get_center_spans(app, active_pane, center_width)
     };
 
     let chunks = Layout::default()
@@ -122,7 +124,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     );
 }
 
-fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'static>> {
+fn get_center_spans(
+    app: &App,
+    active_pane: &crate::app::Pane,
+    available_width: usize,
+) -> Vec<Span<'static>> {
     match app.input_mode {
         InputMode::Search => vec![Span::styled(
             "type query · enter search · esc cancel",
@@ -275,7 +281,7 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
             } else if matches!(active_pane.content, PaneContent::ArticleText { .. })
                 && (!active_pane.history_back.is_empty() || !active_pane.history_forward.is_empty())
             {
-                build_history_trail(active_pane)
+                build_history_trail(active_pane, available_width)
             } else if matches!(active_pane.content, PaneContent::Empty) {
                 vec![Span::styled(
                     "ctrl-s search · F feed · , settings · ? help · q quit",
@@ -304,19 +310,27 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
     }
 }
 
-fn build_history_trail(pane: &crate::app::Pane) -> Vec<Span<'static>> {
+fn build_history_trail(pane: &crate::app::Pane, available_width: usize) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     let back_len = pane.history_back.len();
     let start_idx = back_len.saturating_sub(2);
+    let back_items = &pane.history_back[start_idx..];
+    let fwd_items: Vec<_> = pane.history_forward.iter().take(2).collect();
+
+    let total_items = 1 + back_items.len() + fwd_items.len();
+    let overhead = total_items * 3 + if start_idx > 0 { 4 } else { 0 } + if pane.history_forward.len() > 2 { 4 } else { 0 };
+    let budget = available_width.saturating_sub(overhead);
+    let side_max = (budget / total_items.max(1)).clamp(6, 35);
+    let cur_max = (side_max + side_max / 3).clamp(8, 45);
 
     if start_idx > 0 {
         spans.push(Span::styled("…", Style::default().fg(theme::GREY)));
         spans.push(Span::styled(" › ", Style::default().fg(theme::GREY)));
     }
 
-    for title in &pane.history_back[start_idx..] {
+    for title in back_items {
         spans.push(Span::styled(
-            truncate_trail_title(title, 18),
+            truncate_trail_title(title, side_max),
             Style::default().fg(theme::GREY),
         ));
         spans.push(Span::styled(" › ", Style::default().fg(theme::GREY)));
@@ -324,17 +338,17 @@ fn build_history_trail(pane: &crate::app::Pane) -> Vec<Span<'static>> {
 
     if let Some(cur_title) = pane.title() {
         spans.push(Span::styled(
-            truncate_trail_title(&cur_title, 22),
+            truncate_trail_title(&cur_title, cur_max),
             Style::default()
                 .fg(theme::LIME)
                 .add_modifier(Modifier::BOLD),
         ));
     }
 
-    for title in pane.history_forward.iter().take(2) {
+    for title in fwd_items {
         spans.push(Span::styled(" › ", Style::default().fg(theme::GREY)));
         spans.push(Span::styled(
-            truncate_trail_title(title, 18),
+            truncate_trail_title(title, side_max),
             Style::default()
                 .fg(theme::GREY)
                 .add_modifier(Modifier::ITALIC),
