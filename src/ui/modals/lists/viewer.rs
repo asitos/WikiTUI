@@ -138,7 +138,7 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     let selected_list = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx);
     let right_title = selected_list
         .map(|l| format!(" articles in '{}' ", l.name))
-        .unwrap_or_else(|| " Articles ".to_string());
+        .unwrap_or_else(|| " articles ".to_string());
 
     let right_block = Block::bordered()
         .border_type(border_type)
