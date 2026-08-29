@@ -48,7 +48,7 @@ pub struct App {
     pub wiki_stats: crate::api::WikiStatistics,
     pub daily_feed: Option<crate::api::DailyFeed>,
     pub daily_feed_modal: Option<crate::ui::modals::DailyFeedModalState>,
-    pub recent_articles: Vec<String>,
+    pub recent_articles: Vec<crate::app::recent::RecentArticleEntry>,
     pub launch_quote_idx: usize,
     pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
     pub audio_player: crate::audio::AudioPlayer,

@@ -59,7 +59,7 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
     let left_pad = (inner_width.saturating_sub(LOGO_WIDTH)) / 2;
     let pad_str = " ".repeat(left_pad);
 
-    let recent_articles = app.get_continue_reading_articles();
+    let recent_articles = app.get_continue_reading_with_timestamps();
     let show_recent = !recent_articles.is_empty() && inner_height >= (LOGO.len() + 10);
     let displayed_count = if show_recent {
         recent_articles.len().min(7)
@@ -219,27 +219,46 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             inner_width,
         ));
 
-        let items: Vec<(String, String)> = recent_articles
+        let items: Vec<(String, String, String)> = recent_articles
             .iter()
             .take(displayed_count)
             .enumerate()
-            .map(|(idx, title)| (format!("{}. ", idx + 1), title.clone()))
+            .map(|(idx, (title, ts))| {
+                let time_str = ts
+                    .map(crate::app::recent::format_relative_time)
+                    .unwrap_or_default();
+                (format!("{}. ", idx + 1), title.clone(), time_str)
+            })
             .collect();
 
         let max_item_width = items
             .iter()
-            .map(|(p, t)| p.len() + unicode_width::UnicodeWidthStr::width(t.as_str()))
+            .map(|(p, t, time_str)| {
+                let base_w = p.len() + unicode_width::UnicodeWidthStr::width(t.as_str());
+                if !time_str.is_empty() {
+                    base_w + 3 + unicode_width::UnicodeWidthStr::width(time_str.as_str())
+                } else {
+                    base_w
+                }
+            })
             .max()
             .unwrap_or(0);
 
         let block_pad = (inner_width.saturating_sub(max_item_width)) / 2;
 
-        for (num_prefix, title) in items {
-            lines.push(Line::from(vec![
+        for (num_prefix, title, time_str) in items {
+            let mut line_spans = vec![
                 Span::raw(" ".repeat(block_pad)),
                 Span::styled(num_prefix, Style::default().fg(theme::GREY)),
                 Span::styled(title, Style::default().fg(theme::FG)),
-            ]));
+            ];
+            if !time_str.is_empty() {
+                line_spans.push(Span::styled(
+                    format!(" · {}", time_str),
+                    Style::default().fg(theme::DARK_GREY),
+                ));
+            }
+            lines.push(Line::from(line_spans));
         }
     }
 

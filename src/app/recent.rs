@@ -2,18 +2,43 @@ use super::App;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RecentArticleEntry {
+    pub title: String,
+    pub timestamp: u64,
+}
+
 impl App {
     pub fn recent_articles_file_path() -> PathBuf {
         crate::paths::config_dir().join("recent_articles.json")
     }
 
-    pub fn load_recent_articles() -> Vec<String> {
+    pub fn load_recent_articles() -> Vec<RecentArticleEntry> {
         let path = Self::recent_articles_file_path();
-        std::fs::read_to_string(&path)
-            .ok()
-            .and_then(|c| serde_json::from_str::<Vec<String>>(&c).ok())
-            .map(|list| list.into_iter().map(|t| t.replace('_', " ")).collect())
-            .unwrap_or_default()
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(_) => return Vec::new(),
+        };
+
+        if let Ok(entries) = serde_json::from_str::<Vec<RecentArticleEntry>>(&content) {
+            entries
+                .into_iter()
+                .map(|mut e| {
+                    e.title = e.title.replace('_', " ");
+                    e
+                })
+                .collect()
+        } else if let Ok(strings) = serde_json::from_str::<Vec<String>>(&content) {
+            strings
+                .into_iter()
+                .map(|t| RecentArticleEntry {
+                    title: t.replace('_', " "),
+                    timestamp: 0,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
     }
 
     pub fn save_recent_articles(&self) {
@@ -31,8 +56,19 @@ impl App {
         if clean.is_empty() || clean.to_lowercase().starts_with("category:") {
             return;
         }
-        self.recent_articles.retain(|t| t != &clean);
-        self.recent_articles.insert(0, clean);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        self.recent_articles.retain(|e| e.title != clean);
+        self.recent_articles.insert(
+            0,
+            RecentArticleEntry {
+                title: clean,
+                timestamp: now,
+            },
+        );
         if self.recent_articles.len() > 10 {
             self.recent_articles.truncate(10);
         }
@@ -40,15 +76,15 @@ impl App {
     }
 
     pub fn get_continue_reading_articles(&self) -> Vec<String> {
-        let filtered_recent: Vec<String> = self
+        let filtered: Vec<String> = self
             .recent_articles
             .iter()
-            .filter(|t| !t.to_lowercase().starts_with("category:"))
-            .cloned()
+            .filter(|e| !e.title.to_lowercase().starts_with("category:"))
+            .map(|e| e.title.clone())
             .collect();
 
-        if !filtered_recent.is_empty() {
-            return filtered_recent;
+        if !filtered.is_empty() {
+            return filtered;
         }
 
         let mut seen = HashSet::new();
@@ -64,5 +100,75 @@ impl App {
             }
         }
         list
+    }
+
+    pub fn get_continue_reading_with_timestamps(&self) -> Vec<(String, Option<u64>)> {
+        let filtered: Vec<(String, Option<u64>)> = self
+            .recent_articles
+            .iter()
+            .filter(|e| !e.title.to_lowercase().starts_with("category:"))
+            .map(|e| {
+                let ts = if e.timestamp > 0 {
+                    Some(e.timestamp)
+                } else {
+                    None
+                };
+                (e.title.clone(), ts)
+            })
+            .collect();
+
+        if !filtered.is_empty() {
+            return filtered;
+        }
+
+        let mut seen = HashSet::new();
+        let mut list = Vec::with_capacity(10);
+        for l in &self.saved_lists.lists {
+            for a in l.articles.iter().rev() {
+                if !a.to_lowercase().starts_with("category:") && seen.insert(a.as_str()) {
+                    list.push((a.clone(), None));
+                    if list.len() >= 10 {
+                        return list;
+                    }
+                }
+            }
+        }
+        list
+    }
+}
+
+pub fn format_relative_time(timestamp: u64) -> String {
+    if timestamp == 0 {
+        return String::new();
+    }
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if now <= timestamp {
+        return "just now".to_string();
+    }
+    let diff = now - timestamp;
+    if diff < 60 {
+        "just now".to_string()
+    } else if diff < 3600 {
+        let mins = diff / 60;
+        format!("{}m ago", mins)
+    } else if diff < 86400 {
+        let hours = diff / 3600;
+        format!("{}h ago", hours)
+    } else if diff < 86400 * 7 {
+        let days = diff / 86400;
+        if days == 1 {
+            "yesterday".to_string()
+        } else {
+            format!("{}d ago", days)
+        }
+    } else if diff < 86400 * 30 {
+        let weeks = diff / (86400 * 7);
+        format!("{}w ago", weeks)
+    } else {
+        let months = diff / (86400 * 30);
+        format!("{}mo ago", months)
     }
 }
