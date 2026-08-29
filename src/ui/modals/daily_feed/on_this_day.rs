@@ -81,29 +81,69 @@ pub fn render_on_this_day_modal(
     if let Some(page) = focused_page {
         if let Some(desc) = page.description.as_deref().filter(|d| !d.is_empty()) {
             let icon = if app.config.ui.icons { "󰋼 " } else { "" };
-            let max_desc_len =
-                (modal_area.width as usize).saturating_sub(page.display_title().len() + 10);
-            let clean_desc = if desc.len() > max_desc_len && max_desc_len > 3 {
-                let byte_end = desc
-                    .char_indices()
-                    .nth(max_desc_len.saturating_sub(3))
-                    .map(|(i, _)| i)
-                    .unwrap_or(desc.len());
-                format!("{}...", &desc[..byte_end])
-            } else {
-                desc.to_string()
-            };
-            let footer_line = Line::from(vec![
-                Span::styled(
-                    format!(" {}{}: ", icon, page.display_title()),
-                    Style::default().fg(theme::BLUE).bold(),
-                ),
-                Span::styled(
-                    format!("{} ", clean_desc),
-                    Style::default().fg(theme::GREY).italic(),
-                ),
-            ]);
-            modal_block = modal_block.title_bottom(footer_line);
+            let avail_w = (modal_area.width as usize).saturating_sub(4);
+            let icon_w = unicode_width::UnicodeWidthStr::width(icon);
+            let prefix_w = 1 + icon_w + 2;
+
+            if avail_w > prefix_w + 4 {
+                let title = page.display_title();
+                let title_w = unicode_width::UnicodeWidthStr::width(title.as_str());
+
+                if prefix_w + title_w >= avail_w {
+                    let max_title_w = avail_w.saturating_sub(prefix_w + 3);
+                    let mut trunc_end = title.len();
+                    let mut cur_w = 0;
+                    for (i, ch) in title.char_indices() {
+                        let ch_w = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
+                        if cur_w + ch_w > max_title_w {
+                            trunc_end = i;
+                            break;
+                        }
+                        cur_w += ch_w;
+                    }
+                    let clean_title = format!("{}...", &title[..trunc_end]);
+                    let footer_line = Line::from(vec![Span::styled(
+                        format!(" {}{}: ", icon, clean_title),
+                        Style::default().fg(theme::BLUE).bold(),
+                    )]);
+                    modal_block = modal_block.title_bottom(footer_line);
+                } else {
+                    let max_desc_w = avail_w.saturating_sub(prefix_w + title_w + 1);
+                    let desc_w = unicode_width::UnicodeWidthStr::width(desc);
+
+                    let clean_desc = if desc_w > max_desc_w {
+                        if max_desc_w > 3 {
+                            let mut trunc_end = desc.len();
+                            let mut cur_w = 0;
+                            for (i, ch) in desc.char_indices() {
+                                let ch_w = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
+                                if cur_w + ch_w > max_desc_w - 3 {
+                                    trunc_end = i;
+                                    break;
+                                }
+                                cur_w += ch_w;
+                            }
+                            Some(format!("{}...", &desc[..trunc_end]))
+                        } else {
+                            None
+                        }
+                    } else {
+                        Some(desc.to_string())
+                    };
+
+                    let mut spans = vec![Span::styled(
+                        format!(" {}{}:", icon, title),
+                        Style::default().fg(theme::BLUE).bold(),
+                    )];
+                    if let Some(cd) = clean_desc {
+                        spans.push(Span::styled(
+                            format!(" {} ", cd),
+                            Style::default().fg(theme::GREY).italic(),
+                        ));
+                    }
+                    modal_block = modal_block.title_bottom(Line::from(spans));
+                }
+            }
         }
     }
 
