@@ -56,8 +56,11 @@ pub fn handle_categories_mode(app: &mut App, key: KeyEvent) {
                 };
 
             if let Some(url) = copy_url {
-                crate::clipboard::copy_to_clipboard(&url);
-                app.set_status_message(format!("copied category: {}", url));
+                if crate::clipboard::copy_to_clipboard(&url) {
+                    app.set_status_message(format!("copied category: {}", url));
+                } else {
+                    app.set_status_message("failed to copy (no clipboard backend found)");
+                }
             }
         }
         KeyCode::Char('c') | KeyCode::Esc | KeyCode::Char('q') => {

@@ -126,8 +126,11 @@ impl App {
                 || target.starts_with("https://")
                 || target.starts_with("//")
             {
-                crate::clipboard::copy_to_clipboard(&target);
-                self.set_status_message(format!("copied external link: {}", target));
+                if crate::clipboard::copy_to_clipboard(&target) {
+                    self.set_status_message(format!("copied external link: {}", target));
+                } else {
+                    self.set_status_message("failed to copy (no clipboard backend found)");
+                }
             } else if is_article_link(&target) {
                 self.open_article(&target);
             }
@@ -320,8 +323,11 @@ impl App {
             _ => return,
         };
 
-        crate::clipboard::copy_to_clipboard(&target_url);
-        self.set_status_message(format!("copied: {}", target_url));
+        if crate::clipboard::copy_to_clipboard(&target_url) {
+            self.set_status_message(format!("copied: {}", target_url));
+        } else {
+            self.set_status_message("failed to copy (no clipboard backend found)");
+        }
     }
 
     pub fn copy_article_link(&mut self) {
@@ -339,7 +345,10 @@ impl App {
             _ => return,
         };
 
-        crate::clipboard::copy_to_clipboard(&target_url);
-        self.set_status_message(format!("copied article: {}", target_url));
+        if crate::clipboard::copy_to_clipboard(&target_url) {
+            self.set_status_message(format!("copied article: {}", target_url));
+        } else {
+            self.set_status_message("failed to copy (no clipboard backend found)");
+        }
     }
 }
