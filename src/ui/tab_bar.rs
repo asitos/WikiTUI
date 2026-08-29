@@ -13,12 +13,17 @@ pub fn compute_tab_titles(app: &App) -> Vec<String> {
         .iter()
         .enumerate()
         .map(|(i, tab)| {
-            let is_loading = tab.panes.iter().any(|p| p.is_loading);
+            let loading_pane = tab.panes.iter().find(|p| p.is_loading);
             let show_icons = app.config.ui.icons;
-            let (icon, raw_title, is_saved) = if is_loading {
+            let (icon, raw_title, is_saved) = if let Some(pane) = loading_pane {
+                let title = pane
+                    .loading_title
+                    .as_deref()
+                    .unwrap_or("loading...")
+                    .to_lowercase();
                 (
                     crate::ui::current_spinner_frame(),
-                    "loading...".to_string(),
+                    title,
                     false,
                 )
             } else if let Some(active_pane) = tab.panes.get(tab.active_pane_idx) {

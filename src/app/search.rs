@@ -165,6 +165,7 @@ impl App {
             let pane_id = active_pane.id;
             active_pane.current_request_id = request_id;
             active_pane.is_loading = true;
+            active_pane.loading_title = Some(format!("search: {}", query.to_lowercase()));
             active_pane.selected_idx = 0;
             let limit = self.config.search.limit;
             let timeout = self.config.network.timeout;

@@ -12,6 +12,7 @@ impl App {
         let request_id = self.next_request_id();
         if let Some(pane) = self.find_pane_mut(pane_id) {
             pane.current_request_id = request_id;
+            pane.loading_title = Some(title.clone());
         }
         let _ = self.cmd_tx.send(NetworkCommand::FetchArticle {
             request_id,
@@ -27,6 +28,7 @@ impl App {
         let request_id = self.next_request_id();
         if let Some(pane) = self.find_pane_mut(pane_id) {
             pane.current_request_id = request_id;
+            pane.loading_title = Some("random article".to_string());
         }
         let _ = self.cmd_tx.send(NetworkCommand::FetchRandomArticle {
             request_id,

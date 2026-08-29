@@ -15,6 +15,7 @@ impl App {
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     if request_id >= pane.current_request_id {
                         pane.is_loading = false;
+                        pane.loading_title = None;
                         pane.selected_idx = 0;
                         pane.scroll_offset = 0;
                         pane.toc_focused = false;
@@ -44,6 +45,7 @@ impl App {
                     let show_icons = self.config.ui.icons;
                     if let Some(pane) = self.find_pane_mut(pane_id) {
                         pane.is_loading = false;
+                        pane.loading_title = None;
                         pane.toc_focused = false;
                         let initial_width = 80;
                         let parsed_doc = parse_wikipedia_html(
@@ -86,6 +88,7 @@ impl App {
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     if request_id >= pane.current_request_id {
                         pane.is_loading = false;
+                        pane.loading_title = None;
                         pane.content = PaneContent::Error(message);
                     }
                 }
