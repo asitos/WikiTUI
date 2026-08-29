@@ -241,6 +241,41 @@ fn normalize_search_str(s: &str) -> String {
         .replace(['–', '—', '−'], "-")
 }
 
+fn find_case_insensitive_matches(text: &str, term: &str) -> Vec<(usize, usize)> {
+    let mut matches = Vec::new();
+    let term_chars: Vec<char> = term.chars().collect();
+    if term_chars.is_empty() {
+        return matches;
+    }
+
+    let text_chars: Vec<(usize, char)> = text.char_indices().collect();
+    if text_chars.len() < term_chars.len() {
+        return matches;
+    }
+
+    let mut i = 0;
+    while i + term_chars.len() <= text_chars.len() {
+        let is_match = text_chars[i..i + term_chars.len()]
+            .iter()
+            .zip(&term_chars)
+            .all(|((_, tc), mc)| tc.to_lowercase().eq(mc.to_lowercase()));
+
+        if is_match {
+            let start_byte = text_chars[i].0;
+            let end_byte = if i + term_chars.len() < text_chars.len() {
+                text_chars[i + term_chars.len()].0
+            } else {
+                text.len()
+            };
+            matches.push((start_byte, end_byte));
+            i += term_chars.len();
+        } else {
+            i += 1;
+        }
+    }
+    matches
+}
+
 pub fn parse_onthisday_event(
     text: &str,
     pages: &[crate::api::daily_feed::PageSummary],
@@ -287,14 +322,7 @@ pub fn parse_onthisday_event(
 
     let mut ranges: Vec<(usize, usize, usize, String)> = Vec::new();
     for (term, canonical, l_idx) in &match_targets {
-        let term_lower = term.to_lowercase();
-        let text_lower = clean_text.to_lowercase();
-
-        let mut start = 0;
-        while let Some(found_idx) = text_lower[start..].find(&term_lower) {
-            let actual_start = start + found_idx;
-            let actual_end = actual_start + term.len();
-
+        for (actual_start, actual_end) in find_case_insensitive_matches(&clean_text, term) {
             let overlaps = ranges.iter().any(|(s, e, _, _)| {
                 (actual_start >= *s && actual_start < *e)
                     || (actual_end > *s && actual_end <= *e)
@@ -303,10 +331,6 @@ pub fn parse_onthisday_event(
 
             if !overlaps {
                 ranges.push((actual_start, actual_end, *l_idx, canonical.clone()));
-            }
-            start = actual_start + 1;
-            if start >= clean_text.len() {
-                break;
             }
         }
     }

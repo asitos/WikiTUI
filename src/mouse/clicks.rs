@@ -39,6 +39,34 @@ fn handle_modal_left_click(
         return true;
     }
 
+    if app.input_mode == InputMode::DailyFeedModal {
+        if let Some(modal) = &mut app.daily_feed_modal {
+            let area = crate::ui::modals::compute_daily_feed_modal_area(size, modal.kind);
+            if col < area.x
+                || col >= area.x + area.width
+                || row < area.y
+                || row >= area.y + area.height
+            {
+                app.input_mode = InputMode::Normal;
+                return true;
+            }
+
+            if modal.kind == crate::ui::modals::DailyFeedKind::OnThisDay {
+                if let Some(tab) =
+                    crate::ui::modals::get_otd_tab_at(area, col, row, app.daily_feed.as_ref())
+                {
+                    if modal.otd_tab != tab {
+                        modal.otd_tab = tab;
+                        modal.cursor_idx = 0;
+                        modal.link_idx = 0;
+                    }
+                    return true;
+                }
+            }
+        }
+        return true;
+    }
+
     if app.input_mode == InputMode::Help {
         let help_area = crate::ui::modals::compute_help_modal_area(size);
         if col < help_area.x

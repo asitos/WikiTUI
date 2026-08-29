@@ -298,3 +298,53 @@ pub fn render_on_this_day_modal(
         .scroll((scroll as u16, 0));
     f.render_widget(p, modal_area);
 }
+
+pub fn get_otd_tab_at(
+    modal_area: Rect,
+    col: u16,
+    row: u16,
+    feed: Option<&crate::api::DailyFeed>,
+) -> Option<OnThisDayTab> {
+    let tab_row = modal_area.y + 1;
+    if row != tab_row {
+        return None;
+    }
+
+    let feed = feed?;
+    let archive = feed.onthisday_all.as_ref();
+    let (ev_count, b_count, d_count, h_count) = if let Some(arch) = archive {
+        (
+            if !arch.events.is_empty() {
+                arch.events.len()
+            } else {
+                feed.onthisday.len()
+            },
+            arch.births.len(),
+            arch.deaths.len(),
+            arch.holidays.len(),
+        )
+    } else {
+        (feed.onthisday.len(), 0, 0, 0)
+    };
+
+    let tabs = [
+        (OnThisDayTab::Events, "1", "Events", ev_count),
+        (OnThisDayTab::Births, "2", "Births", b_count),
+        (OnThisDayTab::Deaths, "3", "Deaths", d_count),
+        (OnThisDayTab::Holidays, "4", "Holidays", h_count),
+    ];
+
+    let mut current_x = modal_area.x + 1 + 2;
+    for (i, (tab_type, num, label, count)) in tabs.into_iter().enumerate() {
+        if i > 0 {
+            current_x += 3;
+        }
+        let tab_len = format!("[{}] {} ({})", num, label, count).chars().count() as u16;
+        if col >= current_x && col < current_x + tab_len {
+            return Some(tab_type);
+        }
+        current_x += tab_len;
+    }
+
+    None
+}
