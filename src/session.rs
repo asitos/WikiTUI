@@ -106,6 +106,7 @@ impl SessionState {
                 pane.history_forward = saved_pane.history_forward;
                 if let Some(title) = saved_pane.title {
                     pane.is_loading = true;
+                    pane.loading_title = Some(title.clone());
                     app.send_fetch_article(pane_id, title.clone());
                 }
                 panes.push(pane);
@@ -118,6 +119,7 @@ impl SessionState {
             let active_idx = saved_tab.active_pane_idx.min(panes.len() - 1);
             let tab_title = panes[active_idx]
                 .title()
+                .or_else(|| panes[active_idx].loading_title.clone())
                 .unwrap_or_else(|| "home".to_string());
             app.tabs.push(Tab {
                 name: tab_title,
