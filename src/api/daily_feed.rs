@@ -230,7 +230,18 @@ pub fn utc_today() -> (u32, u32, u32) {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
+    utc_date_from_timestamp(now)
+}
 
+pub fn utc_yesterday() -> (u32, u32, u32) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    utc_date_from_timestamp(now.saturating_sub(86400))
+}
+
+fn utc_date_from_timestamp(now: u64) -> (u32, u32, u32) {
     let days = (now / 86400) as i64;
     let z = days + 719468;
     let era = if z >= 0 { z } else { z - 146096 } / 146097;
@@ -253,7 +264,21 @@ pub fn feed_cache_path(year: u32, month: u32, day: u32) -> PathBuf {
 pub fn get_cached_daily_feed(year: u32, month: u32, day: u32) -> Option<DailyFeed> {
     let path = feed_cache_path(year, month, day);
     let content = fs::read_to_string(path).ok()?;
-    serde_json::from_str(&content).ok()
+    let mut feed: DailyFeed = serde_json::from_str(&content).ok()?;
+    if feed.mostread.as_ref().is_none_or(|m| m.articles.is_empty()) {
+        let (py, pm, pd) = utc_yesterday();
+        let prev_path = feed_cache_path(py, pm, pd);
+        if let Ok(prev_content) = fs::read_to_string(prev_path) {
+            if let Ok(prev_feed) = serde_json::from_str::<DailyFeed>(&prev_content) {
+                if let Some(mr) = prev_feed.mostread {
+                    if !mr.articles.is_empty() {
+                        feed.mostread = Some(mr);
+                    }
+                }
+            }
+        }
+    }
+    Some(feed)
 }
 
 pub fn save_cached_daily_feed(year: u32, month: u32, day: u32, feed: &DailyFeed) {
@@ -275,7 +300,13 @@ pub fn fetch_daily_feed(
 
     if offline_cache {
         if let Some(cached) = get_cached_daily_feed(year, month, day) {
-            return Ok(cached);
+            if cached
+                .mostread
+                .as_ref()
+                .is_some_and(|m| !m.articles.is_empty())
+            {
+                return Ok(cached);
+            }
         }
     }
 
@@ -293,6 +324,27 @@ pub fn fetch_daily_feed(
     let mut feed: DailyFeed = resp
         .into_json()
         .map_err(|e| format!("Failed to parse daily feed: {}", e))?;
+
+    if feed.mostread.as_ref().is_none_or(|m| m.articles.is_empty()) {
+        let (py, pm, pd) = utc_yesterday();
+        let prev_url = format!(
+            "https://en.wikipedia.org/api/rest_v1/feed/featured/{:04}/{:02}/{:02}",
+            py, pm, pd
+        );
+        if let Ok(prev_resp) = agent
+            .get(&prev_url)
+            .timeout(std::time::Duration::from_secs(timeout))
+            .call()
+        {
+            if let Ok(prev_feed) = prev_resp.into_json::<DailyFeed>() {
+                if let Some(mr) = prev_feed.mostread {
+                    if !mr.articles.is_empty() {
+                        feed.mostread = Some(mr);
+                    }
+                }
+            }
+        }
+    }
 
     let itn_url = "https://en.wikipedia.org/w/api.php?action=parse&page=Template:In_the_news&prop=wikitext&format=json";
     if let Ok(itn_resp) = agent
