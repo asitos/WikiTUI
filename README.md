@@ -128,6 +128,7 @@ code_line_numbers = true # enable/disable line numbers in code blocks
 rounded_borders = false # enable/disable rounded borders
 icons = true # enable/disable icons
 scroll_indicator = true # enable/disable scroll indicator on the right edge
+stats = true # enable/disable live wikipedia statistics on launch screen
 
 [search]
 limit = 20 # maximum number of search results returned from wikipedia (5-50)

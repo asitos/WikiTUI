@@ -67,8 +67,12 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
         0
     };
 
+    let show_stats = app.config.ui.stats;
     let mut lines = Vec::new();
-    let total_content_height = LOGO.len() + 6 + if show_recent { displayed_count + 2 } else { 0 };
+    let total_content_height = LOGO.len()
+        + 4
+        + if show_stats { 2 } else { 0 }
+        + if show_recent { displayed_count + 2 } else { 0 };
     let v_pad = inner_height.saturating_sub(total_content_height) / 2;
 
     for _ in 0..v_pad {
@@ -99,74 +103,76 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
         ));
     }
 
-    lines.push(Line::from(""));
-    let show_icons = app.config.ui.icons;
-    let icon_art = if show_icons { "󰈙 " } else { "" };
-    let icon_edits = if show_icons { "󰑐 " } else { "" };
-    let icon_users = if show_icons { "󰒓 " } else { "" };
-    let icon_pages = if show_icons { "󰠱 " } else { "" };
+    if show_stats {
+        lines.push(Line::from(""));
+        let show_icons = app.config.ui.icons;
+        let icon_art = if show_icons { "󰈙 " } else { "" };
+        let icon_edits = if show_icons { "󰑐 " } else { "" };
+        let icon_users = if show_icons { "󰒓 " } else { "" };
+        let icon_pages = if show_icons { "󰠱 " } else { "" };
 
-    let stats_spans = if inner_width >= 75 {
-        vec![
-            Span::styled(
-                format!(
-                    "{}{} articles",
-                    icon_art,
-                    crate::api::stats::format_metric(app.wiki_stats.articles)
+        let stats_spans = if inner_width >= 75 {
+            vec![
+                Span::styled(
+                    format!(
+                        "{}{} articles",
+                        icon_art,
+                        crate::api::stats::format_metric(app.wiki_stats.articles)
+                    ),
+                    Style::default().fg(theme::LIME),
                 ),
-                Style::default().fg(theme::LIME),
-            ),
-            Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
-            Span::styled(
-                format!(
-                    "{}{} edits",
-                    icon_edits,
-                    crate::api::stats::format_metric(app.wiki_stats.edits)
+                Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
+                Span::styled(
+                    format!(
+                        "{}{} edits",
+                        icon_edits,
+                        crate::api::stats::format_metric(app.wiki_stats.edits)
+                    ),
+                    Style::default().fg(theme::TEAL),
                 ),
-                Style::default().fg(theme::TEAL),
-            ),
-            Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
-            Span::styled(
-                format!(
-                    "{}{} active editors",
-                    icon_users,
-                    crate::api::stats::format_metric(app.wiki_stats.activeusers)
+                Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
+                Span::styled(
+                    format!(
+                        "{}{} active editors",
+                        icon_users,
+                        crate::api::stats::format_metric(app.wiki_stats.activeusers)
+                    ),
+                    Style::default().fg(theme::YELLOW),
                 ),
-                Style::default().fg(theme::YELLOW),
-            ),
-            Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
-            Span::styled(
-                format!(
-                    "{}{} pages",
-                    icon_pages,
-                    crate::api::stats::format_metric(app.wiki_stats.pages)
+                Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
+                Span::styled(
+                    format!(
+                        "{}{} pages",
+                        icon_pages,
+                        crate::api::stats::format_metric(app.wiki_stats.pages)
+                    ),
+                    Style::default().fg(theme::VIOLET),
                 ),
-                Style::default().fg(theme::VIOLET),
-            ),
-        ]
-    } else {
-        vec![
-            Span::styled(
-                format!(
-                    "{}{} articles",
-                    icon_art,
-                    crate::api::stats::format_metric(app.wiki_stats.articles)
+            ]
+        } else {
+            vec![
+                Span::styled(
+                    format!(
+                        "{}{} articles",
+                        icon_art,
+                        crate::api::stats::format_metric(app.wiki_stats.articles)
+                    ),
+                    Style::default().fg(theme::LIME),
                 ),
-                Style::default().fg(theme::LIME),
-            ),
-            Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
-            Span::styled(
-                format!(
-                    "{}{} active editors",
-                    icon_users,
-                    crate::api::stats::format_metric(app.wiki_stats.activeusers)
+                Span::styled("   ·   ", Style::default().fg(theme::DARK_GREY)),
+                Span::styled(
+                    format!(
+                        "{}{} active editors",
+                        icon_users,
+                        crate::api::stats::format_metric(app.wiki_stats.activeusers)
+                    ),
+                    Style::default().fg(theme::YELLOW),
                 ),
-                Style::default().fg(theme::YELLOW),
-            ),
-        ]
-    };
+            ]
+        };
 
-    lines.push(center_spans(stats_spans, inner_width));
+        lines.push(center_spans(stats_spans, inner_width));
+    }
     lines.push(Line::from(""));
 
     let actions: Vec<(&str, &str)> = if inner_width >= 75 {

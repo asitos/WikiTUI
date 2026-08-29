@@ -61,9 +61,11 @@ pub struct App {
 impl App {
     pub fn new(cmd_tx: Sender<NetworkCommand>) -> Self {
         let config = crate::config::Config::load();
-        let _ = cmd_tx.send(NetworkCommand::FetchStats {
-            timeout: config.network.timeout,
-        });
+        if config.ui.stats {
+            let _ = cmd_tx.send(NetworkCommand::FetchStats {
+                timeout: config.network.timeout,
+            });
+        }
         let (y, m, d) = crate::api::daily_feed::utc_today();
         let cached_feed = if config.network.offline_cache {
             crate::api::daily_feed::get_cached_daily_feed(y, m, d)

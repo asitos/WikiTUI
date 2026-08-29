@@ -53,8 +53,10 @@ impl App {
     }
 
     pub fn send_fetch_stats(&self) {
-        let _ = self.cmd_tx.send(NetworkCommand::FetchStats {
-            timeout: self.config.network.timeout,
-        });
+        if self.config.ui.stats {
+            let _ = self.cmd_tx.send(NetworkCommand::FetchStats {
+                timeout: self.config.network.timeout,
+            });
+        }
     }
 }

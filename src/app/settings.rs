@@ -9,6 +9,7 @@ pub enum SettingItem {
     RoundedBorders,
     Icons,
     ScrollIndicator,
+    Stats,
     HeadingMarker,
     ScrollLines,
     UnderlineLinks,
@@ -32,6 +33,7 @@ impl SettingItem {
         SettingItem::RoundedBorders,
         SettingItem::Icons,
         SettingItem::ScrollIndicator,
+        SettingItem::Stats,
         SettingItem::HeadingMarker,
         SettingItem::ScrollLines,
         SettingItem::UnderlineLinks,
@@ -52,7 +54,10 @@ impl SettingItem {
             SettingItem::LikedReadonly
             | SettingItem::AutoRestoreSession
             | SettingItem::ConfirmQuit => "general",
-            SettingItem::RoundedBorders | SettingItem::Icons | SettingItem::ScrollIndicator => "ui",
+            SettingItem::RoundedBorders
+            | SettingItem::Icons
+            | SettingItem::ScrollIndicator
+            | SettingItem::Stats => "ui",
             SettingItem::HeadingMarker
             | SettingItem::ScrollLines
             | SettingItem::UnderlineLinks
@@ -76,6 +81,7 @@ impl SettingItem {
             SettingItem::RoundedBorders => "rounded borders",
             SettingItem::Icons => "icons",
             SettingItem::ScrollIndicator => "scroll indicator",
+            SettingItem::Stats => "wikipedia live stats",
             SettingItem::HeadingMarker => "heading marker",
             SettingItem::ScrollLines => "scroll lines per step",
             SettingItem::UnderlineLinks => "underline links",
@@ -102,6 +108,7 @@ impl SettingItem {
             SettingItem::ScrollIndicator => {
                 "display scrollbar track on right edge of content panes"
             }
+            SettingItem::Stats => "display live wikipedia statistics on launch screen",
             SettingItem::HeadingMarker => "display colored bar marker (▍) before section headings",
             SettingItem::ScrollLines => "number of lines to scroll per j/k press (1-20)",
             SettingItem::UnderlineLinks => "display underlined modifier on article links",
@@ -159,6 +166,9 @@ impl App {
                 }
                 SettingItem::ScrollIndicator => {
                     self.config.ui.scroll_indicator = !self.config.ui.scroll_indicator;
+                }
+                SettingItem::Stats => {
+                    self.config.ui.stats = !self.config.ui.stats;
                 }
                 SettingItem::HeadingMarker => {
                     self.config.reader.heading_marker = !self.config.reader.heading_marker;
@@ -272,6 +282,9 @@ impl App {
                 }
                 SettingItem::ScrollIndicator => {
                     self.config.ui.scroll_indicator = default_config.ui.scroll_indicator;
+                }
+                SettingItem::Stats => {
+                    self.config.ui.stats = default_config.ui.stats;
                 }
                 SettingItem::HeadingMarker => {
                     self.config.reader.heading_marker = default_config.reader.heading_marker;
