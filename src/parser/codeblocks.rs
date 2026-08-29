@@ -180,7 +180,7 @@ pub(crate) fn render_code_block<'a>(
     for (line_idx, spans) in raw_lines.into_iter().enumerate() {
         let mut prefix_spans = vec![Span::styled("│ ", Style::default().fg(border_color))];
         if let Some(digits) = gutter_digits {
-            let line_num_str = format!("{:0width$} ", line_idx + 1, width = digits);
+            let line_num_str = format!("{:>width$} ", line_idx + 1, width = digits);
             prefix_spans.push(Span::styled(
                 line_num_str,
                 Style::default().fg(theme::DARK_GREY),
