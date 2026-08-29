@@ -44,6 +44,25 @@ pub fn get_confirm_button_at(app: &App, area: Rect, col: u16, row: u16) -> Optio
     }
 }
 
+fn build_confirm_lines(
+    prompt: &str,
+    detail_spans: Vec<Span<'static>>,
+    action_verb: &str,
+) -> Vec<Line<'static>> {
+    vec![
+        Line::from(prompt.to_string()),
+        Line::from(""),
+        Line::from(detail_spans),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
+            Span::styled(format!("{}   ", action_verb), Style::default().fg(theme::FG)),
+            Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
+            Span::styled("cancel", Style::default().fg(theme::FG)),
+        ]),
+    ]
+}
+
 pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
     let modal_title = match &app.confirm_action {
         Some(crate::app::ConfirmAction::ResetFeed) => "confirm feed reset",
@@ -63,57 +82,30 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
     );
 
     let lines = match &app.confirm_action {
-        Some(crate::app::ConfirmAction::DeleteList { title, .. }) => {
+        Some(crate::app::ConfirmAction::DeleteList { title, .. }) => build_confirm_lines(
+            "are you sure you want to delete:",
             vec![
-                Line::from("are you sure you want to delete:"),
-                Line::from(""),
-                Line::from(vec![
-                    Span::styled("custom list: ", Style::default().fg(theme::GREY)),
-                    Span::styled(title, Style::default().fg(theme::YELLOW).bold()),
-                ]),
-                Line::from(""),
-                Line::from(vec![
-                    Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
-                    Span::styled("delete   ", Style::default().fg(theme::FG)),
-                    Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
-                    Span::styled("cancel", Style::default().fg(theme::FG)),
-                ]),
-            ]
-        }
-        Some(crate::app::ConfirmAction::DeleteArticle { title, .. }) => {
+                Span::styled("custom list: ", Style::default().fg(theme::GREY)),
+                Span::styled(title.clone(), Style::default().fg(theme::YELLOW).bold()),
+            ],
+            "delete",
+        ),
+        Some(crate::app::ConfirmAction::DeleteArticle { title, .. }) => build_confirm_lines(
+            "are you sure you want to delete:",
             vec![
-                Line::from("are you sure you want to delete:"),
-                Line::from(""),
-                Line::from(vec![
-                    Span::styled("article: ", Style::default().fg(theme::GREY)),
-                    Span::styled(title, Style::default().fg(theme::YELLOW).bold()),
-                ]),
-                Line::from(""),
-                Line::from(vec![
-                    Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
-                    Span::styled("delete   ", Style::default().fg(theme::FG)),
-                    Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
-                    Span::styled("cancel", Style::default().fg(theme::FG)),
-                ]),
-            ]
-        }
-        Some(crate::app::ConfirmAction::ResetFeed) => {
-            vec![
-                Line::from("are you sure you want to reset your feed?"),
-                Line::from(""),
-                Line::from(Span::styled(
-                    "all category scores and preferences will be cleared",
-                    Style::default().fg(theme::YELLOW),
-                )),
-                Line::from(""),
-                Line::from(vec![
-                    Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
-                    Span::styled("reset   ", Style::default().fg(theme::FG)),
-                    Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
-                    Span::styled("cancel", Style::default().fg(theme::FG)),
-                ]),
-            ]
-        }
+                Span::styled("article: ", Style::default().fg(theme::GREY)),
+                Span::styled(title.clone(), Style::default().fg(theme::YELLOW).bold()),
+            ],
+            "delete",
+        ),
+        Some(crate::app::ConfirmAction::ResetFeed) => build_confirm_lines(
+            "are you sure you want to reset your feed?",
+            vec![Span::styled(
+                "all category scores and preferences will be cleared",
+                Style::default().fg(theme::YELLOW),
+            )],
+            "reset",
+        ),
         Some(crate::app::ConfirmAction::Quit) => {
             let tab_count = app.tabs.len();
             let subtext = if tab_count > 1 {
@@ -121,18 +113,11 @@ pub fn render_confirm_modal(f: &mut Frame, app: &App, size: Rect) {
             } else {
                 "exit wikid reader".to_string()
             };
-            vec![
-                Line::from("are you sure you want to quit wikid?"),
-                Line::from(""),
-                Line::from(Span::styled(subtext, Style::default().fg(theme::YELLOW))),
-                Line::from(""),
-                Line::from(vec![
-                    Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
-                    Span::styled("quit   ", Style::default().fg(theme::FG)),
-                    Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
-                    Span::styled("cancel", Style::default().fg(theme::FG)),
-                ]),
-            ]
+            build_confirm_lines(
+                "are you sure you want to quit wikid?",
+                vec![Span::styled(subtext, Style::default().fg(theme::YELLOW))],
+                "quit",
+            )
         }
         None => Vec::new(),
     };
