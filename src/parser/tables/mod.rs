@@ -23,6 +23,7 @@ pub fn render_table<'a>(
     doc: &mut ParsedDocument,
     max_width: usize,
     show_footnotes: bool,
+    show_icons: bool,
 ) {
     let grid = match parse_table_into_grid(table_tag, tl_parser, show_footnotes) {
         Some(g) if g.num_rows > 0 && g.num_cols > 0 => g,
@@ -32,8 +33,13 @@ pub fn render_table<'a>(
     let (num_rows, num_cols) = (grid.num_rows, grid.num_cols);
 
     if let Some(cap) = &grid.caption {
+        let icon_span = if show_icons {
+            Span::styled(" 📋 ", Style::default().fg(theme::VIOLET))
+        } else {
+            Span::styled(" ", Style::default().fg(theme::GREY))
+        };
         doc.lines.push(Line::from(vec![
-            Span::styled(" 📋 ", Style::default().fg(theme::VIOLET)),
+            icon_span,
             Span::styled(
                 cap.clone(),
                 Style::default()

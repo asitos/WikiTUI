@@ -41,6 +41,7 @@ impl App {
                     let show_external_links = self.config.reader.show_external_links;
                     let heading_marker = self.config.reader.heading_marker;
                     let code_line_numbers = self.config.reader.code_line_numbers;
+                    let show_icons = self.config.ui.icons;
                     if let Some(pane) = self.find_pane_mut(pane_id) {
                         pane.is_loading = false;
                         pane.toc_focused = false;
@@ -52,6 +53,7 @@ impl App {
                             show_external_links,
                             heading_marker,
                             code_line_numbers,
+                            show_icons,
                         );
                         pane.scroll_offset = pane
                             .scroll_offset
@@ -70,6 +72,7 @@ impl App {
                             last_show_external_links: show_external_links,
                             last_heading_marker: heading_marker,
                             last_code_line_numbers: code_line_numbers,
+                            last_show_icons: show_icons,
                         };
                         pane.selected_link_idx = initial_link_idx;
                     }

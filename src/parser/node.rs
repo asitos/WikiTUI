@@ -31,6 +31,7 @@ pub(crate) fn process_node<'a>(
     is_sub: bool,
     heading_marker: bool,
     code_line_numbers: bool,
+    show_icons: bool,
 ) {
     match node {
         tl::Node::Raw(bytes) => {
@@ -219,7 +220,7 @@ pub(crate) fn process_node<'a>(
                     wrap_and_append_block(current_tokens, doc, max_width);
                     current_tokens.clear();
                 }
-                tables::render_table(tag, parser, doc, max_width, show_footnotes);
+                tables::render_table(tag, parser, doc, max_width, show_footnotes, show_icons);
                 return;
             }
 
@@ -401,6 +402,7 @@ pub(crate) fn process_node<'a>(
                         current_is_sub,
                         heading_marker,
                         code_line_numbers,
+                        show_icons,
                     );
                 }
             }

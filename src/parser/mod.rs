@@ -26,6 +26,7 @@ pub fn parse_wikipedia_html(
     show_external_links: bool,
     heading_marker: bool,
     code_line_numbers: bool,
+    show_icons: bool,
 ) -> ParsedDocument {
     let mut doc = ParsedDocument::default();
     let effective_width = max_width.max(10);
@@ -57,6 +58,7 @@ pub fn parse_wikipedia_html(
                 false,
                 heading_marker,
                 code_line_numbers,
+                show_icons,
             );
         }
     }
