@@ -157,7 +157,7 @@ fn get_center_spans(app: &App, active_pane: &crate::app::Pane) -> Vec<Span<'stat
                 .add_modifier(Modifier::BOLD),
         )],
         InputMode::Help => vec![Span::styled(
-            "j/k scroll · f/b page · esc/q close",
+            "esc/q/? close",
             Style::default()
                 .fg(theme::PINK)
                 .add_modifier(Modifier::BOLD),
