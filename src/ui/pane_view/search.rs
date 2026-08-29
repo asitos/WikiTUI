@@ -108,6 +108,7 @@ pub fn render_search_pane(
     is_active: bool,
     zen_mode: bool,
     scroll_indicator: bool,
+    show_icons: bool,
 ) {
     if items.is_empty() {
         let vertical_offset = (rect.height.saturating_sub(2) / 2) as usize;
@@ -150,6 +151,12 @@ pub fn render_search_pane(
             let is_selected = i == pane.selected_idx;
             let title_lower = item.title.to_lowercase();
             let snippet_lower = item.snippet.to_lowercase();
+            let audio_str = if item.has_audio {
+                if show_icons { " 󰎆" } else { " ♪" }
+            } else {
+                ""
+            };
+            let audio_w = unicode_width::UnicodeWidthStr::width(audio_str);
 
             let mut item_lines = Vec::with_capacity(item_height);
 
@@ -157,9 +164,9 @@ pub fn render_search_pane(
                 let badge_str = format!(" {} ", i + 1);
                 let badge_w = unicode_width::UnicodeWidthStr::width(badge_str.as_str());
                 let title_w = unicode_width::UnicodeWidthStr::width(title_lower.as_str());
-                let pad_1 = inner_width.saturating_sub(badge_w + 1 + title_w);
+                let pad_1 = inner_width.saturating_sub(badge_w + 1 + title_w + audio_w);
 
-                item_lines.push(Line::from(vec![
+                let mut title_spans = vec![
                     Span::styled(
                         badge_str,
                         Style::default().bg(theme::LIME).fg(theme::BG).bold(),
@@ -169,8 +176,15 @@ pub fn render_search_pane(
                         title_lower,
                         Style::default().bg(theme::LIGHT_BG).fg(theme::LIME).bold(),
                     ),
-                    Span::styled(" ".repeat(pad_1), Style::default().bg(theme::LIGHT_BG)),
-                ]));
+                ];
+                if !audio_str.is_empty() {
+                    title_spans.push(Span::styled(
+                        audio_str,
+                        Style::default().bg(theme::LIGHT_BG).fg(theme::PINK).bold(),
+                    ));
+                }
+                title_spans.push(Span::styled(" ".repeat(pad_1), Style::default().bg(theme::LIGHT_BG)));
+                item_lines.push(Line::from(title_spans));
 
                 if !snippet_lower.is_empty() {
                     let wrap_w = inner_width.saturating_sub(3).max(10);
@@ -188,13 +202,20 @@ pub fn render_search_pane(
                     }
                 }
             } else {
-                item_lines.push(Line::from(vec![
+                let mut title_spans = vec![
                     Span::styled(
                         format!(" {:>2} ", i + 1),
                         Style::default().fg(theme::DARK_GREY),
                     ),
                     Span::styled(title_lower, Style::default().fg(theme::FG).bold()),
-                ]));
+                ];
+                if !audio_str.is_empty() {
+                    title_spans.push(Span::styled(
+                        audio_str,
+                        Style::default().fg(theme::PINK),
+                    ));
+                }
+                item_lines.push(Line::from(title_spans));
 
                 if !snippet_lower.is_empty() {
                     let wrap_w = inner_width.saturating_sub(4).max(10);

@@ -15,6 +15,7 @@ use std::sync::mpsc::{Receiver, Sender};
 pub struct SearchResultItem {
     pub title: String,
     pub snippet: String,
+    pub has_audio: bool,
 }
 
 pub enum NetworkCommand {

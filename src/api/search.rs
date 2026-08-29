@@ -2,10 +2,17 @@ use super::SearchResultItem;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
+struct WikiPageCategory {
+    title: String,
+}
+
+#[derive(Deserialize)]
 struct WikiPageDescription {
     title: String,
     description: Option<String>,
     index: Option<i32>,
+    categories: Option<Vec<WikiPageCategory>>,
 }
 
 #[derive(Deserialize)]
@@ -33,7 +40,11 @@ pub fn search_wikipedia(
         .query("generator", "search")
         .query("gsrsearch", query)
         .query("gsrlimit", &limit_str)
-        .query("prop", "description")
+        .query("prop", "description|categories")
+        .query(
+            "clcategories",
+            "Category:Spoken_Wikipedia_articles|Category:Spoken_articles",
+        )
         .query("format", "json")
         .call()
         .map_err(|e| format!("network error: {}", e))?;
@@ -51,10 +62,14 @@ pub fn search_wikipedia(
                     .description
                     .filter(|d| !d.trim().is_empty())
                     .unwrap_or_default();
+                let has_audio = item.categories.as_ref().is_some_and(|c| !c.is_empty())
+                    || item.title.starts_with("Spoken:")
+                    || desc.to_lowercase().contains("spoken wikipedia");
 
                 items.push(SearchResultItem {
                     title: item.title,
                     snippet: desc,
+                    has_audio,
                 });
             }
         }

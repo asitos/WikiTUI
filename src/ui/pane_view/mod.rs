@@ -154,6 +154,7 @@ fn render_pane_at(
                 is_active,
                 app.zen_mode,
                 app.config.ui.scroll_indicator,
+                app.config.ui.icons,
             );
         }
     } else if is_error {
