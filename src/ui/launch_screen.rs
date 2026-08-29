@@ -32,6 +32,26 @@ pub const QUOTES: &[&str] = &[
     "press r",
 ];
 
+fn center_spans<'a>(spans: Vec<Span<'a>>, inner_width: usize) -> Line<'a> {
+    let width: usize = spans
+        .iter()
+        .map(|s| unicode_width::UnicodeWidthStr::width(s.content.as_ref()))
+        .sum();
+    let pad = (inner_width.saturating_sub(width)) / 2;
+    let mut line = vec![Span::raw(" ".repeat(pad))];
+    line.extend(spans);
+    Line::from(line)
+}
+
+fn center_styled(text: &str, style: Style, inner_width: usize) -> Line<'static> {
+    let width = unicode_width::UnicodeWidthStr::width(text);
+    let pad = (inner_width.saturating_sub(width)) / 2;
+    Line::from(vec![
+        Span::raw(" ".repeat(pad)),
+        Span::styled(text.to_string(), style),
+    ])
+}
+
 pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) {
     let inner_width = (rect.width as usize).saturating_sub(4);
     let inner_height = (rect.height as usize).saturating_sub(2);
@@ -66,18 +86,17 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
     let quote = QUOTES[app.launch_quote_idx % QUOTES.len()];
     let quote_len = quote.chars().count();
     if inner_width >= quote_len {
-        let q_pad = (inner_width.saturating_sub(quote_len)) / 2;
-        lines.push(Line::from(vec![
-            Span::raw(" ".repeat(q_pad)),
-            Span::styled(quote, Style::default().fg(theme::GREY).italic()),
-        ]));
+        lines.push(center_styled(
+            quote,
+            Style::default().fg(theme::GREY).italic(),
+            inner_width,
+        ));
     } else {
-        let default_sub = "wikipedia reader for the terminal";
-        let sub_pad = (inner_width.saturating_sub(default_sub.len())) / 2;
-        lines.push(Line::from(vec![
-            Span::raw(" ".repeat(sub_pad)),
-            Span::styled(default_sub, Style::default().fg(theme::GREY).italic()),
-        ]));
+        lines.push(center_styled(
+            "wikipedia reader for the terminal",
+            Style::default().fg(theme::GREY).italic(),
+            inner_width,
+        ));
     }
 
     lines.push(Line::from(""));
@@ -147,15 +166,7 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
         ]
     };
 
-    let stats_width: usize = stats_spans
-        .iter()
-        .map(|s| unicode_width::UnicodeWidthStr::width(s.content.as_ref()))
-        .sum();
-    let stats_pad = (inner_width.saturating_sub(stats_width)) / 2;
-    let mut stats_line = vec![Span::raw(" ".repeat(stats_pad))];
-    stats_line.extend(stats_spans);
-    lines.push(Line::from(stats_line));
-
+    lines.push(center_spans(stats_spans, inner_width));
     lines.push(Line::from(""));
 
     let actions: Vec<(&str, &str)> = if inner_width >= 75 {
@@ -192,23 +203,15 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
         action_spans.push(Span::styled("]", Style::default().fg(theme::DARK_GREY)));
     }
 
-    let actions_width: usize = action_spans
-        .iter()
-        .map(|s| unicode_width::UnicodeWidthStr::width(s.content.as_ref()))
-        .sum();
-    let actions_pad = (inner_width.saturating_sub(actions_width)) / 2;
-    let mut action_line = vec![Span::raw(" ".repeat(actions_pad))];
-    action_line.extend(action_spans);
-    lines.push(Line::from(action_line));
+    lines.push(center_spans(action_spans, inner_width));
 
     if show_recent {
         lines.push(Line::from(""));
-        let header = "── continue reading ──";
-        let h_pad = (inner_width.saturating_sub(header.len())) / 2;
-        lines.push(Line::from(vec![
-            Span::raw(" ".repeat(h_pad)),
-            Span::styled(header, Style::default().fg(theme::GREY)),
-        ]));
+        lines.push(center_styled(
+            "── continue reading ──",
+            Style::default().fg(theme::GREY),
+            inner_width,
+        ));
 
         let items: Vec<(String, String)> = recent_articles
             .iter()
