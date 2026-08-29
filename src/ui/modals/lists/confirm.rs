@@ -56,7 +56,10 @@ fn build_confirm_lines(
         Line::from(""),
         Line::from(vec![
             Span::styled("[y/enter] ", Style::default().fg(theme::LIME).bold()),
-            Span::styled(format!("{}   ", action_verb), Style::default().fg(theme::FG)),
+            Span::styled(
+                format!("{}   ", action_verb),
+                Style::default().fg(theme::FG),
+            ),
             Span::styled("[n/esc] ", Style::default().fg(theme::GREY).bold()),
             Span::styled("cancel", Style::default().fg(theme::FG)),
         ]),

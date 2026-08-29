@@ -21,11 +21,7 @@ pub fn compute_tab_titles(app: &App) -> Vec<String> {
                     .as_deref()
                     .unwrap_or("loading...")
                     .to_lowercase();
-                (
-                    crate::ui::current_spinner_frame(),
-                    title,
-                    false,
-                )
+                (crate::ui::current_spinner_frame(), title, false)
             } else if let Some(active_pane) = tab.panes.get(tab.active_pane_idx) {
                 match &active_pane.content {
                     PaneContent::ArticleText {

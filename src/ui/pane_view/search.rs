@@ -152,7 +152,11 @@ pub fn render_search_pane(
             let title_lower = item.title.to_lowercase();
             let snippet_lower = item.snippet.to_lowercase();
             let audio_str = if item.has_audio {
-                if show_icons { " 󰎆" } else { " ♪" }
+                if show_icons {
+                    " 󰎆"
+                } else {
+                    " ♪"
+                }
             } else {
                 ""
             };
@@ -183,7 +187,10 @@ pub fn render_search_pane(
                         Style::default().bg(theme::LIGHT_BG).fg(theme::PINK).bold(),
                     ));
                 }
-                title_spans.push(Span::styled(" ".repeat(pad_1), Style::default().bg(theme::LIGHT_BG)));
+                title_spans.push(Span::styled(
+                    " ".repeat(pad_1),
+                    Style::default().bg(theme::LIGHT_BG),
+                ));
                 item_lines.push(Line::from(title_spans));
 
                 if !snippet_lower.is_empty() {
@@ -210,10 +217,7 @@ pub fn render_search_pane(
                     Span::styled(title_lower, Style::default().fg(theme::FG).bold()),
                 ];
                 if !audio_str.is_empty() {
-                    title_spans.push(Span::styled(
-                        audio_str,
-                        Style::default().fg(theme::PINK),
-                    ));
+                    title_spans.push(Span::styled(audio_str, Style::default().fg(theme::PINK)));
                 }
                 item_lines.push(Line::from(title_spans));
 
