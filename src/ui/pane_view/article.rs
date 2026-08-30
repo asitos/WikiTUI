@@ -153,8 +153,16 @@ pub fn render_article_pane(
             if selection.contains_line(line_idx) {
                 let (start, end) = selection.normalized();
                 let line_len: usize = spans.iter().map(|s| s.content.chars().count()).sum();
-                let from = if line_idx == start.0 { start.1.min(line_len) } else { 0 };
-                let to = if line_idx == end.0 { end.1.min(line_len) } else { line_len };
+                let from = if line_idx == start.0 {
+                    start.1.min(line_len)
+                } else {
+                    0
+                };
+                let to = if line_idx == end.0 {
+                    end.1.min(line_len)
+                } else {
+                    line_len
+                };
                 if from < to {
                     spans = build_selection_highlighted_spans(&spans, from, to);
                 }

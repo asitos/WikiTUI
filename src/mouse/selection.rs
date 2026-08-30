@@ -118,7 +118,10 @@ pub fn handle_selection_up(app: &mut App) {
                     if !text.trim().is_empty() {
                         let count = text.chars().count();
                         if crate::clipboard::copy_to_clipboard(&text) {
-                            app.set_status_message(format!("copied {} characters to clipboard", count));
+                            app.set_status_message(format!(
+                                "copied {} characters to clipboard",
+                                count
+                            ));
                         }
                     }
                 }
@@ -147,7 +150,11 @@ pub fn extract_selected_text(
             let mut global_char_pos = 0;
 
             let line_from = if line_idx == start_line { start_col } else { 0 };
-            let line_to = if line_idx == end_line { end_col } else { usize::MAX };
+            let line_to = if line_idx == end_line {
+                end_col
+            } else {
+                usize::MAX
+            };
 
             for (span_idx, span) in line.spans.iter().enumerate() {
                 let span_len = span.content.chars().count();
@@ -167,7 +174,12 @@ pub fn extract_selected_text(
                 let rel_to = (line_to.saturating_sub(span_start)).min(span_len);
 
                 if rel_from < rel_to {
-                    let chars: String = span.content.chars().skip(rel_from).take(rel_to - rel_from).collect();
+                    let chars: String = span
+                        .content
+                        .chars()
+                        .skip(rel_from)
+                        .take(rel_to - rel_from)
+                        .collect();
                     line_buf.push_str(&chars);
                 }
             }

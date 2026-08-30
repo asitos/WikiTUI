@@ -225,7 +225,12 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
                 .collect()
         };
 
-        let items: Vec<(String, String, String, Option<crate::app::recent::SemanticHint>)> = recent_articles
+        let items: Vec<(
+            String,
+            String,
+            String,
+            Option<crate::app::recent::SemanticHint>,
+        )> = recent_articles
             .iter()
             .take(displayed_count)
             .enumerate()
@@ -259,9 +264,7 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
         let block_pad = (inner_width.saturating_sub(max_item_width)) / 2;
 
         for (num_prefix, title, time_str, hint) in items {
-            let mut line_spans = vec![
-                Span::raw(" ".repeat(block_pad)),
-            ];
+            let mut line_spans = vec![Span::raw(" ".repeat(block_pad))];
 
             if !num_prefix.is_empty() {
                 line_spans.push(Span::styled(num_prefix, Style::default().fg(theme::GREY)));
@@ -275,7 +278,8 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
                             Style::default().fg(theme::PINK).bold(),
                         ));
                     } else {
-                        line_spans.push(Span::styled(ch.to_string(), Style::default().fg(theme::FG)));
+                        line_spans
+                            .push(Span::styled(ch.to_string(), Style::default().fg(theme::FG)));
                     }
                 }
             } else {

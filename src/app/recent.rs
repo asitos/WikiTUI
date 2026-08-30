@@ -204,9 +204,8 @@ impl App {
 
 pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
     const RESERVED_KEYS: &[char] = &[
-        'f', 'n', 'd', 't', 'r', 'q', 'z', 'a',
-        'F', 'N', 'D', 'T', 'R', 'Q', 'Z', 'A',
-        ':', '?', ',', '/', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+        'f', 'n', 'd', 't', 'r', 'q', 'z', 'a', 'F', 'N', 'D', 'T', 'R', 'Q', 'Z', 'A', ':', '?',
+        ',', '/', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
     ];
 
     let mut used_keys = std::collections::HashSet::new();
