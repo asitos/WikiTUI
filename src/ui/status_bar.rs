@@ -32,6 +32,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             InputMode::Confirm => (" PROMPT ", theme::RED),
             InputMode::Categories => (" CATEGORIES ", theme::TEAL),
             InputMode::DailyFeedModal => (" DAILY ", theme::TEAL),
+            InputMode::CommandPalette => (" COMMAND ", theme::YELLOW),
         }
     };
 
@@ -238,6 +239,10 @@ fn get_center_spans(
                 )]
             }
         }
+        InputMode::CommandPalette => vec![Span::styled(
+            "type to search · up/down navigate · enter run · esc close",
+            Style::default().fg(theme::YELLOW).add_modifier(Modifier::BOLD),
+        )],
         InputMode::Normal => {
             if app.audio_player.is_active() {
                 build_audio_progress_bar(app, available_width)

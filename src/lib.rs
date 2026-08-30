@@ -7,6 +7,7 @@ pub mod feed;
 pub mod keybinds;
 pub mod layout;
 pub mod mouse;
+pub mod palette;
 pub mod parser;
 pub mod paths;
 pub mod saved_lists;

@@ -54,6 +54,7 @@ pub struct App {
     pub launch_quote_idx: usize,
     pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
     pub audio_player: crate::audio::AudioPlayer,
+    pub command_palette: crate::app::types::CommandPaletteState,
 
     pub(crate) next_pane_id: usize,
     pub(crate) next_request_id: u64,
@@ -107,6 +108,7 @@ impl App {
             launch_quote_idx: quote_idx,
             scroll_drag: None,
             audio_player: crate::audio::AudioPlayer::new(),
+            command_palette: crate::app::types::CommandPaletteState::default(),
 
             next_pane_id: 1,
             next_request_id: 1,
@@ -159,6 +161,12 @@ impl App {
 
     pub fn toggle_zen_mode(&mut self) {
         self.zen_mode = !self.zen_mode;
+    }
+
+    pub fn open_command_palette(&mut self) {
+        self.input_mode = InputMode::CommandPalette;
+        self.command_palette.query.clear();
+        self.command_palette.selected_idx = 0;
     }
 
     pub fn active_tab(&self) -> &Tab {
