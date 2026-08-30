@@ -190,11 +190,20 @@ pub fn render_article_pane(
                     .or_else(|| crate::graphics::cache::get_cached_image_path(&img.url));
 
                 if let Some(path) = img_path {
-                    let rel_line = img_top.saturating_sub(view_start);
-                    let screen_y = rect.y + 1 + (rel_line as u16);
+                    let (screen_y, visible_rows) = if img_top < view_start {
+                        let top_clipped = view_start - img_top;
+                        let rows = img.height_lines.saturating_sub(top_clipped);
+                        (rect.y + 1, (rows as u16).min(pane.viewport_height as u16))
+                    } else {
+                        let rel_line = img_top - view_start;
+                        let max_rows = pane.viewport_height.saturating_sub(rel_line);
+                        (
+                            rect.y + 1 + (rel_line as u16),
+                            (img.height_lines as u16).min(max_rows as u16),
+                        )
+                    };
+
                     let screen_x = rect.x + 2;
-                    let visible_rows = (img.height_lines as u16)
-                        .min(rect.height.saturating_sub(rel_line as u16 + 2));
                     let visible_cols = (img.width_cols as u16).min(rect.width.saturating_sub(4));
                     if visible_rows > 0 && visible_cols > 0 {
                         app.pending_image_renders.push(crate::app::ImageRenderTask {

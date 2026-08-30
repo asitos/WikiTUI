@@ -80,7 +80,14 @@ fn normalize_image_url(src: &str) -> Option<String> {
         return None;
     }
 
-    if clean.contains("/static/images/") || clean.contains("red_pencile.svg") || clean.ends_with(".svg") {
+    if clean.contains("/static/images/")
+        || clean.contains("red_pencile.svg")
+        || clean.contains("Padlock")
+        || clean.contains("Symbol_")
+        || clean.contains("Ambox_")
+        || clean.contains("Question_book")
+        || clean.ends_with(".svg")
+    {
         return None;
     }
 
@@ -99,6 +106,12 @@ fn extract_image_attributes(
     tag: &HTMLTag,
     parser: &Parser,
 ) -> (String, Option<String>, Option<usize>, Option<usize>) {
+    if let Some(cls) = tag.attributes().get("class").flatten().map(|b| b.as_utf8_str()) {
+        if cls.contains("mwe-math") || cls.contains("math-fallback") || cls.contains("noviewer") {
+            return (String::new(), None, None, None);
+        }
+    }
+
     if tag.name().as_utf8_str() == "img" {
         return parse_img_tag(tag);
     }
@@ -115,11 +128,35 @@ fn extract_image_attributes(
 }
 
 fn parse_img_tag(tag: &HTMLTag) -> (String, Option<String>, Option<usize>, Option<usize>) {
+    if let Some(cls) = tag.attributes().get("class").flatten().map(|b| b.as_utf8_str()) {
+        if cls.contains("mwe-math") || cls.contains("math-fallback") || cls.contains("noviewer") {
+            return (String::new(), None, None, None);
+        }
+    }
+
     let src = tag
         .attributes()
-        .get("src")
+        .get("srcset")
         .flatten()
-        .map(|b| b.as_utf8_str().to_string())
+        .and_then(|b| {
+            let s = b.as_utf8_str();
+            s.split(',')
+                .filter_map(|cand| cand.split_whitespace().next())
+                .next_back()
+                .map(|u| u.to_string())
+        })
+        .or_else(|| {
+            tag.attributes()
+                .get("src")
+                .flatten()
+                .map(|b| b.as_utf8_str().to_string())
+        })
+        .or_else(|| {
+            tag.attributes()
+                .get("data-src")
+                .flatten()
+                .map(|b| b.as_utf8_str().to_string())
+        })
         .unwrap_or_default();
 
     let alt = tag
@@ -140,6 +177,12 @@ fn parse_img_tag(tag: &HTMLTag) -> (String, Option<String>, Option<usize>, Optio
         .get("height")
         .flatten()
         .and_then(|b| b.as_utf8_str().parse::<usize>().ok());
+
+    if let (Some(w), Some(h)) = (width, height) {
+        if w < 40 || h < 40 {
+            return (String::new(), None, None, None);
+        }
+    }
 
     (src, alt, width, height)
 }
