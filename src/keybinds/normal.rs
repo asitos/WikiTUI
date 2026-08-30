@@ -94,10 +94,7 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('A') => {
                 app.stop_spoken_audio();
             }
-            KeyCode::Char('<') | KeyCode::Char(',') if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                app.seek_spoken_audio(-10);
-            }
-            KeyCode::Char('>') | KeyCode::Char('.') => {
+            KeyCode::Char('>') => {
                 app.seek_spoken_audio(10);
             }
             KeyCode::Char('<') => {
