@@ -20,10 +20,20 @@ pub struct SavedTabState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SavedAudioState {
+    pub title: String,
+    pub url: String,
+    pub elapsed_secs: u64,
+    pub total_duration_secs: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SessionState {
     pub version: u32,
     pub tabs: Vec<SavedTabState>,
     pub active_tab_idx: usize,
+    #[serde(default)]
+    pub audio: Option<SavedAudioState>,
 }
 
 impl SessionState {
@@ -77,60 +87,97 @@ impl SessionState {
                 });
             }
         }
-        if saved_tabs.is_empty() {
+
+        let audio = if app.audio_player.is_active() {
+            if let (Some(title), Some(url)) = (
+                app.audio_player.current_title.clone(),
+                app.audio_player.current_url.clone(),
+            ) {
+                crate::audio::cache::save_position(&url, app.audio_player.elapsed_secs);
+                Some(SavedAudioState {
+                    title,
+                    url,
+                    elapsed_secs: app.audio_player.elapsed_secs,
+                    total_duration_secs: app.audio_player.total_duration_secs,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if saved_tabs.is_empty() && audio.is_none() {
             Self::delete_file();
             return;
         }
-        let active_tab_idx = app.active_tab_idx.min(saved_tabs.len() - 1);
+
+        let active_tab_idx = if saved_tabs.is_empty() {
+            0
+        } else {
+            app.active_tab_idx.min(saved_tabs.len() - 1)
+        };
+
         let session = SessionState {
             version: 1,
             tabs: saved_tabs,
             active_tab_idx,
+            audio,
         };
         session.save();
     }
 
     pub fn restore_to_app(self, app: &mut App) {
-        if self.tabs.is_empty() {
-            return;
-        }
-        app.tabs.clear();
-        for saved_tab in self.tabs {
-            let mut panes = Vec::new();
-            for saved_pane in saved_tab.panes {
-                let pane_id = app.next_pane_id;
-                app.next_pane_id += 1;
-                let mut pane = Pane::new(pane_id);
-                pane.scroll_offset = saved_pane.scroll_offset;
-                pane.history_back = saved_pane.history_back;
-                pane.history_forward = saved_pane.history_forward;
-                if let Some(title) = saved_pane.title {
-                    pane.is_loading = true;
-                    pane.loading_title = Some(title.clone());
-                    app.send_fetch_article(pane_id, title.clone());
+        if !self.tabs.is_empty() {
+            app.tabs.clear();
+            for saved_tab in self.tabs {
+                let mut panes = Vec::new();
+                for saved_pane in saved_tab.panes {
+                    let pane_id = app.next_pane_id;
+                    app.next_pane_id += 1;
+                    let mut pane = Pane::new(pane_id);
+                    pane.scroll_offset = saved_pane.scroll_offset;
+                    pane.history_back = saved_pane.history_back;
+                    pane.history_forward = saved_pane.history_forward;
+                    if let Some(title) = saved_pane.title {
+                        pane.is_loading = true;
+                        pane.loading_title = Some(title.clone());
+                        app.send_fetch_article(pane_id, title.clone());
+                    }
+                    panes.push(pane);
                 }
-                panes.push(pane);
+                if panes.is_empty() {
+                    let pane_id = app.next_pane_id;
+                    app.next_pane_id += 1;
+                    panes.push(Pane::new(pane_id));
+                }
+                let active_idx = saved_tab.active_pane_idx.min(panes.len() - 1);
+                let tab_title = panes[active_idx]
+                    .title()
+                    .or_else(|| panes[active_idx].loading_title.clone())
+                    .unwrap_or_else(|| "home".to_string());
+                app.tabs.push(Tab {
+                    name: tab_title,
+                    panes,
+                    active_pane_idx: active_idx,
+                    layout_root: saved_tab.layout_root,
+                });
             }
-            if panes.is_empty() {
-                let pane_id = app.next_pane_id;
-                app.next_pane_id += 1;
-                panes.push(Pane::new(pane_id));
+            if !app.tabs.is_empty() {
+                app.active_tab_idx = self.active_tab_idx.min(app.tabs.len() - 1);
             }
-            let active_idx = saved_tab.active_pane_idx.min(panes.len() - 1);
-            let tab_title = panes[active_idx]
-                .title()
-                .or_else(|| panes[active_idx].loading_title.clone())
-                .unwrap_or_else(|| "home".to_string());
-            app.tabs.push(Tab {
-                name: tab_title,
-                panes,
-                active_pane_idx: active_idx,
-                layout_root: saved_tab.layout_root,
-            });
         }
-        if !app.tabs.is_empty() {
-            app.active_tab_idx = self.active_tab_idx.min(app.tabs.len() - 1);
+
+        if let Some(saved_audio) = self.audio {
+            app.audio_player.play_at_offset(
+                &saved_audio.title,
+                &saved_audio.url,
+                saved_audio.elapsed_secs,
+                saved_audio.total_duration_secs,
+            );
+            app.audio_player.pause();
         }
+
         Self::delete_file();
     }
 }

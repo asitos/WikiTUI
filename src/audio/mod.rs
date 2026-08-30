@@ -25,6 +25,7 @@ pub struct AudioPlayer {
     pub elapsed_secs: u64,
     pub total_duration_secs: Option<u64>,
     pub last_tick: Option<Instant>,
+    pub last_save_tick: Option<Instant>,
     pub probe_rx: Option<Receiver<u64>>,
     pub playhead_rx: Option<Receiver<PlayheadUpdate>>,
     pub is_buffering: bool,
@@ -47,6 +48,7 @@ impl AudioPlayer {
             elapsed_secs: 0,
             total_duration_secs: None,
             last_tick: None,
+            last_save_tick: None,
             probe_rx: None,
             playhead_rx: None,
             is_buffering: false,
@@ -65,7 +67,17 @@ impl AudioPlayer {
         let total_duration_secs = duration_str
             .and_then(parse_duration_to_secs)
             .or_else(|| get_cached_duration(url));
-        self.play_at_offset(title, url, 0, total_duration_secs)
+        let saved_pos = cache::get_saved_position(url).unwrap_or(0);
+        let start_secs = if let Some(total) = total_duration_secs {
+            if saved_pos + 10 < total {
+                saved_pos
+            } else {
+                0
+            }
+        } else {
+            saved_pos
+        };
+        self.play_at_offset(title, url, start_secs, total_duration_secs)
     }
 
     pub fn play_at_offset(
@@ -102,6 +114,7 @@ impl AudioPlayer {
                 self.elapsed_secs = start_secs;
                 self.total_duration_secs = total_duration_secs.or_else(|| get_cached_duration(url));
                 self.last_tick = Some(Instant::now());
+                self.last_save_tick = Some(Instant::now());
                 self.is_buffering = !is_cached && playhead_rx.is_some();
                 self.playhead_rx = playhead_rx;
 
@@ -149,6 +162,9 @@ impl AudioPlayer {
                     if stdin.write_all(cmd.as_bytes()).is_ok() && stdin.flush().is_ok() {
                         self.elapsed_secs = target_offset;
                         self.last_tick = Some(Instant::now());
+                        if let Some(url) = &self.current_url {
+                            cache::save_position(url, self.elapsed_secs);
+                        }
                         return true;
                     }
                 }
@@ -178,6 +194,9 @@ impl AudioPlayer {
                     .output();
                 self.state = PlaybackState::Paused;
                 self.last_tick = None;
+                if let Some(url) = &self.current_url {
+                    cache::save_position(url, self.elapsed_secs);
+                }
             }
         }
     }
@@ -192,6 +211,7 @@ impl AudioPlayer {
                     .output();
                 self.state = PlaybackState::Playing;
                 self.last_tick = Some(Instant::now());
+                self.last_save_tick = Some(Instant::now());
             }
         }
     }
@@ -205,6 +225,18 @@ impl AudioPlayer {
     }
 
     pub fn stop(&mut self) {
+        if let Some(url) = &self.current_url {
+            if let Some(total) = self.total_duration_secs {
+                if self.elapsed_secs + 5 >= total {
+                    cache::clear_position(url);
+                } else if self.elapsed_secs > 3 {
+                    cache::save_position(url, self.elapsed_secs);
+                }
+            } else if self.elapsed_secs > 3 {
+                cache::save_position(url, self.elapsed_secs);
+            }
+        }
+
         if let Some(mut child) = self.child.take() {
             let _ = child.kill();
             let _ = child.wait();
@@ -215,6 +247,7 @@ impl AudioPlayer {
         self.elapsed_secs = 0;
         self.total_duration_secs = None;
         self.last_tick = None;
+        self.last_save_tick = None;
         self.probe_rx = None;
         self.playhead_rx = None;
         self.is_buffering = false;
@@ -249,6 +282,15 @@ impl AudioPlayer {
             } else {
                 self.last_tick = Some(Instant::now());
             }
+
+            if let Some(last_save) = self.last_save_tick {
+                if last_save.elapsed().as_secs() >= 5 {
+                    if let Some(url) = &self.current_url {
+                        cache::save_position(url, self.elapsed_secs);
+                    }
+                    self.last_save_tick = Some(Instant::now());
+                }
+            }
         }
 
         if let Some(child) = &mut self.child {
@@ -260,6 +302,7 @@ impl AudioPlayer {
                 self.elapsed_secs = 0;
                 self.total_duration_secs = None;
                 self.last_tick = None;
+                self.last_save_tick = None;
                 self.probe_rx = None;
                 self.playhead_rx = None;
                 self.is_buffering = false;
