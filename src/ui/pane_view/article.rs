@@ -282,13 +282,15 @@ pub fn render_article_pane(
                         let left_pad = (inner_width.saturating_sub(visible_cols)) / 2;
                         let screen_x = rect.x + 1 + left_pad;
                         if visible_rows > 0 && visible_cols > 0 {
-                            app.pending_image_renders.push(crate::app::ImageRenderTask {
-                                path,
-                                screen_x,
-                                screen_y,
-                                cols: visible_cols,
-                                rows: visible_rows,
-                            });
+                            app.graphics
+                                .pending_image_renders
+                                .push(crate::app::ImageRenderTask {
+                                    path,
+                                    screen_x,
+                                    screen_y,
+                                    cols: visible_cols,
+                                    rows: visible_rows,
+                                });
                         }
                     }
                 } else {

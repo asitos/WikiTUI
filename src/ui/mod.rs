@@ -115,6 +115,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         || app.daily_feed_modal.is_some();
 
     if is_modal_open {
-        app.pending_image_renders.clear();
+        app.graphics.pending_image_renders.clear();
     }
 }

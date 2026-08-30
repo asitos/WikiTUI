@@ -115,3 +115,10 @@ pub struct CommandPaletteState {
     pub query: String,
     pub selected_idx: usize,
 }
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct GraphicsState {
+    pub pending_image_renders: Vec<ImageRenderTask>,
+    pub last_kitty_render_tasks: Vec<ImageRenderTask>,
+    pub has_active_kitty_images: bool,
+}
