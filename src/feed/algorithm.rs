@@ -15,8 +15,31 @@ pub enum SelectionStrategy {
     RandomExploration,
 }
 
+pub fn rand_u64() -> u64 {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(1234567) as u64;
+    let mut x = nanos ^ 0x517cc1b727220a95;
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    x.wrapping_mul(0x2545f4914f6cdd1d)
+}
+
+pub fn shuffle<T>(slice: &mut [T]) {
+    let mut rng = rand_u64();
+    for i in (1..slice.len()).rev() {
+        rng ^= rng >> 12;
+        rng ^= rng << 25;
+        rng ^= rng >> 27;
+        let j = (rng.wrapping_mul(0x2545f4914f6cdd1d) as usize) % (i + 1);
+        slice.swap(i, j);
+    }
+}
+
 pub fn choose_strategy() -> SelectionStrategy {
-    let roll: u8 = fastrand::u8(0..100);
+    let roll = (rand_u64() % 100) as u8;
     if roll < 40 {
         SelectionStrategy::WeightedCategory
     } else if roll < 82 {
@@ -34,7 +57,7 @@ pub fn select_best_item(mut candidates: Vec<FeedItem>, profile: &FeedProfile) ->
     let strategy = choose_strategy();
     match strategy {
         SelectionStrategy::RandomExploration => {
-            let idx = fastrand::usize(0..candidates.len());
+            let idx = (rand_u64() as usize) % candidates.len();
             Some(candidates.swap_remove(idx))
         }
         SelectionStrategy::TopCategory | SelectionStrategy::WeightedCategory => {

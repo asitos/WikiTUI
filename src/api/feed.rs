@@ -131,7 +131,7 @@ pub fn fetch_feed_batch(agent: &ureq::Agent, timeout_secs: u64) -> Result<Vec<Fe
     let mut chosen_cats = Vec::new();
     if !active_subcats.is_empty() {
         let mut available = active_subcats.clone();
-        fastrand::shuffle(&mut available);
+        crate::feed::algorithm::shuffle(&mut available);
         chosen_cats = available.into_iter().take(3).collect();
     }
 
@@ -156,6 +156,6 @@ pub fn fetch_feed_batch(agent: &ureq::Agent, timeout_secs: u64) -> Result<Vec<Fe
         }
     }
 
-    fastrand::shuffle(&mut items);
+    crate::feed::algorithm::shuffle(&mut items);
     Ok(items)
 }
