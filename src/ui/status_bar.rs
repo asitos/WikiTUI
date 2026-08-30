@@ -350,14 +350,14 @@ fn truncate_trail_title(title: &str, max_len: usize) -> String {
 
 fn format_audio_time(secs: u64, include_hours: bool) -> String {
     if include_hours {
-        format!(
-            "{:02}:{:02}:{:02}",
-            secs / 3600,
-            (secs % 3600) / 60,
-            secs % 60
-        )
+        let h = secs / 3600;
+        let m = (secs % 3600) / 60;
+        let s = secs % 60;
+        format!("{}:{:02}:{:02}", h, m, s)
     } else {
-        format!("{:02}:{:02}", secs / 60, secs % 60)
+        let m = secs / 60;
+        let s = secs % 60;
+        format!("{}:{:02}", m, s)
     }
 }
 
@@ -367,7 +367,11 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
     let is_icons = app.config.ui.icons;
 
     let icon = if is_buffering {
-        "󰑐 "
+        if is_icons {
+            "󰑐 "
+        } else {
+            ""
+        }
     } else if is_icons {
         if is_playing {
             "󰐊 "
@@ -375,17 +379,17 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
             "󰏤 "
         }
     } else if is_playing {
-        "▶ "
+        "playing "
     } else {
-        "❚❚ "
+        "paused "
     };
 
-    let icon_color = if is_buffering {
+    let fill_bg = if is_buffering {
         theme::ORANGE
     } else if is_playing {
-        theme::LIME
-    } else {
         theme::YELLOW
+    } else {
+        theme::BEIGE
     };
 
     let elapsed = app.audio_player.elapsed_secs;
@@ -398,6 +402,9 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
         |t| format_audio_time(t, include_hours),
     );
 
+    let label = format!("{} / {}", elapsed_str, total_str);
+    let min_bar_width = label.chars().count() + 8;
+
     let hint = if is_buffering {
         "[buffering... · A stop]"
     } else if is_playing {
@@ -406,69 +413,62 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
         "[< / > seek · a resume · A stop]"
     };
 
-    let mut spans = Vec::new();
-    spans.push(Span::styled(
-        icon,
-        Style::default()
-            .fg(icon_color)
-            .add_modifier(Modifier::BOLD),
-    ));
-    spans.push(Span::styled(
-        format!("{} ", elapsed_str),
-        Style::default()
-            .fg(theme::FG)
-            .add_modifier(Modifier::BOLD),
-    ));
-
-    let fixed_len = icon.chars().count() + elapsed_str.len() + 1 + total_str.len() + 1;
-    let show_hint = available_width > fixed_len + hint.len() + 14;
-    let hint_len = if show_hint { hint.len() + 1 } else { 0 };
+    let show_hint = available_width > icon.chars().count() + min_bar_width + hint.len() + 4;
+    let hint_len = if show_hint { hint.len() + 2 } else { 0 };
 
     let bar_width = available_width
-        .saturating_sub(fixed_len + hint_len + 4)
-        .clamp(4, 20);
+        .saturating_sub(icon.chars().count() + hint_len + 2)
+        .clamp(min_bar_width, 36);
 
-    if bar_width > 0 {
-        let fill_color = if is_buffering {
-            theme::ORANGE
+    let pad_total = bar_width.saturating_sub(label.chars().count());
+    let pad_left = pad_total / 2;
+    let pad_right = pad_total.saturating_sub(pad_left);
+    let bar_text = format!("{}{}{}", " ".repeat(pad_left), label, " ".repeat(pad_right));
+
+    let ratio = if let Some(total) = total_opt {
+        if total > 0 {
+            (elapsed as f32 / total as f32).clamp(0.0, 1.0)
         } else {
-            theme::TEAL
-        };
-
-        let ratio = if let Some(total) = total_opt {
-            if total > 0 {
-                (elapsed as f32 / total as f32).clamp(0.0, 1.0)
-            } else {
-                0.0
-            }
-        } else {
-            ((elapsed as f32 % 10.0) / 10.0).clamp(0.0, 1.0)
-        };
-
-        let filled = ((bar_width as f32) * ratio) as usize;
-        let empty = bar_width.saturating_sub(filled);
-
-        spans.push(Span::styled("▐", Style::default().fg(theme::DARK_GREY)));
-        if filled > 0 {
-            spans.push(Span::styled(
-                "█".repeat(filled),
-                Style::default().fg(fill_color),
-            ));
+            0.0
         }
-        if empty > 0 {
-            spans.push(Span::styled(
-                "░".repeat(empty),
-                Style::default().fg(theme::DARK_GREY),
-            ));
-        }
-        spans.push(Span::styled("▌", Style::default().fg(theme::DARK_GREY)));
-        spans.push(Span::raw(" "));
+    } else {
+        ((elapsed as f32 % 10.0) / 10.0).clamp(0.0, 1.0)
+    };
+
+    let filled_count = ((bar_width as f32) * ratio).round() as usize;
+    let filled_count = filled_count.min(bar_width);
+
+    let (filled_str, unfilled_str) = bar_text.split_at(filled_count);
+
+    let mut spans = Vec::new();
+
+    spans.push(Span::styled(
+        icon,
+        Style::default().fg(fill_bg).add_modifier(Modifier::BOLD),
+    ));
+
+    if !filled_str.is_empty() {
+        spans.push(Span::styled(
+            filled_str.to_string(),
+            Style::default()
+                .fg(theme::BG)
+                .bg(fill_bg)
+                .add_modifier(Modifier::BOLD),
+        ));
     }
 
-    spans.push(Span::styled(total_str, Style::default().fg(theme::GREY)));
+    if !unfilled_str.is_empty() {
+        spans.push(Span::styled(
+            unfilled_str.to_string(),
+            Style::default()
+                .fg(theme::FG)
+                .bg(theme::LIGHT_BG)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
 
     if show_hint {
-        spans.push(Span::raw(" "));
+        spans.push(Span::raw("  "));
         spans.push(Span::styled(hint, Style::default().fg(theme::GREY)));
     }
 
