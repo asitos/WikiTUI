@@ -86,6 +86,7 @@ fn normalize_image_url(src: &str) -> Option<String> {
         || clean.contains("Symbol_")
         || clean.contains("Ambox_")
         || clean.contains("Question_book")
+        || clean.to_lowercase().contains("logo")
         || clean.ends_with(".svg")
     {
         return None;
@@ -102,6 +103,20 @@ fn normalize_image_url(src: &str) -> Option<String> {
     }
 }
 
+fn find_first_img<'a>(tag: &'a HTMLTag<'a>, parser: &'a Parser<'a>) -> Option<&'a HTMLTag<'a>> {
+    if tag.name().as_utf8_str() == "img" {
+        return Some(tag);
+    }
+    for child_handle in tag.children().top().iter() {
+        if let Some(tl::Node::Tag(child_tag)) = child_handle.get(parser) {
+            if let Some(found) = find_first_img(child_tag, parser) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
 fn extract_image_attributes(
     tag: &HTMLTag,
     parser: &Parser,
@@ -112,16 +127,8 @@ fn extract_image_attributes(
         }
     }
 
-    if tag.name().as_utf8_str() == "img" {
-        return parse_img_tag(tag);
-    }
-
-    for child_handle in tag.children().top().iter() {
-        if let Some(tl::Node::Tag(img_tag)) = child_handle.get(parser) {
-            if img_tag.name().as_utf8_str() == "img" {
-                return parse_img_tag(img_tag);
-            }
-        }
+    if let Some(img_tag) = find_first_img(tag, parser) {
+        return parse_img_tag(img_tag);
     }
 
     (String::new(), None, None, None)
@@ -134,7 +141,7 @@ fn parse_img_tag(tag: &HTMLTag) -> (String, Option<String>, Option<usize>, Optio
         }
     }
 
-    let src = tag
+    let raw_src = tag
         .attributes()
         .get("srcset")
         .flatten()
@@ -159,11 +166,13 @@ fn parse_img_tag(tag: &HTMLTag) -> (String, Option<String>, Option<usize>, Optio
         })
         .unwrap_or_default();
 
+    let src = crate::parser::utils::decode_html_entities(&raw_src);
+
     let alt = tag
         .attributes()
         .get("alt")
         .flatten()
-        .map(|b| b.as_utf8_str().to_string())
+        .map(|b| crate::parser::utils::decode_html_entities(&b.as_utf8_str()))
         .filter(|s| !s.trim().is_empty());
 
     let width = tag
@@ -190,18 +199,21 @@ fn parse_img_tag(tag: &HTMLTag) -> (String, Option<String>, Option<usize>, Optio
 fn extract_caption(tag: &HTMLTag, parser: &Parser) -> Option<String> {
     for child_handle in tag.children().top().iter() {
         if let Some(tl::Node::Tag(cap_tag)) = child_handle.get(parser) {
-            if cap_tag.name().as_utf8_str() == "figcaption"
-                || cap_tag
-                    .attributes()
-                    .get("class")
-                    .flatten()
-                    .map(|b| b.as_utf8_str().contains("thumbcaption"))
-                    .unwrap_or(false)
-            {
+            let name = cap_tag.name().as_utf8_str();
+            let cls = cap_tag
+                .attributes()
+                .get("class")
+                .flatten()
+                .map(|b| b.as_utf8_str().to_string())
+                .unwrap_or_default();
+            if name == "figcaption" || cls.contains("thumbcaption") || cls.contains("gallerytext") {
                 let text = cap_tag.inner_text(parser).trim().to_string();
                 if !text.is_empty() {
-                    return Some(text);
+                    return Some(crate::parser::utils::decode_html_entities(&text));
                 }
+            }
+            if let Some(sub) = extract_caption(cap_tag, parser) {
+                return Some(sub);
             }
         }
     }
