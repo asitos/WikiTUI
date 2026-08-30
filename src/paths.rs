@@ -32,3 +32,7 @@ pub fn cache_dir() -> PathBuf {
     }
     PathBuf::from("cache")
 }
+
+pub fn audio_cache_dir() -> PathBuf {
+    cache_dir().join("audio")
+}

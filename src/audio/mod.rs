@@ -1,10 +1,12 @@
 pub mod backend;
+pub mod cache;
 pub mod duration;
 pub mod probe;
 pub mod sync;
 pub mod types;
 
 pub use backend::{detect_backend, AudioBackend};
+pub use cache::{get_cached_audio_path, get_cached_duration, save_cached_duration};
 pub use duration::parse_duration_to_secs;
 pub use probe::probe_exact_duration;
 pub use sync::{spawn_playhead_monitor, PlayheadUpdate};
@@ -60,7 +62,9 @@ impl AudioPlayer {
     }
 
     pub fn play(&mut self, title: &str, url: &str, duration_str: Option<&str>) -> bool {
-        let total_duration_secs = duration_str.and_then(parse_duration_to_secs);
+        let total_duration_secs = duration_str
+            .and_then(parse_duration_to_secs)
+            .or_else(|| get_cached_duration(url));
         self.play_at_offset(title, url, 0, total_duration_secs)
     }
 
@@ -78,7 +82,17 @@ impl AudioPlayer {
             None => return false,
         };
 
-        match backend::spawn_player(backend, url, start_secs) {
+        let cached_path_opt = get_cached_audio_path(url);
+        let is_cached = cached_path_opt.is_some();
+        let play_target = cached_path_opt
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| url.to_string());
+
+        if !is_cached && (url.starts_with("http://") || url.starts_with("https://")) {
+            cache::spawn_background_audio_download(url);
+        }
+
+        match backend::spawn_player(backend, &play_target, start_secs) {
             Ok(mut child) => {
                 let playhead_rx = child.stderr.take().map(spawn_playhead_monitor);
                 self.child = Some(child);
@@ -86,15 +100,16 @@ impl AudioPlayer {
                 self.current_title = Some(title.to_string());
                 self.current_url = Some(url.to_string());
                 self.elapsed_secs = start_secs;
-                self.total_duration_secs = total_duration_secs;
+                self.total_duration_secs = total_duration_secs.or_else(|| get_cached_duration(url));
                 self.last_tick = Some(Instant::now());
-                self.is_buffering = playhead_rx.is_some();
+                self.is_buffering = !is_cached && playhead_rx.is_some();
                 self.playhead_rx = playhead_rx;
 
                 let (tx, rx) = std::sync::mpsc::channel();
                 let probe_url = url.to_string();
                 std::thread::spawn(move || {
                     if let Some(secs) = probe_exact_duration(&probe_url) {
+                        save_cached_duration(&probe_url, secs);
                         let _ = tx.send(secs);
                     }
                 });
