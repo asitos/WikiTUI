@@ -480,3 +480,66 @@ fn handle_workspace_left_click(
         }
     }
 }
+
+pub fn handle_mouse_move(
+    app: &mut App,
+    col: u16,
+    row: u16,
+    term_width: u16,
+    term_height: u16,
+) {
+    if app.input_mode != InputMode::Normal {
+        return;
+    }
+
+    if app.zen_mode {
+        let zen_rect = crate::ui::compute_zen_area(Rect::new(0, 0, term_width, term_height));
+        if col >= zen_rect.x
+            && col < zen_rect.x + zen_rect.width
+            && row >= zen_rect.y
+            && row < zen_rect.y + zen_rect.height
+        {
+            let pane = app.active_pane_mut();
+            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+                if let Some(link_idx) = crate::ui::pane_view::get_link_at_coord(
+                    parsed_doc,
+                    pane.scroll_offset,
+                    zen_rect,
+                    col,
+                    row,
+                ) {
+                    pane.selected_link_idx = Some(link_idx);
+                }
+            }
+        }
+        return;
+    }
+
+    if row >= 1 && row < term_height.saturating_sub(1) {
+        let main_rect = Rect::new(0, 1, term_width, term_height.saturating_sub(2));
+        let tab = app.active_tab_mut();
+        let rects = tab.layout_root.compute_rects(main_rect);
+
+        for (pane_idx, rect) in rects {
+            if col >= rect.x
+                && col < rect.x + rect.width
+                && row >= rect.y
+                && row < rect.y + rect.height
+            {
+                let pane = &mut tab.panes[pane_idx];
+                if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+                    if let Some(link_idx) = crate::ui::pane_view::get_link_at_coord(
+                        parsed_doc,
+                        pane.scroll_offset,
+                        rect,
+                        col,
+                        row,
+                    ) {
+                        pane.selected_link_idx = Some(link_idx);
+                    }
+                }
+                break;
+            }
+        }
+    }
+}

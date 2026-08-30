@@ -3,7 +3,7 @@ pub mod scroll;
 pub mod scrollbar;
 pub mod types;
 
-pub use clicks::handle_left_click;
+pub use clicks::{handle_left_click, handle_mouse_move};
 pub use scroll::handle_scroll;
 pub use scrollbar::{active_pane_rect, handle_scrollbar_down, handle_scrollbar_drag};
 pub use types::ScrollDragTarget;
@@ -29,6 +29,9 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent, term_width: u16, ter
         }
         MouseEventKind::Up(MouseButton::Left) => {
             app.scroll_drag = None;
+        }
+        MouseEventKind::Moved => {
+            handle_mouse_move(app, mouse.column, mouse.row, term_width, term_height);
         }
         _ => {}
     }
