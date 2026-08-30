@@ -16,6 +16,7 @@ a feature-rich terminal wikipedia client.
 - **personalized recommendation feed (`F`)**: article discovery feed tailored to your reading history. inspired by [xikipedia](https://github.com/rebane2001/xikipedia).
 - **random article discovery (`r`)**: instantly fetch and explore random wikipedia articles in new tabs.
 - **in-page search (`/`)**: exact substring search with live match highlighting and cycling (`n` / `N`).
+- **inline article images (`I`)**: rich terminal graphics via Kitty graphics protocol with fallback to Unicode halfblocks.
 - **custom saved lists (`m` / `M`)**: save articles into custom lists stored in `~/.config/wikid/saved_articles.json`.
 - **live settings (`,`)**: in-app settings modal with instant hot-reloading.
 
@@ -81,6 +82,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **next / prev match** | `n` / `N` | jump to next / previous in-page search match |
 | **table of contents** | `o` | open centered article outline modal |
 | **zen mode** | `z` | toggle minimalist borderless reading view |
+| **toggle images** | `I` | toggle rendering of inline article illustrations |
 | **random article** | `r` | fetch & open random wikipedia article in new tab |
 | **heading jump** | `]` / `[` | jump to next / previous section heading |
 | **toggle feed** | `F` | toggle recommendation feed mode |
