@@ -62,3 +62,15 @@ pub(crate) struct StyledToken {
     pub style: Style,
     pub link_target: Option<String>,
 }
+
+pub(crate) struct ParserContext<'a> {
+    pub parser: &'a tl::Parser<'a>,
+    pub max_width: usize,
+    pub show_footnotes: bool,
+    pub show_external_links: bool,
+    pub heading_marker: bool,
+    pub code_line_numbers: bool,
+    pub show_icons: bool,
+    pub skipping_external_section: bool,
+    pub skipping_references_section: bool,
+}

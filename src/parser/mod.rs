@@ -35,30 +35,31 @@ pub fn parse_wikipedia_html(
         return doc;
     };
     let parser = dom.parser();
+    let mut ctx = types::ParserContext {
+        parser,
+        max_width: effective_width,
+        show_footnotes,
+        show_external_links,
+        heading_marker,
+        code_line_numbers,
+        show_icons,
+        skipping_external_section: false,
+        skipping_references_section: false,
+    };
     let mut current_block_tokens: Vec<StyledToken> = Vec::new();
-    let mut skipping_external_section = false;
-    let mut skipping_references_section = false;
 
     for handle in dom.children() {
         if let Some(node) = handle.get(parser) {
             process_node(
                 node,
-                parser,
+                &mut ctx,
                 Style::default().fg(crate::theme::FG),
                 None,
                 &mut current_block_tokens,
                 &mut doc,
-                effective_width,
                 None,
-                show_footnotes,
-                show_external_links,
-                &mut skipping_external_section,
-                &mut skipping_references_section,
                 false,
                 false,
-                heading_marker,
-                code_line_numbers,
-                show_icons,
             );
         }
     }

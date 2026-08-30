@@ -6,7 +6,7 @@ use super::elements;
 use super::sections::{heading_info, is_references_heading, is_references_id};
 use super::spoken;
 use super::tables;
-use super::types::{ParsedDocument, StyledToken};
+use super::types::{ParsedDocument, ParserContext, StyledToken};
 use super::utils::{
     decode_html_entities, extract_title_from_href, to_subscript_str, to_superscript_str,
 };
@@ -16,26 +16,18 @@ use ratatui::style::{Modifier, Style};
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn process_node<'a>(
     node: &'a tl::Node<'a>,
-    parser: &'a tl::Parser<'a>,
+    ctx: &mut ParserContext<'a>,
     parent_style: Style,
     parent_link: Option<String>,
     current_tokens: &mut Vec<StyledToken>,
     doc: &mut ParsedDocument,
-    max_width: usize,
     list_item_idx: Option<usize>,
-    show_footnotes: bool,
-    show_external_links: bool,
-    skipping_external_section: &mut bool,
-    skipping_references_section: &mut bool,
     is_sup: bool,
     is_sub: bool,
-    heading_marker: bool,
-    code_line_numbers: bool,
-    show_icons: bool,
 ) {
     match node {
         tl::Node::Raw(bytes) => {
-            if *skipping_external_section || *skipping_references_section {
+            if ctx.skipping_external_section || ctx.skipping_references_section {
                 return;
             }
             let raw_text = bytes.as_utf8_str();
@@ -85,8 +77,8 @@ pub(crate) fn process_node<'a>(
                 .flatten()
                 .map(|b| decode_html_entities(&b.as_utf8_str()));
 
-            if spoken::is_spoken_wikipedia_tag(tag, parser) {
-                if let Some(spoken_audio) = spoken::extract_spoken_audio(tag, parser) {
+            if spoken::is_spoken_wikipedia_tag(tag, ctx.parser) {
+                if let Some(spoken_audio) = spoken::extract_spoken_audio(tag, ctx.parser) {
                     if doc.spoken_audio.is_none() {
                         doc.spoken_audio = Some(spoken_audio);
                     }
@@ -94,64 +86,64 @@ pub(crate) fn process_node<'a>(
                 return;
             }
 
-            if categories::is_category_links_tag(tag, parser) {
-                categories::extract_categories_from_tag(tag, parser, &mut doc.categories);
+            if categories::is_category_links_tag(tag, ctx.parser) {
+                categories::extract_categories_from_tag(tag, ctx.parser, &mut doc.categories);
                 return;
             }
 
-            if let Some((level, title, id_opt)) = heading_info(tag, parser) {
+            if let Some((level, title, id_opt)) = heading_info(tag, ctx.parser) {
                 let lower_title = title.to_lowercase();
                 let lower_id = id_opt.as_deref().unwrap_or("").to_lowercase();
 
-                let is_ext = !show_external_links
+                let is_ext = !ctx.show_external_links
                     && (lower_title.starts_with("external link")
                         || lower_title.starts_with("external_link")
                         || lower_id == "external_links"
                         || lower_id == "external-links"
                         || lower_id == "externallinks");
 
-                let is_refs = !show_footnotes
+                let is_refs = !ctx.show_footnotes
                     && (is_references_heading(&title) || is_references_id(&lower_id));
 
                 if is_ext {
-                    *skipping_external_section = true;
-                    *skipping_references_section = false;
+                    ctx.skipping_external_section = true;
+                    ctx.skipping_references_section = false;
                     return;
                 }
                 if is_refs {
-                    *skipping_references_section = true;
-                    *skipping_external_section = false;
+                    ctx.skipping_references_section = true;
+                    ctx.skipping_external_section = false;
                     return;
                 }
 
                 if level <= 2 {
-                    *skipping_external_section = false;
-                    *skipping_references_section = false;
-                } else if *skipping_external_section || *skipping_references_section {
+                    ctx.skipping_external_section = false;
+                    ctx.skipping_references_section = false;
+                } else if ctx.skipping_external_section || ctx.skipping_references_section {
                     return;
                 }
-            } else if *skipping_external_section || *skipping_references_section {
+            } else if ctx.skipping_external_section || ctx.skipping_references_section {
                 return;
             }
 
-            if !show_external_links {
+            if !ctx.show_external_links {
                 if let Some(ref id_str) = id_attr {
                     let lower = id_str.to_lowercase();
                     if lower == "external_links"
                         || lower == "external-links"
                         || lower == "externallinks"
                     {
-                        *skipping_external_section = true;
+                        ctx.skipping_external_section = true;
                         return;
                     }
                 }
             }
 
-            if !show_footnotes {
+            if !ctx.show_footnotes {
                 if let Some(ref id_str) = id_attr {
                     if is_references_id(id_str) {
                         if !id_str.starts_with("cite_note") && !id_str.starts_with("cite_ref") {
-                            *skipping_references_section = true;
+                            ctx.skipping_references_section = true;
                         }
                         return;
                     }
@@ -162,10 +154,10 @@ pub(crate) fn process_node<'a>(
                 if let Some(banner_type) = banners::classify_ambox_class(class_str.as_ref()) {
                     banners::render_ambox_banner(
                         tag,
-                        parser,
+                        ctx.parser,
                         current_tokens,
                         doc,
-                        max_width,
+                        ctx.max_width,
                         banner_type,
                     );
                     return;
@@ -190,7 +182,7 @@ pub(crate) fn process_node<'a>(
                             | "cite-accessibility-label"
                             | "visually-hidden"
                             | "sr-only"
-                    ) || (!show_footnotes
+                    ) || (!ctx.show_footnotes
                         && matches!(
                             cls,
                             "reference"
@@ -204,7 +196,7 @@ pub(crate) fn process_node<'a>(
                 }
             }
 
-            if !show_footnotes {
+            if !ctx.show_footnotes {
                 if let Some(ref id_str) = id_attr {
                     if id_str.starts_with("cite_note")
                         || id_str.starts_with("cite_ref")
@@ -217,40 +209,54 @@ pub(crate) fn process_node<'a>(
 
             if tag_name == "table" {
                 if !current_tokens.is_empty() {
-                    wrap_and_append_block(current_tokens, doc, max_width);
+                    wrap_and_append_block(current_tokens, doc, ctx.max_width);
                     current_tokens.clear();
                 }
-                tables::render_table(tag, parser, doc, max_width, show_footnotes, show_icons);
+                tables::render_table(
+                    tag,
+                    ctx.parser,
+                    doc,
+                    ctx.max_width,
+                    ctx.show_footnotes,
+                    ctx.show_icons,
+                );
                 return;
             }
 
             if tag_name == "pre" {
                 if !current_tokens.is_empty() {
-                    wrap_and_append_block(current_tokens, doc, max_width);
+                    wrap_and_append_block(current_tokens, doc, ctx.max_width);
                     current_tokens.clear();
                 }
                 let lang = codeblocks::extract_language(tag);
-                codeblocks::render_code_block(tag, parser, doc, max_width, lang, code_line_numbers);
+                codeblocks::render_code_block(
+                    tag,
+                    ctx.parser,
+                    doc,
+                    ctx.max_width,
+                    lang,
+                    ctx.code_line_numbers,
+                );
                 return;
             }
 
             if let Some(ref class_str) = class_attr {
                 if class_str.contains("mw-highlight") {
                     if !current_tokens.is_empty() {
-                        wrap_and_append_block(current_tokens, doc, max_width);
+                        wrap_and_append_block(current_tokens, doc, ctx.max_width);
                         current_tokens.clear();
                     }
                     let lang = codeblocks::extract_language(tag);
                     for child_handle in tag.children().top().iter() {
-                        if let Some(tl::Node::Tag(pre_tag)) = child_handle.get(parser) {
+                        if let Some(tl::Node::Tag(pre_tag)) = child_handle.get(ctx.parser) {
                             if pre_tag.name().as_utf8_str() == "pre" {
                                 codeblocks::render_code_block(
                                     pre_tag,
-                                    parser,
+                                    ctx.parser,
                                     doc,
-                                    max_width,
+                                    ctx.max_width,
                                     lang,
-                                    code_line_numbers,
+                                    ctx.code_line_numbers,
                                 );
                                 return;
                             }
@@ -276,7 +282,7 @@ pub(crate) fn process_node<'a>(
             );
 
             if is_block_element && !current_tokens.is_empty() {
-                wrap_and_append_block(current_tokens, doc, max_width);
+                wrap_and_append_block(current_tokens, doc, ctx.max_width);
                 current_tokens.clear();
             }
 
@@ -295,11 +301,11 @@ pub(crate) fn process_node<'a>(
                 "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
                     current_style = elements::handle_heading_tag(
                         tag,
-                        parser,
+                        ctx.parser,
                         tag_name,
                         doc,
                         current_tokens,
-                        heading_marker,
+                        ctx.heading_marker,
                         current_style,
                     );
                 }
@@ -368,7 +374,7 @@ pub(crate) fn process_node<'a>(
             let current_is_sub = is_sub || tag_name == "sub";
 
             for child_handle in tag.children().top().iter() {
-                if let Some(child_node) = child_handle.get(parser) {
+                if let Some(child_node) = child_handle.get(ctx.parser) {
                     let child_list_idx = if is_ordered_list {
                         if let tl::Node::Tag(child_tag) = child_node {
                             if child_tag.name().as_utf8_str() == "li" {
@@ -387,22 +393,14 @@ pub(crate) fn process_node<'a>(
 
                     process_node(
                         child_node,
-                        parser,
+                        ctx,
                         current_style,
                         current_link.clone(),
                         current_tokens,
                         doc,
-                        max_width,
                         child_list_idx,
-                        show_footnotes,
-                        show_external_links,
-                        skipping_external_section,
-                        skipping_references_section,
                         current_is_sup,
                         current_is_sub,
-                        heading_marker,
-                        code_line_numbers,
-                        show_icons,
                     );
                 }
             }
@@ -415,7 +413,7 @@ pub(crate) fn process_node<'a>(
             }
 
             if is_block_element && !current_tokens.is_empty() {
-                wrap_and_append_block(current_tokens, doc, max_width);
+                wrap_and_append_block(current_tokens, doc, ctx.max_width);
                 current_tokens.clear();
             }
         }
