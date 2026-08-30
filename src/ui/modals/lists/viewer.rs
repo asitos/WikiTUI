@@ -142,6 +142,16 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
         app.config.ui.rounded_borders,
     );
 
+fn article_has_spoken_audio(app: &App, title: &str) -> bool {
+    title.starts_with("Spoken:")
+        || app.audio_player.current_title.as_deref() == Some(title)
+        || app.tabs.iter().flat_map(|t| &t.panes).any(|p| {
+            matches!(&p.content, crate::app::PaneContent::ArticleText { title: t, parsed_doc, .. } if t.eq_ignore_ascii_case(title) && parsed_doc.spoken_audio.is_some())
+        })
+        || crate::api::article::get_cached_article(title, 24 * 365)
+            .is_some_and(|c| c.contains("spoken-wikipedia") || c.contains("Spoken Wikipedia"))
+}
+
     let mut article_lines = Vec::new();
     let right_total = selected_list.map(|l| l.articles.len()).unwrap_or(0);
     if let Some(list) = selected_list {
@@ -154,13 +164,23 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
             for (idx, article) in list.articles.iter().enumerate() {
                 let is_selected = idx == app.lists_modal.viewer_article_idx;
                 let is_active = app.lists_modal.viewer_focus_right;
+                let has_audio = article_has_spoken_audio(app, article);
+                let suffix = if has_audio {
+                    if app.config.ui.icons {
+                        Some(" 󰎆")
+                    } else {
+                        Some(" ♪")
+                    }
+                } else {
+                    None
+                };
 
                 article_lines.push(create_selectable_line(
                     article,
                     is_selected,
                     is_active,
                     theme::VIOLET,
-                    None,
+                    suffix,
                 ));
             }
         }
