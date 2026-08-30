@@ -1,7 +1,7 @@
 use crate::app::App;
 use crate::palette::filter_commands;
 use crate::theme;
-use crate::ui::modals::utils::{compute_centered_scroll, render_modal_frame_at};
+use crate::ui::modals::utils::{compute_centered_scroll, render_modal_container_at};
 use ratatui::{
     layout::Rect,
     style::{Modifier, Style, Stylize},
@@ -20,10 +20,8 @@ pub fn compute_palette_modal_area(size: Rect) -> Rect {
 
 pub fn render_palette_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = compute_palette_modal_area(size);
-    f.render_widget(ratatui::widgets::Clear, area);
-
     let icon = if app.config.ui.icons { ">" } else { "" };
-    let block = render_modal_frame_at(
+    let inner = render_modal_container_at(
         f,
         area,
         icon,
@@ -31,8 +29,6 @@ pub fn render_palette_modal(f: &mut Frame, app: &App, size: Rect) {
         theme::YELLOW,
         app.config.ui.rounded_borders,
     );
-    let inner = block.inner(area);
-    f.render_widget(block, area);
 
     if inner.height < 3 || inner.width < 10 {
         return;
