@@ -86,11 +86,12 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **toggle feed** | `F` | toggle recommendation feed mode |
 | **link navigation** | `tab` / `shift-tab` | focus next / previous article link |
 | **open link** | `enter` | open link in active pane |
-| **open link in new tab** | `t` or `alt-enter` | open link in a new tab |
+| **open link in new tab** | `t`, `alt-enter`, `alt-click` | open link in a new tab |
 | **open link in split** | `s` / `v` | open link in horizontal (`s`) or vertical (`v`) split |
 | **copy link** | `y` | copy focused link to clipboard |
 | **copy article URL** | `Y` | copy current article URL to clipboard |
 | **split pane** | `ctrl-w` `s`/`v` | split active pane horizontally (`s`) or vertically (`v`) |
+| **resize split** | `ctrl-=` / `ctrl--` | expand (`ctrl-=`) or shrink (`ctrl--`) active split dimensions |
 | **navigate panes** | `ctrl-h/j/k/l` | switch focus between split panes |
 | **close pane** | `x` | close active pane |
 | **reopen closed** | `u` | reopen last closed tab or split pane |
