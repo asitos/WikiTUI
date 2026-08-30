@@ -183,6 +183,15 @@ impl Pane {
             *last_show_icons = show_icons;
             *last_show_images = show_images;
             *last_max_image_height = max_image_height;
+            if let Some(idx) = self.selected_link_idx {
+                if idx >= parsed_doc.links.len() {
+                    self.selected_link_idx = if parsed_doc.links.is_empty() {
+                        None
+                    } else {
+                        Some(parsed_doc.links.len() - 1)
+                    };
+                }
+            }
             self.recompute_local_matches();
         }
     }
