@@ -13,7 +13,7 @@ pub mod settings;
 pub mod tab;
 pub mod types;
 
-pub use pane::{LocalMatch, Pane, PaneContent};
+pub use pane::{LocalMatch, Pane, PaneContent, TextSelection};
 pub use settings::SettingItem;
 pub use tab::Tab;
 pub use types::{

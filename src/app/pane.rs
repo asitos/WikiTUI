@@ -29,6 +29,27 @@ pub struct LocalMatch {
     pub char_offset: usize,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TextSelection {
+    pub start: (usize, usize),
+    pub end: (usize, usize),
+}
+
+impl TextSelection {
+    pub fn normalized(&self) -> ((usize, usize), (usize, usize)) {
+        if self.start <= self.end {
+            (self.start, self.end)
+        } else {
+            (self.end, self.start)
+        }
+    }
+
+    pub fn contains_line(&self, line_idx: usize) -> bool {
+        let (start, end) = self.normalized();
+        line_idx >= start.0 && line_idx <= end.0
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Pane {
     pub id: usize,
@@ -40,6 +61,9 @@ pub struct Pane {
     pub local_search_query: String,
     pub local_matches: Vec<LocalMatch>,
     pub selected_match_idx: Option<usize>,
+    pub text_selection: Option<TextSelection>,
+    pub is_mouse_selecting: bool,
+    pub selection_anchor: Option<(usize, usize)>,
     pub is_loading: bool,
     pub loading_title: Option<String>,
     pub show_toc: bool,
@@ -65,6 +89,9 @@ impl Pane {
             local_search_query: String::new(),
             local_matches: Vec::new(),
             selected_match_idx: None,
+            text_selection: None,
+            is_mouse_selecting: false,
+            selection_anchor: None,
             is_loading: false,
             loading_title: None,
             show_toc: false,
@@ -83,6 +110,9 @@ impl Pane {
         self.is_loading = true;
         self.loading_title = Some(title.to_string());
         self.selected_link_idx = None;
+        self.text_selection = None;
+        self.is_mouse_selecting = false;
+        self.selection_anchor = None;
         self.intra_jump_back.clear();
         self.intra_jump_forward.clear();
         self.scroll_offset = 0;
