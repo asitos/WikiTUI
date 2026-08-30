@@ -4,6 +4,7 @@ pub mod feed;
 pub mod random;
 pub mod search;
 pub mod stats;
+pub mod updates;
 
 pub use daily_feed::DailyFeed;
 pub use stats::WikiStatistics;
@@ -78,6 +79,9 @@ pub enum NetworkCommand {
     FetchStats {
         timeout: u64,
     },
+    CheckForUpdates {
+        timeout: u64,
+    },
 }
 
 pub enum NetworkEvent {
@@ -98,6 +102,9 @@ pub enum NetworkEvent {
     },
     DailyFeedLoaded(Box<DailyFeed>),
     StatsLoaded(WikiStatistics),
+    UpdateCheckResult {
+        latest_tag: Result<String, String>,
+    },
     Error {
         request_id: u64,
         pane_id: usize,
@@ -218,6 +225,10 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                 if let Ok(statistics) = stats::fetch_wiki_statistics(&agent, timeout) {
                     let _ = ev_tx.send(NetworkEvent::StatsLoaded(statistics));
                 }
+            }
+            NetworkCommand::CheckForUpdates { timeout } => {
+                let res = updates::check_latest_release(&agent, timeout).map_err(|e| e.to_string());
+                let _ = ev_tx.send(NetworkEvent::UpdateCheckResult { latest_tag: res });
             }
         });
     }

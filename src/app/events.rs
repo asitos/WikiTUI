@@ -115,6 +115,43 @@ impl App {
             NetworkEvent::StatsLoaded(stats) => {
                 self.wiki_stats = stats;
             }
+            NetworkEvent::UpdateCheckResult { latest_tag } => match latest_tag {
+                Ok(tag) => {
+                    let remote_ver = parse_semver_parts(&tag);
+                    let current_ver = parse_semver_parts(env!("CARGO_PKG_VERSION"));
+                    if remote_ver > current_ver {
+                        self.set_status_message(format!(
+                            "update available: {} (current: v{}) · run cargo install wikid",
+                            tag,
+                            env!("CARGO_PKG_VERSION")
+                        ));
+                    } else {
+                        self.set_status_message(format!(
+                            "wikid is up to date (v{})",
+                            env!("CARGO_PKG_VERSION")
+                        ));
+                    }
+                }
+                Err(err) => {
+                    self.set_status_message(format!("update check failed: {}", err));
+                }
+            },
         }
     }
+}
+
+fn parse_semver_parts(v: &str) -> (u32, u32, u32) {
+    let clean = v.trim_start_matches('v').trim_start_matches('V').trim();
+    let mut parts = clean.split('.').filter_map(|p| {
+        p.chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<String>()
+            .parse::<u32>()
+            .ok()
+    });
+    (
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+    )
 }

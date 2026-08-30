@@ -125,6 +125,12 @@ pub const COMMANDS: &[CommandDef] = &[
         execute: |app| app.toggle_help_popup(),
     },
     CommandDef {
+        id: "check_for_updates",
+        label: "check for updates",
+        shortcut: Some("U"),
+        execute: |app| app.check_for_updates(),
+    },
+    CommandDef {
         id: "quit_wikid",
         label: "quit wikid",
         shortcut: Some("q"),

@@ -59,4 +59,11 @@ impl App {
             });
         }
     }
+
+    pub fn check_for_updates(&mut self) {
+        self.set_status_message("checking for updates...".to_string());
+        let _ = self.cmd_tx.send(NetworkCommand::CheckForUpdates {
+            timeout: self.config.network.timeout,
+        });
+    }
 }
