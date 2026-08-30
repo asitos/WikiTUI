@@ -76,9 +76,24 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             && (key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT)
         {
             if let KeyCode::Char(c) = key.code {
-                if let Some(title) = app.find_semantic_hint_article(c) {
-                    app.open_article(&title);
-                    return;
+                match app.config.general.hint_mode {
+                    crate::config::HintMode::Semantic => {
+                        if let Some(title) = app.find_semantic_hint_article(c) {
+                            app.open_article(&title);
+                            return;
+                        }
+                    }
+                    crate::config::HintMode::Numbered => {
+                        if c.is_ascii_digit() && c != '0' && key.modifiers.is_empty() {
+                            let idx = (c as usize) - ('1' as usize);
+                            let recents = app.get_continue_reading_articles();
+                            if let Some(title) = recents.get(idx) {
+                                app.open_article(title);
+                                return;
+                            }
+                        }
+                    }
+                    crate::config::HintMode::None => {}
                 }
             }
         }

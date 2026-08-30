@@ -118,6 +118,7 @@ wikid can be configured via `~/.config/wikid/config.toml` or via the settings mo
 liked_readonly = true # when set to false, allow deleting items from the "Liked" list
 auto_restore_session = false # when set to true, automatically restore previous session on launch
 confirm_quit = true # enable/disable confirmation prompt on quit
+hint_mode = "semantic" # continue reading hints: "semantic", "numbered", or "none"
 
 [reader]
 scroll_lines = 1 # number of lines to scroll per j/k press (1-20)

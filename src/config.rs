@@ -29,12 +29,22 @@ impl Default for InputConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HintMode {
+    #[default]
+    Semantic,
+    Numbered,
+    None,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GeneralConfig {
     pub liked_readonly: bool,
     pub auto_restore_session: bool,
     pub confirm_quit: bool,
+    pub hint_mode: HintMode,
 }
 
 impl Default for GeneralConfig {
@@ -43,6 +53,7 @@ impl Default for GeneralConfig {
             liked_readonly: true,
             auto_restore_session: false,
             confirm_quit: true,
+            hint_mode: HintMode::Semantic,
         }
     }
 }

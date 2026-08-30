@@ -6,6 +6,7 @@ pub enum SettingItem {
     LikedReadonly,
     AutoRestoreSession,
     ConfirmQuit,
+    HintMode,
     RoundedBorders,
     Icons,
     ScrollIndicator,
@@ -30,6 +31,7 @@ impl SettingItem {
         SettingItem::LikedReadonly,
         SettingItem::AutoRestoreSession,
         SettingItem::ConfirmQuit,
+        SettingItem::HintMode,
         SettingItem::RoundedBorders,
         SettingItem::Icons,
         SettingItem::ScrollIndicator,
@@ -53,7 +55,8 @@ impl SettingItem {
         match self {
             SettingItem::LikedReadonly
             | SettingItem::AutoRestoreSession
-            | SettingItem::ConfirmQuit => "general",
+            | SettingItem::ConfirmQuit
+            | SettingItem::HintMode => "general",
             SettingItem::RoundedBorders
             | SettingItem::Icons
             | SettingItem::ScrollIndicator
@@ -78,6 +81,7 @@ impl SettingItem {
             SettingItem::LikedReadonly => "liked list read-only",
             SettingItem::AutoRestoreSession => "auto-restore last session",
             SettingItem::ConfirmQuit => "confirm before quitting",
+            SettingItem::HintMode => "continue reading hints",
             SettingItem::RoundedBorders => "rounded borders",
             SettingItem::Icons => "icons",
             SettingItem::ScrollIndicator => "scroll indicator",
@@ -103,6 +107,9 @@ impl SettingItem {
             SettingItem::LikedReadonly => "prevent manual deletion of articles from liked list",
             SettingItem::AutoRestoreSession => "automatically restore last session on startup",
             SettingItem::ConfirmQuit => "prompt for confirmation when exiting wikid",
+            SettingItem::HintMode => {
+                "hint style for continue reading list (semantic, numbered, none)"
+            }
             SettingItem::RoundedBorders => "use rounded border corners instead of sharp",
             SettingItem::Icons => "display nerd fonts",
             SettingItem::ScrollIndicator => {
@@ -157,6 +164,31 @@ impl App {
                 }
                 SettingItem::ConfirmQuit => {
                     self.config.general.confirm_quit = !self.config.general.confirm_quit;
+                }
+                SettingItem::HintMode => {
+                    self.config.general.hint_mode = match self.config.general.hint_mode {
+                        crate::config::HintMode::Semantic => {
+                            if delta < 0 {
+                                crate::config::HintMode::None
+                            } else {
+                                crate::config::HintMode::Numbered
+                            }
+                        }
+                        crate::config::HintMode::Numbered => {
+                            if delta < 0 {
+                                crate::config::HintMode::Semantic
+                            } else {
+                                crate::config::HintMode::None
+                            }
+                        }
+                        crate::config::HintMode::None => {
+                            if delta < 0 {
+                                crate::config::HintMode::Numbered
+                            } else {
+                                crate::config::HintMode::Semantic
+                            }
+                        }
+                    };
                 }
                 SettingItem::RoundedBorders => {
                     self.config.ui.rounded_borders = !self.config.ui.rounded_borders;
@@ -273,6 +305,9 @@ impl App {
                 }
                 SettingItem::ConfirmQuit => {
                     self.config.general.confirm_quit = default_config.general.confirm_quit;
+                }
+                SettingItem::HintMode => {
+                    self.config.general.hint_mode = default_config.general.hint_mode;
                 }
                 SettingItem::RoundedBorders => {
                     self.config.ui.rounded_borders = default_config.ui.rounded_borders;

@@ -214,23 +214,39 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             inner_width,
         ));
 
-        let hints_map = app.current_continue_reading_hints();
-        let items: Vec<(String, String, Option<crate::app::recent::SemanticHint>)> = recent_articles
+        let hint_mode = app.config.general.hint_mode;
+        let hints_map = if hint_mode == crate::config::HintMode::Semantic {
+            app.current_continue_reading_hints()
+        } else {
+            recent_articles
+                .iter()
+                .take(displayed_count)
+                .map(|(t, _)| (t.clone(), None))
+                .collect()
+        };
+
+        let items: Vec<(String, String, String, Option<crate::app::recent::SemanticHint>)> = recent_articles
             .iter()
             .take(displayed_count)
+            .enumerate()
             .zip(hints_map)
-            .map(|((_, ts), (title, hint))| {
+            .map(|((idx, (_, ts)), (title, hint))| {
+                let num_prefix = if hint_mode == crate::config::HintMode::Numbered {
+                    format!("{}. ", idx + 1)
+                } else {
+                    String::new()
+                };
                 let time_str = ts
                     .map(crate::app::recent::format_relative_time)
                     .unwrap_or_default();
-                (title, time_str, hint)
+                (num_prefix, title, time_str, hint)
             })
             .collect();
 
         let max_item_width = items
             .iter()
-            .map(|(t, time_str, _)| {
-                let base_w = unicode_width::UnicodeWidthStr::width(t.as_str());
+            .map(|(p, t, time_str, _)| {
+                let base_w = p.len() + unicode_width::UnicodeWidthStr::width(t.as_str());
                 if !time_str.is_empty() {
                     base_w + 3 + unicode_width::UnicodeWidthStr::width(time_str.as_str())
                 } else {
@@ -242,10 +258,14 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
 
         let block_pad = (inner_width.saturating_sub(max_item_width)) / 2;
 
-        for (title, time_str, hint) in items {
+        for (num_prefix, title, time_str, hint) in items {
             let mut line_spans = vec![
                 Span::raw(" ".repeat(block_pad)),
             ];
+
+            if !num_prefix.is_empty() {
+                line_spans.push(Span::styled(num_prefix, Style::default().fg(theme::GREY)));
+            }
 
             if let Some(h) = hint {
                 for (idx, ch) in title.char_indices() {

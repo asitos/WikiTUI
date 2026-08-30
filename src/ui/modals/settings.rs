@@ -70,6 +70,18 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                 let val = app.config.general.confirm_quit;
                 bool_span(val)
             }
+            SettingItem::HintMode => {
+                let val = app.config.general.hint_mode;
+                let text = match val {
+                    crate::config::HintMode::Semantic => "semantic",
+                    crate::config::HintMode::Numbered => "numbered",
+                    crate::config::HintMode::None => "none",
+                };
+                Span::styled(
+                    format!("◄  {:>8}  ►", text),
+                    Style::default().fg(theme::TEAL).bold(),
+                )
+            }
             SettingItem::RoundedBorders => {
                 let val = app.config.ui.rounded_borders;
                 bool_span(val)
