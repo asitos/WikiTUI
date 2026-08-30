@@ -4,6 +4,9 @@ pub mod modals;
 pub mod pane_view;
 pub mod status_bar;
 pub mod tab_bar;
+pub mod utils;
+
+pub use utils::{truncate_to_width, truncate_with_ellipsis};
 
 use crate::app::{App, InputMode};
 use ratatui::{

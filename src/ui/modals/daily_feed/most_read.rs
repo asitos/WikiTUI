@@ -44,17 +44,7 @@ pub fn render_most_read_modal(
         let avail_w = (modal_area.width as usize).saturating_sub(8);
         for (idx, entry) in entries.iter().enumerate() {
             let is_selected = idx == selected_idx;
-            let title = if entry.title.chars().count() > avail_w && avail_w > 3 {
-                let byte_end = entry
-                    .title
-                    .char_indices()
-                    .nth(avail_w.saturating_sub(3))
-                    .map(|(i, _)| i)
-                    .unwrap_or(entry.title.len());
-                format!("{}...", &entry.title[..byte_end])
-            } else {
-                entry.title.clone()
-            };
+            let title = crate::ui::truncate_to_width(&entry.title, avail_w);
 
             lines.push(create_selectable_line(
                 &title,

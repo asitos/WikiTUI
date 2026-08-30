@@ -365,18 +365,6 @@ fn build_history_trail(pane: &crate::app::Pane, available_width: usize) -> Vec<S
 }
 
 fn truncate_trail_title(title: &str, max_len: usize) -> String {
-    let char_count = title.chars().count();
-    if char_count > max_len {
-        let take_chars = max_len.saturating_sub(1);
-        let mut result = String::with_capacity(take_chars * 4 + 3);
-        for c in title.chars().take(take_chars) {
-            for lc in c.to_lowercase() {
-                result.push(lc);
-            }
-        }
-        result.push('…');
-        result
-    } else {
-        title.to_lowercase()
-    }
+    let lower = title.to_lowercase();
+    crate::ui::truncate_with_ellipsis(&lower, max_len, "…")
 }

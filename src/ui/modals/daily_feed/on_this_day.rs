@@ -90,18 +90,8 @@ pub fn render_on_this_day_modal(
                 let title_w = unicode_width::UnicodeWidthStr::width(title.as_str());
 
                 if prefix_w + title_w >= avail_w {
-                    let max_title_w = avail_w.saturating_sub(prefix_w + 3);
-                    let mut trunc_end = title.len();
-                    let mut cur_w = 0;
-                    for (i, ch) in title.char_indices() {
-                        let ch_w = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
-                        if cur_w + ch_w > max_title_w {
-                            trunc_end = i;
-                            break;
-                        }
-                        cur_w += ch_w;
-                    }
-                    let clean_title = format!("{}...", &title[..trunc_end]);
+                    let max_title_w = avail_w.saturating_sub(prefix_w);
+                    let clean_title = crate::ui::truncate_to_width(&title, max_title_w);
                     let footer_line = Line::from(vec![Span::styled(
                         format!(" {}{}: ", icon, clean_title),
                         Style::default().fg(theme::BLUE).bold(),
@@ -109,26 +99,10 @@ pub fn render_on_this_day_modal(
                     modal_block = modal_block.title_bottom(footer_line);
                 } else {
                     let max_desc_w = avail_w.saturating_sub(prefix_w + title_w + 1);
-                    let desc_w = unicode_width::UnicodeWidthStr::width(desc);
-
-                    let clean_desc = if desc_w > max_desc_w {
-                        if max_desc_w > 3 {
-                            let mut trunc_end = desc.len();
-                            let mut cur_w = 0;
-                            for (i, ch) in desc.char_indices() {
-                                let ch_w = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
-                                if cur_w + ch_w > max_desc_w - 3 {
-                                    trunc_end = i;
-                                    break;
-                                }
-                                cur_w += ch_w;
-                            }
-                            Some(format!("{}...", &desc[..trunc_end]))
-                        } else {
-                            None
-                        }
+                    let clean_desc = if max_desc_w > 3 {
+                        Some(crate::ui::truncate_to_width(desc, max_desc_w))
                     } else {
-                        Some(desc.to_string())
+                        None
                     };
 
                     let mut spans = vec![Span::styled(
