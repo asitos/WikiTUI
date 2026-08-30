@@ -62,16 +62,31 @@ pub fn clear_position(url: &str) {
     }
 }
 
-pub fn safe_audio_filename(url: &str) -> String {
-    let base = if let Some(idx) = url.rfind('/') {
-        let mut name = &url[idx + 1..];
-        if let Some(q) = name.find('?') {
-            name = &name[..q];
+pub fn extract_wikimedia_file_title(url: &str) -> Option<String> {
+    let idx = url.rfind('/')?;
+    let mut name = &url[idx + 1..];
+    if let Some(q) = name.find('?') {
+        name = &name[..q];
+    }
+    let base = if name.ends_with(".mp3") && name.contains(".ogg") {
+        if let Some(ogg_pos) = name.find(".ogg") {
+            &name[..ogg_pos + 4]
+        } else {
+            name
         }
-        name
     } else {
-        "track.ogg"
+        name
     };
+
+    if base.is_empty() {
+        None
+    } else {
+        Some(base.to_string())
+    }
+}
+
+pub fn safe_audio_filename(url: &str) -> String {
+    let base = extract_wikimedia_file_title(url).unwrap_or_else(|| "track.ogg".to_string());
     let sanitized: String = base
         .chars()
         .map(|c| {

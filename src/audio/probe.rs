@@ -38,25 +38,7 @@ pub fn probe_exact_duration(url: &str) -> Option<u64> {
         }
     }
 
-    let filename_opt = if let Some(idx) = url.rfind('/') {
-        let mut name = &url[idx + 1..];
-        if let Some(q) = name.find('?') {
-            name = &name[..q];
-        }
-        if name.ends_with(".mp3") && name.contains(".ogg") {
-            if let Some(ogg_pos) = name.find(".ogg") {
-                Some(&name[..ogg_pos + 4])
-            } else {
-                Some(name)
-            }
-        } else {
-            Some(name)
-        }
-    } else {
-        None
-    };
-
-    if let Some(file_name) = filename_opt {
+    if let Some(file_name) = crate::audio::cache::extract_wikimedia_file_title(url) {
         let api_url = format!(
             "https://en.wikipedia.org/w/api.php?action=query&titles=File:{}&prop=imageinfo&iiprop=duration&format=json",
             file_name
