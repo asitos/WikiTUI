@@ -237,28 +237,7 @@ fn get_center_spans(
         }
         InputMode::Normal => {
             if app.audio_player.is_active() {
-                let state_str = match app.audio_player.state {
-                    crate::audio::PlaybackState::Playing => "󰎆 playing",
-                    crate::audio::PlaybackState::Paused => "󰏤 paused",
-                    _ => "audio",
-                };
-                let title = app
-                    .audio_player
-                    .current_title
-                    .as_deref()
-                    .unwrap_or("article");
-                vec![
-                    Span::styled(
-                        format!("{} [{}]", state_str, title),
-                        Style::default()
-                            .fg(theme::PINK)
-                            .add_modifier(Modifier::BOLD),
-                    ),
-                    Span::styled(
-                        " · a pause/resume · A stop",
-                        Style::default().fg(theme::GREY),
-                    ),
-                ]
+                build_audio_progress_bar(app, available_width)
             } else if app.feed.active {
                 vec![Span::styled(
                     "j/k browse · l like · enter read · t tab · r reset · esc exit",
@@ -367,4 +346,139 @@ fn build_history_trail(pane: &crate::app::Pane, available_width: usize) -> Vec<S
 fn truncate_trail_title(title: &str, max_len: usize) -> String {
     let lower = title.to_lowercase();
     crate::ui::truncate_with_ellipsis(&lower, max_len, "…")
+}
+
+fn format_audio_time(secs: u64, include_hours: bool) -> String {
+    if include_hours {
+        format!(
+            "{:02}:{:02}:{:02}",
+            secs / 3600,
+            (secs % 3600) / 60,
+            secs % 60
+        )
+    } else {
+        format!("{:02}:{:02}", secs / 60, secs % 60)
+    }
+}
+
+fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'static>> {
+    let is_playing = app.audio_player.is_playing();
+    let is_icons = app.config.ui.icons;
+
+    let icon = if is_icons {
+        if is_playing {
+            "󰐊 "
+        } else {
+            "󰏤 "
+        }
+    } else if is_playing {
+        "▶ "
+    } else {
+        "❚❚ "
+    };
+
+    let icon_color = if is_playing {
+        theme::LIME
+    } else {
+        theme::YELLOW
+    };
+
+    let elapsed = app.audio_player.elapsed_secs;
+    let total_opt = app.audio_player.total_duration_secs;
+    let include_hours = total_opt.map_or(elapsed >= 3600, |t| t >= 3600);
+
+    let elapsed_str = format_audio_time(elapsed, include_hours);
+    let total_str = total_opt.map_or_else(
+        || "--:--".to_string(),
+        |t| format_audio_time(t, include_hours),
+    );
+
+    let hint = if is_playing {
+        "[< / > seek · a pause · A stop]"
+    } else {
+        "[< / > seek · a resume · A stop]"
+    };
+
+    let mut spans = Vec::new();
+    spans.push(Span::styled(
+        icon,
+        Style::default()
+            .fg(icon_color)
+            .add_modifier(Modifier::BOLD),
+    ));
+    spans.push(Span::styled(
+        format!("{} ", elapsed_str),
+        Style::default()
+            .fg(theme::FG)
+            .add_modifier(Modifier::BOLD),
+    ));
+
+    let fixed_len = icon.chars().count() + elapsed_str.len() + 1 + total_str.len() + 1;
+    let show_hint = available_width > fixed_len + hint.len() + 14;
+    let hint_len = if show_hint { hint.len() + 1 } else { 0 };
+
+    let bar_width = available_width
+        .saturating_sub(fixed_len + hint_len + 2)
+        .clamp(6, 24);
+
+    if bar_width > 0 {
+        if let Some(total) = total_opt {
+            let ratio = if total > 0 {
+                (elapsed as f64 / total as f64).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let filled_len = ((bar_width as f64) * ratio).round() as usize;
+            let filled_len = filled_len.min(bar_width);
+
+            let filled_part = "━".repeat(filled_len.saturating_sub(1));
+            let knob = if filled_len > 0 { "●" } else { "─" };
+            let unfilled_len = bar_width.saturating_sub(filled_len.max(1));
+            let unfilled_part = "─".repeat(unfilled_len);
+
+            if !filled_part.is_empty() {
+                spans.push(Span::styled(filled_part, Style::default().fg(theme::TEAL)));
+            }
+            spans.push(Span::styled(
+                knob,
+                Style::default()
+                    .fg(theme::LIME)
+                    .add_modifier(Modifier::BOLD),
+            ));
+            if !unfilled_part.is_empty() {
+                spans.push(Span::styled(
+                    unfilled_part,
+                    Style::default().fg(theme::DARK_GREY),
+                ));
+            }
+        } else {
+            let pos = (elapsed as usize) % bar_width.max(1);
+            let before = "━".repeat(pos);
+            let knob = "●";
+            let after = "─".repeat(bar_width.saturating_sub(pos + 1));
+
+            if !before.is_empty() {
+                spans.push(Span::styled(before, Style::default().fg(theme::TEAL)));
+            }
+            spans.push(Span::styled(
+                knob,
+                Style::default()
+                    .fg(theme::LIME)
+                    .add_modifier(Modifier::BOLD),
+            ));
+            if !after.is_empty() {
+                spans.push(Span::styled(after, Style::default().fg(theme::DARK_GREY)));
+            }
+        }
+        spans.push(Span::raw(" "));
+    }
+
+    spans.push(Span::styled(total_str, Style::default().fg(theme::GREY)));
+
+    if show_hint {
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(hint, Style::default().fg(theme::GREY)));
+    }
+
+    spans
 }
