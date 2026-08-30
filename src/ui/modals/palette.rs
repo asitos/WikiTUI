@@ -42,7 +42,12 @@ pub fn render_palette_modal(f: &mut Frame, app: &App, size: Rect) {
     let mut lines = Vec::new();
 
     let input_line = Line::from(vec![
-        Span::styled(" > ", Style::default().fg(theme::YELLOW).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " > ",
+            Style::default()
+                .fg(theme::YELLOW)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(
             &app.command_palette.query,
             Style::default().fg(theme::FG).add_modifier(Modifier::BOLD),
@@ -70,11 +75,18 @@ pub fn render_palette_modal(f: &mut Frame, app: &App, size: Rect) {
             Style::default().fg(theme::GREY).italic(),
         )));
     } else {
-        for (idx, (cmd, match_indices)) in filtered.iter().enumerate().skip(scroll_offset).take(visible_rows) {
+        for (idx, (cmd, match_indices)) in filtered
+            .iter()
+            .enumerate()
+            .skip(scroll_offset)
+            .take(visible_rows)
+        {
             let is_selected = idx == app.command_palette.selected_idx;
             let cursor_str = if is_selected { " ▶ " } else { "   " };
             let cursor_style = if is_selected {
-                Style::default().fg(theme::YELLOW).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(theme::YELLOW)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(theme::DARK_GREY)
             };

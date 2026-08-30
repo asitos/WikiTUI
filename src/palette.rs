@@ -162,5 +162,8 @@ pub fn filter_commands(query: &str) -> Vec<(&'static CommandDef, Vec<usize>)> {
     }
 
     matches.sort_by_key(|(_, _, score)| *score);
-    matches.into_iter().map(|(cmd, indices, _)| (cmd, indices)).collect()
+    matches
+        .into_iter()
+        .map(|(cmd, indices, _)| (cmd, indices))
+        .collect()
 }

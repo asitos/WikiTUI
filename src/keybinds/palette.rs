@@ -14,7 +14,9 @@ pub fn handle_palette_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Up | KeyCode::BackTab => {
             app.command_palette.selected_idx = app.command_palette.selected_idx.saturating_sub(1);
         }
-        KeyCode::Char('p') | KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Char('p') | KeyCode::Char('k')
+            if key.modifiers.contains(KeyModifiers::CONTROL) =>
+        {
             app.command_palette.selected_idx = app.command_palette.selected_idx.saturating_sub(1);
         }
         KeyCode::Down | KeyCode::Tab => {
@@ -23,7 +25,9 @@ pub fn handle_palette_mode(app: &mut App, key: KeyEvent) {
                     (app.command_palette.selected_idx + 1).min(filtered_len.saturating_sub(1));
             }
         }
-        KeyCode::Char('n') | KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Char('n') | KeyCode::Char('j')
+            if key.modifiers.contains(KeyModifiers::CONTROL) =>
+        {
             if filtered_len > 0 {
                 app.command_palette.selected_idx =
                     (app.command_palette.selected_idx + 1).min(filtered_len.saturating_sub(1));

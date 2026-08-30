@@ -241,7 +241,9 @@ fn get_center_spans(
         }
         InputMode::CommandPalette => vec![Span::styled(
             "type to search · up/down navigate · enter run · esc close",
-            Style::default().fg(theme::YELLOW).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(theme::YELLOW)
+                .add_modifier(Modifier::BOLD),
         )],
         InputMode::Normal => {
             if app.audio_player.is_active() {
