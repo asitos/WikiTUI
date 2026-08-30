@@ -184,4 +184,10 @@ impl App {
             tab.active_pane_idx = next_idx;
         }
     }
+
+    pub fn resize_active_split(&mut self, delta: i16) {
+        let tab = self.active_tab_mut();
+        let target_idx = tab.active_pane_idx;
+        tab.layout_root.resize_pane(target_idx, delta);
+    }
 }

@@ -201,6 +201,16 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.waiting_for_split_cmd = true;
             }
+            KeyCode::Char('=')
+                if key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                app.resize_active_split(5);
+            }
+            KeyCode::Char('-')
+                if key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                app.resize_active_split(-5);
+            }
             KeyCode::Char('S') => {
                 if app.active_tab().name == "home" {
                     if let Some(session) = crate::session::SessionState::load() {

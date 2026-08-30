@@ -7,11 +7,17 @@ pub enum SplitDirection {
     Vertical,
 }
 
+fn default_ratio() -> u16 {
+    50
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LayoutNode {
     Leaf(usize),
     Split {
         direction: SplitDirection,
+        #[serde(default = "default_ratio")]
+        ratio: u16,
         left: Box<LayoutNode>,
         right: Box<LayoutNode>,
     },
@@ -29,16 +35,18 @@ impl LayoutNode {
             LayoutNode::Leaf(idx) => vec![(*idx, rect)],
             LayoutNode::Split {
                 direction,
+                ratio,
                 left,
                 right,
             } => {
                 let dir = match direction {
-                    SplitDirection::Horizontal => Direction::Vertical, // splitting horizontally yields rows
-                    SplitDirection::Vertical => Direction::Horizontal, // splitting vertically yields columns
+                    SplitDirection::Horizontal => Direction::Vertical,
+                    SplitDirection::Vertical => Direction::Horizontal,
                 };
+                let r = (*ratio).clamp(10, 90);
                 let chunks = Layout::default()
                     .direction(dir)
-                    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                    .constraints([Constraint::Percentage(r), Constraint::Percentage(100 - r)])
                     .split(rect);
                 let mut rects = left.compute_rects(chunks[0]);
                 rects.extend(right.compute_rects(chunks[1]));
@@ -58,6 +66,7 @@ impl LayoutNode {
                 if *idx == target_idx {
                     *self = LayoutNode::Split {
                         direction,
+                        ratio: 50,
                         left: Box::new(LayoutNode::Leaf(target_idx)),
                         right: Box::new(LayoutNode::Leaf(new_idx)),
                     };
@@ -84,6 +93,7 @@ impl LayoutNode {
             }
             LayoutNode::Split {
                 direction,
+                ratio,
                 left,
                 right,
             } => {
@@ -100,12 +110,47 @@ impl LayoutNode {
                 match (new_left, new_right) {
                     (Some(l), Some(r)) => Some(LayoutNode::Split {
                         direction: *direction,
+                        ratio: *ratio,
                         left: Box::new(l),
                         right: Box::new(r),
                     }),
                     (Some(l), None) => Some(l),
                     (None, Some(r)) => Some(r),
                     (None, None) => None,
+                }
+            }
+        }
+    }
+
+    pub fn contains_pane(&self, target_idx: usize) -> bool {
+        match self {
+            LayoutNode::Leaf(idx) => *idx == target_idx,
+            LayoutNode::Split { left, right, .. } => {
+                left.contains_pane(target_idx) || right.contains_pane(target_idx)
+            }
+        }
+    }
+
+    pub fn resize_pane(&mut self, target_idx: usize, delta: i16) -> bool {
+        match self {
+            LayoutNode::Leaf(_) => false,
+            LayoutNode::Split {
+                ratio, left, right, ..
+            } => {
+                if left.contains_pane(target_idx) {
+                    if left.resize_pane(target_idx, delta) {
+                        return true;
+                    }
+                    *ratio = ((*ratio as i16) + delta).clamp(10, 90) as u16;
+                    true
+                } else if right.contains_pane(target_idx) {
+                    if right.resize_pane(target_idx, delta) {
+                        return true;
+                    }
+                    *ratio = ((*ratio as i16) - delta).clamp(10, 90) as u16;
+                    true
+                } else {
+                    false
                 }
             }
         }
