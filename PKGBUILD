@@ -1,6 +1,6 @@
 # Maintainer: sharkthakftw <sharkthakftw@gmail.com>
 pkgname=wikid
-pkgver=2.7.0
+pkgver=2.8.0
 pkgrel=1
 pkgdesc="feature-rich terminal wikipedia client"
 arch=('x86_64' 'aarch64')
