@@ -172,3 +172,58 @@ pub fn format_relative_time(timestamp: u64) -> String {
         format!("{}mo ago", months)
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct SemanticHint {
+    pub key: char,
+    pub char_idx: usize,
+    pub title: String,
+}
+
+pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
+    const RESERVED_KEYS: &[char] = &[
+        'f', 'n', 'd', 't', 'r', 'q', 'z', 'F', 'a', 'A', 'o', 'c', 'm', 'M',
+        'y', 'Y', 'U', 'S', 'j', 'k', 'g', 'G', 'h', 'l', 'x', 'u', 's', 'v',
+        ':', '?', ',', '/', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+    ];
+
+    let mut used_keys = std::collections::HashSet::new();
+    let mut hints = Vec::with_capacity(titles.len());
+
+    for title in titles {
+        let mut assigned = None;
+        for (idx, ch) in title.char_indices() {
+            if ch.is_ascii_alphabetic() {
+                let lower = ch.to_ascii_lowercase();
+                if !RESERVED_KEYS.contains(&lower) && used_keys.insert(lower) {
+                    assigned = Some(SemanticHint {
+                        key: lower,
+                        char_idx: idx,
+                        title: title.clone(),
+                    });
+                    break;
+                }
+            }
+        }
+
+        if assigned.is_none() {
+            for (idx, ch) in title.char_indices() {
+                if ch.is_ascii_alphabetic() {
+                    let upper = ch.to_ascii_uppercase();
+                    if !RESERVED_KEYS.contains(&upper) && used_keys.insert(upper) {
+                        assigned = Some(SemanticHint {
+                            key: upper,
+                            char_idx: idx,
+                            title: title.clone(),
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+
+        hints.push(assigned);
+    }
+
+    hints
+}

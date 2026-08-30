@@ -214,21 +214,29 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             inner_width,
         ));
 
-        let items: Vec<(String, String, String)> = recent_articles
+        let displayed_recent: Vec<(String, Option<u64>)> = recent_articles
             .iter()
             .take(displayed_count)
+            .cloned()
+            .collect();
+        let titles: Vec<String> = displayed_recent.iter().map(|(t, _)| t.clone()).collect();
+        let hints = crate::app::recent::compute_semantic_hints(&titles);
+
+        let items: Vec<(String, String, String, Option<crate::app::recent::SemanticHint>)> = displayed_recent
+            .into_iter()
+            .zip(hints)
             .enumerate()
-            .map(|(idx, (title, ts))| {
+            .map(|(idx, ((title, ts), hint))| {
                 let time_str = ts
                     .map(crate::app::recent::format_relative_time)
                     .unwrap_or_default();
-                (format!("{}. ", idx + 1), title.clone(), time_str)
+                (format!("{}. ", idx + 1), title, time_str, hint)
             })
             .collect();
 
         let max_item_width = items
             .iter()
-            .map(|(p, t, time_str)| {
+            .map(|(p, t, time_str, _)| {
                 let base_w = p.len() + unicode_width::UnicodeWidthStr::width(t.as_str());
                 if !time_str.is_empty() {
                     base_w + 3 + unicode_width::UnicodeWidthStr::width(time_str.as_str())
@@ -241,12 +249,27 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
 
         let block_pad = (inner_width.saturating_sub(max_item_width)) / 2;
 
-        for (num_prefix, title, time_str) in items {
+        for (num_prefix, title, time_str, hint) in items {
             let mut line_spans = vec![
                 Span::raw(" ".repeat(block_pad)),
                 Span::styled(num_prefix, Style::default().fg(theme::GREY)),
-                Span::styled(title, Style::default().fg(theme::FG)),
             ];
+
+            if let Some(h) = hint {
+                for (idx, ch) in title.char_indices() {
+                    if idx == h.char_idx {
+                        line_spans.push(Span::styled(
+                            ch.to_string(),
+                            Style::default().fg(theme::PINK).bold().underlined(),
+                        ));
+                    } else {
+                        line_spans.push(Span::styled(ch.to_string(), Style::default().fg(theme::FG)));
+                    }
+                }
+            } else {
+                line_spans.push(Span::styled(title, Style::default().fg(theme::FG)));
+            }
+
             if !time_str.is_empty() {
                 line_spans.push(Span::styled(
                     format!(" · {}", time_str),
