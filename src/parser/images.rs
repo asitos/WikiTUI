@@ -25,7 +25,7 @@ pub(crate) fn render_image_node(
 
     let (cols, rows) = calculate_terminal_dimensions(width_px, height_px, max_cols, max_rows);
 
-    let line_idx = doc.lines.len();
+    let line_idx = doc.lines.len() + 1;
 
     let image_block = ImageBlock {
         url,
@@ -37,9 +37,27 @@ pub(crate) fn render_image_node(
     };
 
     doc.lines.push(Line::from(""));
-    for _ in 0..rows {
+    let inner_width = cols.saturating_sub(2);
+    for r in 0..rows {
+        let content = if r == 0 {
+            format!("┌{}┐", "─".repeat(inner_width))
+        } else if r == rows - 1 {
+            format!("└{}┘", "─".repeat(inner_width))
+        } else if r == rows / 2 {
+            let label = " 🖼 [image] ";
+            if inner_width >= label.chars().count() {
+                let pad = inner_width - label.chars().count();
+                let left_pad = pad / 2;
+                let right_pad = pad - left_pad;
+                format!("│{}{}{}│", " ".repeat(left_pad), label, " ".repeat(right_pad))
+            } else {
+                format!("│{}│", " ".repeat(inner_width))
+            }
+        } else {
+            format!("│{}│", " ".repeat(inner_width))
+        };
         doc.lines.push(Line::from(vec![
-            Span::styled(" ".repeat(cols), Style::default())
+            Span::styled(content, Style::default().fg(crate::theme::GREY))
         ]));
     }
 

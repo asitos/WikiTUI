@@ -101,6 +101,7 @@ fn run_app(
 
         if !app.pending_image_renders.is_empty() {
             let mut stdout = io::stdout();
+            let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut stdout);
             for task in app.pending_image_renders.drain(..) {
                 if let Ok(bytes) = std::fs::read(&task.path) {
                     let _ = wikid::graphics::kitty::render_kitty_image_at(
@@ -113,6 +114,11 @@ fn run_app(
                     );
                 }
             }
+            app.has_active_kitty_images = true;
+        } else if app.has_active_kitty_images {
+            let mut stdout = io::stdout();
+            let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut stdout);
+            app.has_active_kitty_images = false;
         }
 
         let has_loading = app.feed.is_fetching
