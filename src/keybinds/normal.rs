@@ -226,6 +226,9 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             {
                 app.edit_search_mode();
             }
+            KeyCode::Char('I') => {
+                app.toggle_images();
+            }
             KeyCode::Char('s') => {
                 app.activate_selected_in_split(SplitDirection::Horizontal);
             }

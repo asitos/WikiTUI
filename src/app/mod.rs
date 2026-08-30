@@ -206,4 +206,14 @@ impl App {
         let idx = tab.active_pane_idx;
         &mut tab.panes[idx]
     }
+
+    pub fn toggle_images(&mut self) {
+        self.config.reader.show_images = !self.config.reader.show_images;
+        let status = if self.config.reader.show_images {
+            "enabled"
+        } else {
+            "disabled"
+        };
+        self.set_status_message(format!("inline images {}", status));
+    }
 }

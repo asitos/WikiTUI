@@ -41,6 +41,12 @@ pub const COMMANDS: &[CommandDef] = &[
         execute: |app| app.toggle_feed_mode(),
     },
     CommandDef {
+        id: "toggle_images",
+        label: "toggle inline images",
+        shortcut: Some("I"),
+        execute: |app| app.toggle_images(),
+    },
+    CommandDef {
         id: "play_pause_audio",
         label: "play / pause audio",
         shortcut: Some("a"),
