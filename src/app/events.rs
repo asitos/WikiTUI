@@ -69,6 +69,8 @@ impl App {
                         } else {
                             None
                         };
+                        let image_urls: Vec<String> =
+                            parsed_doc.images.iter().map(|img| img.url.clone()).collect();
                         pane.content = PaneContent::ArticleText {
                             title,
                             raw_html: content,
@@ -83,6 +85,16 @@ impl App {
                             last_max_image_height: max_image_height,
                         };
                         pane.selected_link_idx = initial_link_idx;
+                        for img_url in image_urls {
+                            self.send_fetch_image(img_url);
+                        }
+                    }
+                }
+            }
+            NetworkEvent::ImageLoaded { url, path } => {
+                for tab in &mut self.tabs {
+                    for pane in &mut tab.panes {
+                        pane.loaded_images.insert(url.clone(), path.clone());
                     }
                 }
             }

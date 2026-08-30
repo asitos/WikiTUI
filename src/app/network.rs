@@ -66,4 +66,13 @@ impl App {
             timeout: self.config.network.timeout,
         });
     }
+
+    pub fn send_fetch_image(&self, url: String) {
+        if self.config.reader.show_images {
+            let _ = self.cmd_tx.send(NetworkCommand::FetchImage {
+                url,
+                timeout: self.config.network.timeout,
+            });
+        }
+    }
 }

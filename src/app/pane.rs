@@ -71,6 +71,7 @@ pub struct Pane {
     pub show_toc: bool,
     pub selected_toc_idx: Option<usize>,
     pub toc_focused: bool,
+    pub loaded_images: std::collections::HashMap<String, std::path::PathBuf>,
 
     pub history_back: Vec<String>,
     pub history_forward: Vec<String>,
@@ -99,6 +100,7 @@ impl Pane {
             show_toc: false,
             selected_toc_idx: None,
             toc_focused: false,
+            loaded_images: std::collections::HashMap::new(),
 
             history_back: Vec::new(),
             history_forward: Vec::new(),
