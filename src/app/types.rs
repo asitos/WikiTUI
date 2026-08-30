@@ -21,6 +21,7 @@ pub enum InputMode {
     Settings,
     Categories,
     DailyFeedModal,
+    CommandPalette,
 }
 
 pub fn is_article_link(title: &str) -> bool {
@@ -98,4 +99,10 @@ impl Default for ListsModalState {
             viewer_focus_right: false,
         }
     }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CommandPaletteState {
+    pub query: String,
+    pub selected_idx: usize,
 }

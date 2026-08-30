@@ -79,6 +79,12 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('q') => {
                 app.quit();
             }
+            KeyCode::Char(':') => {
+                app.open_command_palette();
+            }
+            KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.open_command_palette();
+            }
             KeyCode::Char('z') => {
                 app.toggle_zen_mode();
             }
