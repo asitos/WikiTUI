@@ -6,13 +6,10 @@ use std::sync::Mutex;
 const BASE64_ALPHABET: &[u8; 64] =
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-enum CachedKittyPayload {
-    Png(String),
-    Rgba {
-        b64: String,
-        width: u32,
-        height: u32,
-    },
+struct CachedKittyPayload {
+    b64: String,
+    width: u32,
+    height: u32,
 }
 
 static KITTY_PAYLOAD_CACHE: Mutex<Option<HashMap<PathBuf, CachedKittyPayload>>> = Mutex::new(None);
@@ -62,12 +59,7 @@ pub fn render_kitty_image_from_path<W: Write>(
 
     if let Some(payload) = cache.get(path) {
         write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
-        match payload {
-            CachedKittyPayload::Png(b64) => render_kitty_png_chunked(writer, b64, cols, rows)?,
-            CachedKittyPayload::Rgba { b64, width, height } => {
-                render_kitty_rgba_chunked(writer, b64, *width, *height, cols, rows)?
-            }
-        }
+        render_kitty_rgba_chunked(writer, &payload.b64, payload.width, payload.height, cols, rows)?;
         return Ok(());
     }
 
@@ -75,20 +67,25 @@ pub fn render_kitty_image_from_path<W: Write>(
         return Ok(());
     };
 
-    if image_bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
-        let b64 = base64_encode(&image_bytes);
-        write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
-        render_kitty_png_chunked(writer, &b64, cols, rows)?;
-        cache.insert(path.to_path_buf(), CachedKittyPayload::Png(b64));
-    } else if let Ok(img) = image::load_from_memory(&image_bytes) {
+    if let Ok(img) = image::load_from_memory(&image_bytes) {
         let (w, h) = (img.width(), img.height());
-        let rgba = img.to_rgba8();
+        let mut rgba = img.to_rgba8();
+        for pixel in rgba.pixels_mut() {
+            let a = pixel[3] as u32;
+            if a < 255 {
+                let inv_a = 255 - a;
+                pixel[0] = ((pixel[0] as u32 * a + 255 * inv_a) / 255) as u8;
+                pixel[1] = ((pixel[1] as u32 * a + 255 * inv_a) / 255) as u8;
+                pixel[2] = ((pixel[2] as u32 * a + 255 * inv_a) / 255) as u8;
+                pixel[3] = 255;
+            }
+        }
         let b64 = base64_encode(&rgba);
         write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
         render_kitty_rgba_chunked(writer, &b64, w, h, cols, rows)?;
         cache.insert(
             path.to_path_buf(),
-            CachedKittyPayload::Rgba {
+            CachedKittyPayload {
                 b64,
                 width: w,
                 height: h,

@@ -64,13 +64,16 @@ pub fn render_halfblock_image_from_bytes(
         target_px_height as u32,
         image::imageops::FilterType::Triangle,
     );
-    let rgb = resized.to_rgb8();
-    let pixels: Vec<RgbPixel> = rgb
+    let rgba = resized.to_rgba8();
+    let pixels: Vec<RgbPixel> = rgba
         .pixels()
-        .map(|p| RgbPixel {
-            r: p[0],
-            g: p[1],
-            b: p[2],
+        .map(|p| {
+            let a = p[3] as u32;
+            let inv_a = 255 - a;
+            let r = ((p[0] as u32 * a + 255 * inv_a) / 255) as u8;
+            let g = ((p[1] as u32 * a + 255 * inv_a) / 255) as u8;
+            let b = ((p[2] as u32 * a + 255 * inv_a) / 255) as u8;
+            RgbPixel { r, g, b }
         })
         .collect();
     let mut lines = render_halfblock_lines(&pixels, target_cols, target_px_height);
