@@ -105,9 +105,13 @@ impl AudioPlayer {
         let mpv_start = format!("--start={}", start_secs);
         let vlc_start = format!("--start-time={}", start_secs);
 
+        const USER_AGENT: &str = "wikid/2.6.0 (https://github.com/sharkthakftw/wikid)";
+        let mpv_ua = format!("--user-agent={}", USER_AGENT);
+        let vlc_ua = format!("--http-user-agent={}", USER_AGENT);
+
         let child_res = match backend {
             AudioBackend::Mpv => {
-                let mut args = vec!["--no-video", "--really-quiet"];
+                let mut args = vec!["--no-video", "--really-quiet", &mpv_ua];
                 if start_secs > 0 {
                     args.push(&mpv_start);
                 }
@@ -120,7 +124,14 @@ impl AudioPlayer {
                     .spawn()
             }
             AudioBackend::Ffplay => {
-                let mut args = vec!["-nodisp", "-autoexit", "-loglevel", "quiet"];
+                let mut args = vec![
+                    "-nodisp",
+                    "-autoexit",
+                    "-loglevel",
+                    "error",
+                    "-user_agent",
+                    USER_AGENT,
+                ];
                 if start_secs > 0 {
                     args.extend(["-ss", &start_str]);
                 }
@@ -133,7 +144,7 @@ impl AudioPlayer {
                     .spawn()
             }
             AudioBackend::Cvlc => {
-                let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy"];
+                let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy", &vlc_ua];
                 if start_secs > 0 {
                     args.push(&vlc_start);
                 }
@@ -146,7 +157,7 @@ impl AudioPlayer {
                     .spawn()
             }
             AudioBackend::Vlc => {
-                let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy"];
+                let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy", &vlc_ua];
                 if start_secs > 0 {
                     args.push(&vlc_start);
                 }
@@ -313,63 +324,94 @@ impl AudioPlayer {
 }
 
 pub fn parse_duration_to_secs(dur_str: &str) -> Option<u64> {
-    let s = dur_str.trim().to_lowercase();
+    let clean: String = dur_str
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == ':' || c == '.' {
+                c.to_ascii_lowercase()
+            } else {
+                ' '
+            }
+        })
+        .collect();
+    let s = clean.trim();
     if s.is_empty() {
         return None;
     }
 
-    if s.contains(':') {
-        let parts: Vec<&str> = s.split(':').collect();
-        match parts.len() {
-            2 => {
-                let m: u64 = parts[0].trim().parse().ok()?;
-                let sec: u64 = parts[1].trim().parse().ok()?;
-                return Some(m * 60 + sec);
+    for token in s.split_whitespace() {
+        if token.contains(':') {
+            let parts: Vec<&str> = token.split(':').collect();
+            match parts.len() {
+                2 => {
+                    if let (Ok(m), Ok(sec)) =
+                        (parts[0].trim().parse::<u64>(), parts[1].trim().parse::<u64>())
+                    {
+                        return Some(m * 60 + sec);
+                    }
+                }
+                3 => {
+                    if let (Ok(h), Ok(m), Ok(sec)) = (
+                        parts[0].trim().parse::<u64>(),
+                        parts[1].trim().parse::<u64>(),
+                        parts[2].trim().parse::<u64>(),
+                    ) {
+                        return Some(h * 3600 + m * 60 + sec);
+                    }
+                }
+                _ => {}
             }
-            3 => {
-                let h: u64 = parts[0].trim().parse().ok()?;
-                let m: u64 = parts[1].trim().parse().ok()?;
-                let sec: u64 = parts[2].trim().parse().ok()?;
-                return Some(h * 3600 + m * 60 + sec);
-            }
-            _ => {}
         }
     }
 
     let mut total_secs = 0u64;
     let mut found_any = false;
 
-    let words: Vec<&str> = s
-        .split(|c: char| c.is_whitespace() || c == ',')
-        .filter(|w| !w.is_empty())
-        .collect();
+    let words: Vec<&str> = s.split_whitespace().collect();
     let mut i = 0;
     while i < words.len() {
-        if let Ok(num) = words[i].parse::<u64>() {
+        let w = words[i];
+        if let Ok(num) = w.parse::<u64>() {
             if i + 1 < words.len() {
                 let unit = words[i + 1];
-                if unit.starts_with("hour") || unit.starts_with("hr") {
+                if unit.starts_with("hour") || unit.starts_with("hr") || unit == "h" {
                     total_secs += num * 3600;
                     found_any = true;
                     i += 2;
                     continue;
-                } else if unit.starts_with("minute") || unit.starts_with("min") {
+                } else if unit.starts_with("minute") || unit.starts_with("min") || unit == "m" {
                     total_secs += num * 60;
                     found_any = true;
                     i += 2;
                     continue;
-                } else if unit.starts_with("second") || unit.starts_with("sec") {
+                } else if unit.starts_with("second") || unit.starts_with("sec") || unit == "s" {
                     total_secs += num;
                     found_any = true;
                     i += 2;
                     continue;
                 }
             }
+        } else {
+            if let Some(pos) = w.find(|c: char| c.is_alphabetic()) {
+                let (digits, unit) = w.split_at(pos);
+                if let Ok(num) = digits.parse::<u64>() {
+                    if unit.starts_with('h') {
+                        total_secs += num * 3600;
+                        found_any = true;
+                    } else if unit.starts_with('m') {
+                        total_secs += num * 60;
+                        found_any = true;
+                    } else if unit.starts_with('s') {
+                        total_secs += num;
+                        found_any = true;
+                    }
+                }
+            }
         }
         i += 1;
     }
 
-    if found_any {
+    if found_any && total_secs > 0 {
         Some(total_secs)
     } else {
         None
