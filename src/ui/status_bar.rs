@@ -413,11 +413,35 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
         "[< / > seek · a resume · A stop]"
     };
 
-    let show_hint = available_width > icon.chars().count() + min_bar_width + hint.len() + 4;
+    let raw_title = app.audio_player.current_title.as_deref().unwrap_or("");
+    let title_budget = if available_width > 80 {
+        24
+    } else if available_width > 60 {
+        16
+    } else if available_width > 45 {
+        10
+    } else {
+        0
+    };
+
+    let display_title = if title_budget > 0 && !raw_title.is_empty() {
+        if raw_title.chars().count() > title_budget {
+            let truncated: String = raw_title.chars().take(title_budget.saturating_sub(1)).collect();
+            Some(format!("{}…", truncated))
+        } else {
+            Some(raw_title.to_string())
+        }
+    } else {
+        None
+    };
+
+    let title_len = display_title.as_ref().map_or(0, |t| t.chars().count() + 2);
+
+    let show_hint = available_width > icon.chars().count() + title_len + min_bar_width + hint.len() + 4;
     let hint_len = if show_hint { hint.len() + 2 } else { 0 };
 
     let bar_width = available_width
-        .saturating_sub(icon.chars().count() + hint_len + 2)
+        .saturating_sub(icon.chars().count() + title_len + hint_len + 2)
         .clamp(min_bar_width, 36);
 
     let pad_total = bar_width.saturating_sub(label.chars().count());
@@ -446,6 +470,15 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
         icon,
         Style::default().fg(fill_bg).add_modifier(Modifier::BOLD),
     ));
+
+    if let Some(t) = display_title {
+        spans.push(Span::styled(
+            format!("{}  ", t),
+            Style::default()
+                .fg(theme::FG)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
 
     if !filled_str.is_empty() {
         spans.push(Span::styled(
