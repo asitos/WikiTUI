@@ -1,6 +1,18 @@
 use crate::api::SearchResultItem;
 use crate::parser::{parse_wikipedia_html, ParsedDocument};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ArticleRenderOptions {
+    pub width: usize,
+    pub show_footnotes: bool,
+    pub show_external_links: bool,
+    pub heading_marker: bool,
+    pub code_line_numbers: bool,
+    pub show_icons: bool,
+    pub show_images: bool,
+    pub max_image_height: usize,
+}
+
 #[derive(Clone, Debug)]
 pub enum PaneContent {
     Empty,
@@ -12,14 +24,7 @@ pub enum PaneContent {
         title: String,
         raw_html: String,
         parsed_doc: Box<ParsedDocument>,
-        last_width: usize,
-        last_show_footnotes: bool,
-        last_show_external_links: bool,
-        last_heading_marker: bool,
-        last_code_line_numbers: bool,
-        last_show_icons: bool,
-        last_show_images: bool,
-        last_max_image_height: usize,
+        last_render_options: ArticleRenderOptions,
     },
     Error(String),
 }
@@ -128,61 +133,29 @@ impl Pane {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn ensure_parsed_width(
-        &mut self,
-        width: usize,
-        show_footnotes: bool,
-        show_external_links: bool,
-        heading_marker: bool,
-        code_line_numbers: bool,
-        show_icons: bool,
-        show_images: bool,
-        max_image_height: usize,
-    ) {
+    pub fn ensure_parsed_width(&mut self, opts: ArticleRenderOptions) {
         if let PaneContent::ArticleText {
             raw_html,
             parsed_doc,
-            last_width,
-            last_show_footnotes,
-            last_show_external_links,
-            last_heading_marker,
-            last_code_line_numbers,
-            last_show_icons,
-            last_show_images,
-            last_max_image_height,
+            last_render_options,
             ..
         } = &mut self.content
         {
-            if *last_width == width
-                && *last_show_footnotes == show_footnotes
-                && *last_show_external_links == show_external_links
-                && *last_heading_marker == heading_marker
-                && *last_code_line_numbers == code_line_numbers
-                && *last_show_icons == show_icons
-                && *last_show_images == show_images
-                && *last_max_image_height == max_image_height
-            {
+            if *last_render_options == opts {
                 return;
             }
             **parsed_doc = parse_wikipedia_html(
                 raw_html,
-                width,
-                show_footnotes,
-                show_external_links,
-                heading_marker,
-                code_line_numbers,
-                show_icons,
-                show_images,
-                max_image_height,
+                opts.width,
+                opts.show_footnotes,
+                opts.show_external_links,
+                opts.heading_marker,
+                opts.code_line_numbers,
+                opts.show_icons,
+                opts.show_images,
+                opts.max_image_height,
             );
-            *last_width = width;
-            *last_show_footnotes = show_footnotes;
-            *last_show_external_links = show_external_links;
-            *last_heading_marker = heading_marker;
-            *last_code_line_numbers = code_line_numbers;
-            *last_show_icons = show_icons;
-            *last_show_images = show_images;
-            *last_max_image_height = max_image_height;
+            *last_render_options = opts;
             if let Some(idx) = self.selected_link_idx {
                 if idx >= parsed_doc.links.len() {
                     self.selected_link_idx = if parsed_doc.links.is_empty() {
