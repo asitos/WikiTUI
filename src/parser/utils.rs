@@ -137,9 +137,9 @@ pub fn extract_domain(url: &str) -> Option<String> {
     Some(clean_host.to_lowercase())
 }
 
-pub fn decode_html_entities(s: &str) -> String {
+pub fn decode_html_entities(s: &str) -> std::borrow::Cow<'_, str> {
     if !s.contains('&') {
-        return s.to_string();
+        return std::borrow::Cow::Borrowed(s);
     }
 
     let mut result = String::with_capacity(s.len());
@@ -226,7 +226,7 @@ pub fn decode_html_entities(s: &str) -> String {
         result.push(c);
     }
 
-    result
+    std::borrow::Cow::Owned(result)
 }
 
 pub fn to_superscript_char(c: char) -> char {

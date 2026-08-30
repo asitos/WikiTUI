@@ -238,7 +238,7 @@ fn collect_cell_tokens<'a>(
                     } else if current_is_sub {
                         to_subscript_str(&decoded_text)
                     } else {
-                        decoded_text
+                        decoded_text.into_owned()
                     };
                     let cleaned = transformed.replace(['\r', '\t', '\n'], " ");
                     if !cleaned.trim().is_empty() || cleaned == " " {
