@@ -50,14 +50,9 @@ pub fn render_article_pane(
         false
     };
 
-    let has_selected_link = pane
+    let selected_link = pane
         .selected_link_idx
-        .and_then(|idx| parsed_doc.links.get(idx))
-        .is_some_and(|link| {
-            link.span_indices
-                .iter()
-                .any(|&(line_idx, _)| line_idx >= view_start && line_idx < view_end)
-        });
+        .and_then(|idx| parsed_doc.links.get(idx));
 
     let has_search_matches =
         if !pane.local_matches.is_empty() && !pane.local_search_query.trim().is_empty() {
@@ -70,106 +65,97 @@ pub fn render_article_pane(
             false
         };
 
-    if !has_underline && !has_selected_link && !has_search_matches {
-        let borrowed_lines: Vec<Line<'_>> = parsed_doc.lines[view_start..view_end]
-            .iter()
-            .map(|line| {
-                let spans: Vec<Span<'_>> = line
-                    .spans
-                    .iter()
-                    .map(|s| Span::styled(s.content.as_ref(), s.style))
-                    .collect();
-                let mut l = Line::from(spans);
-                l.alignment = line.alignment;
-                l
-            })
-            .collect();
-        let paragraph = Paragraph::new(borrowed_lines).block(block);
-        f.render_widget(paragraph, rect);
+    let mut rendered_lines: Vec<Line<'_>> = Vec::with_capacity(view_len);
+
+    let first_link_idx = if has_underline {
+        parsed_doc.links.partition_point(|link| {
+            link.span_indices
+                .last()
+                .map(|&(l, _)| l < view_start)
+                .unwrap_or(true)
+        })
     } else {
-        let mut rendered_lines: Vec<Line<'static>> = parsed_doc.lines[view_start..view_end].to_vec();
+        0
+    };
 
-        if app.config.reader.underline_links {
-            let first_link_idx = parsed_doc.links.partition_point(|link| {
-                link.span_indices
-                    .last()
-                    .map(|&(l, _)| l < view_start)
-                    .unwrap_or(true)
-            });
+    let query_len = pane.local_search_query.len();
+    let mut match_ptr = if has_search_matches {
+        pane.local_matches
+            .partition_point(|m| m.line_idx < view_start)
+    } else {
+        0
+    };
+    let selected_match = pane
+        .selected_match_idx
+        .and_then(|idx| pane.local_matches.get(idx));
 
+    for (local_idx, orig_line) in parsed_doc.lines[view_start..view_end].iter().enumerate() {
+        let line_idx = view_start + local_idx;
+
+        let mut spans: Vec<Span<'_>> = orig_line
+            .spans
+            .iter()
+            .map(|s| Span::styled(s.content.as_ref(), s.style))
+            .collect();
+
+        if has_underline {
             for link in &parsed_doc.links[first_link_idx..] {
                 let Some(&(first_line, _)) = link.span_indices.first() else {
                     continue;
                 };
-                if first_line >= view_end {
+                if first_line > line_idx {
                     break;
                 }
                 if link.is_citation() {
                     continue;
                 }
-                for &(line_idx, span_idx) in &link.span_indices {
-                    if line_idx >= view_start && line_idx < view_end {
-                        if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
-                            if let Some(span) = line.spans.get_mut(span_idx) {
-                                span.style = span.style.add_modifier(Modifier::UNDERLINED);
-                            }
+                for &(l_idx, span_idx) in &link.span_indices {
+                    if l_idx == line_idx {
+                        if let Some(span) = spans.get_mut(span_idx) {
+                            span.style = span.style.add_modifier(Modifier::UNDERLINED);
                         }
                     }
                 }
             }
         }
 
-        if let Some(link) = pane
-            .selected_link_idx
-            .and_then(|idx| parsed_doc.links.get(idx))
-        {
-            for &(line_idx, span_idx) in &link.span_indices {
-                if line_idx >= view_start && line_idx < view_end {
-                    if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
-                        if let Some(span) = line.spans.get_mut(span_idx) {
-                            span.style = Style::default()
-                                .fg(theme::VIOLET)
-                                .bold()
-                                .add_modifier(Modifier::UNDERLINED);
-                        }
+        if let Some(link) = selected_link {
+            for &(l_idx, span_idx) in &link.span_indices {
+                if l_idx == line_idx {
+                    if let Some(span) = spans.get_mut(span_idx) {
+                        span.style = Style::default()
+                            .fg(theme::VIOLET)
+                            .bold()
+                            .add_modifier(Modifier::UNDERLINED);
                     }
                 }
             }
         }
 
-        if !pane.local_matches.is_empty() && !pane.local_search_query.trim().is_empty() {
-            let query_len = pane.local_search_query.len();
-            let first_match_idx = pane
-                .local_matches
-                .partition_point(|m| m.line_idx < view_start);
-            let selected_match = pane
-                .selected_match_idx
-                .and_then(|idx| pane.local_matches.get(idx));
+        if has_search_matches {
+            let mut line_matches = Vec::new();
+            while match_ptr < pane.local_matches.len()
+                && pane.local_matches[match_ptr].line_idx == line_idx
+            {
+                let m = &pane.local_matches[match_ptr];
+                let is_active = selected_match
+                    .is_some_and(|sm| sm.line_idx == m.line_idx && sm.char_offset == m.char_offset);
+                line_matches.push((m.char_offset, m.char_offset + query_len, is_active));
+                match_ptr += 1;
+            }
 
-            let mut match_ptr = first_match_idx;
-            for (local_idx, line) in rendered_lines.iter_mut().enumerate() {
-                let line_idx = view_start + local_idx;
-                let mut line_matches = Vec::new();
-
-                while match_ptr < pane.local_matches.len()
-                    && pane.local_matches[match_ptr].line_idx == line_idx
-                {
-                    let m = &pane.local_matches[match_ptr];
-                    let is_active = selected_match
-                        .is_some_and(|sm| sm.line_idx == m.line_idx && sm.char_offset == m.char_offset);
-                    line_matches.push((m.char_offset, m.char_offset + query_len, is_active));
-                    match_ptr += 1;
-                }
-
-                if !line_matches.is_empty() {
-                    apply_search_highlights_to_line(line, &line_matches);
-                }
+            if !line_matches.is_empty() {
+                spans = build_search_highlighted_spans(&spans, &line_matches);
             }
         }
 
-        let paragraph = Paragraph::new(rendered_lines).block(block);
-        f.render_widget(paragraph, rect);
+        let mut line = Line::from(spans);
+        line.alignment = orig_line.alignment;
+        rendered_lines.push(line);
     }
+
+    let paragraph = Paragraph::new(rendered_lines).block(block);
+    f.render_widget(paragraph, rect);
 
     render_scroll_indicator(
         f,
@@ -196,18 +182,18 @@ pub fn render_article_pane(
     }
 }
 
-pub fn apply_search_highlights_to_line(
-    line: &mut Line<'static>,
+pub fn build_search_highlighted_spans<'a>(
+    spans: &[Span<'a>],
     line_matches: &[(usize, usize, bool)],
-) {
+) -> Vec<Span<'a>> {
     if line_matches.is_empty() {
-        return;
+        return spans.to_vec();
     }
 
-    let mut new_spans = Vec::with_capacity(line.spans.len() + line_matches.len() * 2);
+    let mut new_spans = Vec::with_capacity(spans.len() + line_matches.len() * 2);
     let mut global_offset = 0;
 
-    for span in &line.spans {
+    for span in spans {
         let text = span.content.as_ref();
         let span_len = text.len();
         let span_start = global_offset;
@@ -224,35 +210,52 @@ pub fn apply_search_highlights_to_line(
             let rel_match_end = (m_end.saturating_sub(span_start)).min(span_len);
 
             if rel_match_start > text_cursor && rel_match_start <= span_len {
-                let unmatch_slice = &text[text_cursor..rel_match_start];
-                new_spans.push(Span::styled(unmatch_slice.to_string(), span.style));
+                let unmatch_span = match &span.content {
+                    std::borrow::Cow::Borrowed(s) => {
+                        Span::styled(&s[text_cursor..rel_match_start], span.style)
+                    }
+                    std::borrow::Cow::Owned(s) => {
+                        Span::styled(s[text_cursor..rel_match_start].to_string(), span.style)
+                    }
+                };
+                new_spans.push(unmatch_span);
                 text_cursor = rel_match_start;
             }
 
             if rel_match_end > text_cursor && rel_match_end <= span_len {
-                let match_slice = &text[text_cursor..rel_match_end];
                 let bg_color = if is_active {
                     theme::YELLOW
                 } else {
                     theme::BEIGE
                 };
-                new_spans.push(Span::styled(
-                    match_slice.to_string(),
-                    Style::default().bg(bg_color).fg(theme::BG).bold(),
-                ));
+                let match_style = Style::default().bg(bg_color).fg(theme::BG).bold();
+                let match_span = match &span.content {
+                    std::borrow::Cow::Borrowed(s) => {
+                        Span::styled(&s[text_cursor..rel_match_end], match_style)
+                    }
+                    std::borrow::Cow::Owned(s) => {
+                        Span::styled(s[text_cursor..rel_match_end].to_string(), match_style)
+                    }
+                };
+                new_spans.push(match_span);
                 text_cursor = rel_match_end;
             }
         }
 
         if text_cursor < span_len {
-            let trailing_slice = &text[text_cursor..];
-            new_spans.push(Span::styled(trailing_slice.to_string(), span.style));
+            let trailing_span = match &span.content {
+                std::borrow::Cow::Borrowed(s) => Span::styled(&s[text_cursor..], span.style),
+                std::borrow::Cow::Owned(s) => {
+                    Span::styled(s[text_cursor..].to_string(), span.style)
+                }
+            };
+            new_spans.push(trailing_span);
         }
 
         global_offset = span_end;
     }
 
-    line.spans = new_spans;
+    new_spans
 }
 
 pub fn get_link_at_coord(
