@@ -3,14 +3,12 @@ pub mod cache;
 pub mod duration;
 pub mod probe;
 pub mod sync;
-pub mod types;
 
-pub use backend::{detect_backend, AudioBackend};
+pub use backend::{detect_backend, AudioBackend, PlaybackState};
 pub use cache::{get_cached_audio_path, get_cached_duration, save_cached_duration};
 pub use duration::parse_duration_to_secs;
 pub use probe::probe_exact_duration;
 pub use sync::{spawn_playhead_monitor, PlayheadUpdate};
-pub use types::PlaybackState;
 
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::Receiver;

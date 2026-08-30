@@ -9,6 +9,13 @@ pub enum AudioBackend {
     Afplay,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlaybackState {
+    Stopped,
+    Playing,
+    Paused,
+}
+
 pub fn detect_backend() -> Option<AudioBackend> {
     if has_binary("mpv") {
         Some(AudioBackend::Mpv)
