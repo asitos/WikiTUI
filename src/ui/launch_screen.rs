@@ -254,15 +254,23 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             ];
 
             if let Some(h) = hint {
-                for (idx, ch) in title.char_indices() {
-                    if idx == h.char_idx {
-                        line_spans.push(Span::styled(
-                            ch.to_string(),
-                            Style::default().fg(theme::PINK).bold().underlined(),
-                        ));
-                    } else {
-                        line_spans.push(Span::styled(ch.to_string(), Style::default().fg(theme::FG)));
+                if let Some(char_idx) = h.char_idx {
+                    for (idx, ch) in title.char_indices() {
+                        if idx == char_idx {
+                            line_spans.push(Span::styled(
+                                ch.to_string(),
+                                Style::default().fg(theme::PINK).bold().underlined(),
+                            ));
+                        } else {
+                            line_spans.push(Span::styled(ch.to_string(), Style::default().fg(theme::FG)));
+                        }
                     }
+                } else {
+                    line_spans.push(Span::styled(title, Style::default().fg(theme::FG)));
+                    line_spans.push(Span::styled(
+                        format!(" [{}]", h.key),
+                        Style::default().fg(theme::PINK).bold(),
+                    ));
                 }
             } else {
                 line_spans.push(Span::styled(title, Style::default().fg(theme::FG)));

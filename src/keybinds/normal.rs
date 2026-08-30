@@ -313,7 +313,8 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             {
                 let recents = app.get_continue_reading_articles();
                 let hints = crate::app::recent::compute_semantic_hints(&recents);
-                if let Some(Some(hint)) = hints.into_iter().find(|h| h.as_ref().map(|x| x.key) == Some(c)) {
+                let target_c = c.to_ascii_lowercase();
+                if let Some(Some(hint)) = hints.into_iter().find(|h| h.as_ref().map(|x| x.key) == Some(target_c)) {
                     app.open_article(&hint.title);
                 }
             }
