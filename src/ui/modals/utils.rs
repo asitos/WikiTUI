@@ -163,3 +163,24 @@ pub fn create_selectable_line(
 
     ratatui::text::Line::from(spans)
 }
+
+pub fn create_search_input_lines(
+    prompt: &str,
+    query: &str,
+    prompt_color: Color,
+    inner_width: usize,
+) -> (ratatui::text::Line<'static>, ratatui::text::Line<'static>) {
+    let input_line = ratatui::text::Line::from(vec![
+        Span::styled(
+            format!(" {} ", prompt),
+            Style::default().fg(prompt_color).bold(),
+        ),
+        Span::styled(query.to_string(), Style::default().fg(theme::FG).bold()),
+        Span::styled("█", Style::default().fg(prompt_color)),
+    ]);
+    let divider_line = ratatui::text::Line::from(Span::styled(
+        "─".repeat(inner_width),
+        Style::default().fg(theme::DARK_GREY),
+    ));
+    (input_line, divider_line)
+}

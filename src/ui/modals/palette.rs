@@ -1,7 +1,9 @@
 use crate::app::App;
 use crate::palette::filter_commands;
 use crate::theme;
-use crate::ui::modals::utils::{compute_centered_scroll, render_modal_container_at};
+use crate::ui::modals::utils::{
+    compute_centered_scroll, create_search_input_lines, render_modal_container_at,
+};
 use ratatui::{
     layout::Rect,
     style::{Modifier, Style, Stylize},
@@ -37,25 +39,10 @@ pub fn render_palette_modal(f: &mut Frame, app: &App, size: Rect) {
     let inner_width = inner.width as usize;
     let mut lines = Vec::new();
 
-    let input_line = Line::from(vec![
-        Span::styled(
-            " > ",
-            Style::default()
-                .fg(theme::YELLOW)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            &app.command_palette.query,
-            Style::default().fg(theme::FG).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled("█", Style::default().fg(theme::YELLOW)),
-    ]);
+    let (input_line, divider_line) =
+        create_search_input_lines(">", &app.command_palette.query, theme::YELLOW, inner_width);
     lines.push(input_line);
-
-    lines.push(Line::from(Span::styled(
-        "─".repeat(inner_width),
-        Style::default().fg(theme::DARK_GREY),
-    )));
+    lines.push(divider_line);
 
     let filtered = filter_commands(&app.command_palette.query);
     let visible_rows = (inner.height as usize).saturating_sub(2);
