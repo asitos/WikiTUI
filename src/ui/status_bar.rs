@@ -59,7 +59,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             } else if scroll >= max_scroll {
                 "BOT".to_string()
             } else {
-                format!("{}%", (scroll * 100) / max_scroll.max(1))
+                let pct = (((scroll as f64) / (max_scroll as f64)) * 100.0)
+                    .round()
+                    .clamp(1.0, 99.0) as usize;
+                format!("{}%", pct)
             }
         }
         PaneContent::SearchResults { items, .. } => {

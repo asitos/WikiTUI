@@ -83,13 +83,13 @@ impl App {
             NetworkEvent::Error {
                 request_id,
                 pane_id,
-                message,
+                error,
             } => {
                 if let Some(pane) = self.find_pane_mut(pane_id) {
                     if request_id >= pane.current_request_id {
                         pane.is_loading = false;
                         pane.loading_title = None;
-                        pane.content = PaneContent::Error(message);
+                        pane.content = PaneContent::Error(error.to_string());
                     }
                 }
             }

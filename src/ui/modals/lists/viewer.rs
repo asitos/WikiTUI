@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
@@ -84,11 +84,12 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
     } else {
         theme::GREY
     };
-    let border_type = app.config.ui.border_type();
-    let left_block = Block::bordered()
-        .border_type(border_type)
-        .title(" custom lists ")
-        .border_style(Style::default().fg(left_border_color));
+    let left_block = create_modal_block(
+        "",
+        "custom lists",
+        left_border_color,
+        app.config.ui.rounded_borders,
+    );
 
     let mut list_lines = Vec::new();
     if app.saved_lists.lists.is_empty() {
@@ -131,13 +132,15 @@ pub fn render_saved_lists_viewer_modal(f: &mut Frame, app: &App, size: Rect) {
 
     let selected_list = app.saved_lists.lists.get(app.lists_modal.viewer_list_idx);
     let right_title = selected_list
-        .map(|l| format!(" articles in '{}' ", l.name))
-        .unwrap_or_else(|| " articles ".to_string());
+        .map(|l| format!("articles in '{}'", l.name))
+        .unwrap_or_else(|| "articles".to_string());
 
-    let right_block = Block::bordered()
-        .border_type(border_type)
-        .title(right_title)
-        .border_style(Style::default().fg(right_border_color));
+    let right_block = create_modal_block(
+        "",
+        &right_title,
+        right_border_color,
+        app.config.ui.rounded_borders,
+    );
 
     let mut article_lines = Vec::new();
     let right_total = selected_list.map(|l| l.articles.len()).unwrap_or(0);

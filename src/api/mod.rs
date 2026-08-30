@@ -11,6 +11,33 @@ pub use stats::WikiStatistics;
 use crate::feed::algorithm::FeedItem;
 use std::sync::mpsc::{Receiver, Sender};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ApiError {
+    Network(String),
+    Parse(String),
+    Wikipedia(String),
+    NotFound(String),
+}
+
+impl std::fmt::Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ApiError::Network(msg) => write!(f, "network error: {}", msg),
+            ApiError::Parse(msg) => write!(f, "parse error: {}", msg),
+            ApiError::Wikipedia(msg) => write!(f, "Wikipedia error: {}", msg),
+            ApiError::NotFound(msg) => write!(f, "not found: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ApiError {}
+
+impl From<ureq::Error> for ApiError {
+    fn from(err: ureq::Error) -> Self {
+        ApiError::Network(err.to_string())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SearchResultItem {
     pub title: String,
@@ -74,7 +101,7 @@ pub enum NetworkEvent {
     Error {
         request_id: u64,
         pane_id: usize,
-        message: String,
+        error: ApiError,
     },
 }
 
@@ -113,7 +140,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                     let _ = ev_tx.send(NetworkEvent::Error {
                         request_id,
                         pane_id,
-                        message: err,
+                        error: err,
                     });
                 }
             },
@@ -144,7 +171,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                         let _ = ev_tx.send(NetworkEvent::Error {
                             request_id,
                             pane_id,
-                            message: err,
+                            error: err,
                         });
                     }
                 }
@@ -169,7 +196,7 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
                         let _ = ev_tx.send(NetworkEvent::Error {
                             request_id,
                             pane_id,
-                            message: err,
+                            error: err,
                         });
                     }
                 }

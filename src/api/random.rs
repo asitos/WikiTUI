@@ -21,7 +21,7 @@ pub fn fetch_random_article(
     timeout_secs: u64,
     offline_cache: bool,
     cache_lifetime: u64,
-) -> Result<(String, String), String> {
+) -> Result<(String, String), super::ApiError> {
     let url = "https://en.wikipedia.org/w/api.php";
     let res = agent
         .get(url)
@@ -32,16 +32,16 @@ pub fn fetch_random_article(
         .query("rnlimit", "1")
         .query("format", "json")
         .call()
-        .map_err(|e| format!("network error: {}", e))?;
+        .map_err(|e| super::ApiError::Network(e.to_string()))?;
 
     let rand_resp: WikiRandomResponse =
-        res.into_json().map_err(|e| format!("parse error: {}", e))?;
+        res.into_json().map_err(|e| super::ApiError::Parse(e.to_string()))?;
 
     let title = rand_resp
         .query
         .and_then(|q| q.random.into_iter().next())
         .map(|r| r.title)
-        .ok_or_else(|| "no random article returned".to_string())?;
+        .ok_or_else(|| super::ApiError::NotFound("no random article returned".to_string()))?;
 
     let content =
         fetch_article_wikipedia(agent, &title, timeout_secs, offline_cache, cache_lifetime)?;

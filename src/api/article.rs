@@ -86,7 +86,7 @@ pub fn fetch_article_wikipedia(
     timeout_secs: u64,
     offline_cache: bool,
     cache_lifetime: u64,
-) -> Result<String, String> {
+) -> Result<String, super::ApiError> {
     if offline_cache {
         if let Some(cached_html) = get_cached_article(title, cache_lifetime) {
             return Ok(cached_html);
@@ -111,11 +111,11 @@ pub fn fetch_article_wikipedia(
         Ok(response) => {
             let parse_resp: WikiParseResponse = response
                 .into_json()
-                .map_err(|e| format!("parse error: {}", e))?;
+                .map_err(|e| super::ApiError::Parse(e.to_string()))?;
 
             if let Some(err) = parse_resp.error {
                 if let Some(info) = err.info {
-                    return Err(format!("Wikipedia error: {}", info));
+                    return Err(super::ApiError::Wikipedia(info));
                 }
             }
 
@@ -132,7 +132,7 @@ pub fn fetch_article_wikipedia(
                 .unwrap_or("");
 
             if body_html.trim().is_empty() {
-                return Err("article HTML content not found".to_string());
+                return Err(super::ApiError::NotFound("article HTML content not found".to_string()));
             }
 
             let combined_html = if cat_html.trim().is_empty() {
@@ -153,7 +153,7 @@ pub fn fetch_article_wikipedia(
                     return Ok(content);
                 }
             }
-            Err(format!("network error: {}", err))
+            Err(super::ApiError::Network(err.to_string()))
         }
     }
 }

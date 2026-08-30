@@ -130,6 +130,23 @@ impl SavedListsStore {
         false
     }
 
+    pub fn remove_article_from_list(&mut self, list_id: &str, title: &str) -> bool {
+        let title_trimmed = title.trim();
+        if title_trimmed.is_empty() {
+            return false;
+        }
+
+        if let Some(list) = self.lists.iter_mut().find(|l| l.id == list_id) {
+            if let Some(idx) = list.articles.iter().position(|a| a == title_trimmed) {
+                list.articles.remove(idx);
+                self.save();
+                self.rebuild_cache();
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn is_article_in_list(&self, list_id: &str, title: &str) -> bool {
         let title_trimmed = title.trim();
         if let Some(list) = self.lists.iter().find(|l| l.id == list_id) {

@@ -30,7 +30,7 @@ pub fn search_wikipedia(
     query: &str,
     limit: usize,
     timeout_secs: u64,
-) -> Result<Vec<SearchResultItem>, String> {
+) -> Result<Vec<SearchResultItem>, super::ApiError> {
     let url = "https://en.wikipedia.org/w/api.php";
     let limit_str = limit.clamp(1, 50).to_string();
     let res = agent
@@ -47,10 +47,10 @@ pub fn search_wikipedia(
         )
         .query("format", "json")
         .call()
-        .map_err(|e| format!("network error: {}", e))?;
+        .map_err(|e| super::ApiError::Network(e.to_string()))?;
 
     let search_resp: WikiGenSearchResponse =
-        res.into_json().map_err(|e| format!("parse error: {}", e))?;
+        res.into_json().map_err(|e| super::ApiError::Parse(e.to_string()))?;
 
     let mut items = Vec::new();
     if let Some(q) = search_resp.query {
