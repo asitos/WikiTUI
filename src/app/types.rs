@@ -24,15 +24,11 @@ pub enum InputMode {
 }
 
 pub fn is_article_link(title: &str) -> bool {
+    const MEDIA_EXTENSIONS: &[&str] = &[".jpg", ".png", ".svg", ".gif", ".jpeg", ".webp"];
     let lower = title.to_lowercase();
     !lower.starts_with("http://")
         && !lower.starts_with("https://")
-        && !lower.ends_with(".jpg")
-        && !lower.ends_with(".png")
-        && !lower.ends_with(".svg")
-        && !lower.ends_with(".gif")
-        && !lower.ends_with(".jpeg")
-        && !lower.ends_with(".webp")
+        && !MEDIA_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
 }
 
 #[derive(Clone, Debug)]
