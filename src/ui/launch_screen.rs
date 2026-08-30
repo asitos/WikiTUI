@@ -214,18 +214,12 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
             inner_width,
         ));
 
-        let displayed_recent: Vec<(String, Option<u64>)> = recent_articles
+        let hints_map = app.current_continue_reading_hints();
+        let items: Vec<(String, String, Option<crate::app::recent::SemanticHint>)> = recent_articles
             .iter()
             .take(displayed_count)
-            .cloned()
-            .collect();
-        let titles: Vec<String> = displayed_recent.iter().map(|(t, _)| t.clone()).collect();
-        let hints = crate::app::recent::compute_semantic_hints(&titles);
-
-        let items: Vec<(String, String, Option<crate::app::recent::SemanticHint>)> = displayed_recent
-            .into_iter()
-            .zip(hints)
-            .map(|((title, ts), hint)| {
+            .zip(hints_map)
+            .map(|((_, ts), (title, hint))| {
                 let time_str = ts
                     .map(crate::app::recent::format_relative_time)
                     .unwrap_or_default();

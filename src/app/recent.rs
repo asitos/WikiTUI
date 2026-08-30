@@ -180,10 +180,32 @@ pub struct SemanticHint {
     pub title: String,
 }
 
+impl App {
+    pub fn current_continue_reading_hints(&self) -> Vec<(String, Option<SemanticHint>)> {
+        let recents = self.get_continue_reading_with_timestamps();
+        let displayed_count = recents.len().min(7);
+        let titles: Vec<String> = recents
+            .into_iter()
+            .take(displayed_count)
+            .map(|(t, _)| t)
+            .collect();
+        let hints = compute_semantic_hints(&titles);
+        titles.into_iter().zip(hints).collect()
+    }
+
+    pub fn find_semantic_hint_article(&self, key: char) -> Option<String> {
+        let target_c = key.to_ascii_lowercase();
+        self.current_continue_reading_hints()
+            .into_iter()
+            .find(|(_, h)| h.as_ref().map(|x| x.key) == Some(target_c))
+            .map(|(t, _)| t)
+    }
+}
+
 pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
     const RESERVED_KEYS: &[char] = &[
-        'f', 'n', 'd', 't', 'r', 'q', 'z', 'a', 'x', 'u', 'j', 'k', 'g',
-        'F', 'N', 'D', 'T', 'R', 'Q', 'Z', 'A', 'S', 'U', 'G',
+        'f', 'n', 'd', 't', 'r', 'q', 'z', 'a',
+        'F', 'N', 'D', 'T', 'R', 'Q', 'Z', 'A',
         ':', '?', ',', '/', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
     ];
 
@@ -196,7 +218,7 @@ pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
         let mut prev_is_space = true;
         for (idx, ch) in title.char_indices() {
             let is_word_start = prev_is_space && ch.is_alphanumeric();
-            prev_is_space = ch.is_whitespace() || ch == '(' || ch == '[' || ch == '-';
+            prev_is_space = !ch.is_alphanumeric();
             if is_word_start && ch.is_ascii_alphabetic() {
                 let lower = ch.to_ascii_lowercase();
                 if !RESERVED_KEYS.contains(&lower) && used_keys.insert(lower) {

@@ -72,6 +72,17 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             _ => {}
         }
     } else {
+        if matches!(app.active_pane().content, crate::app::PaneContent::Empty)
+            && (key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT)
+        {
+            if let KeyCode::Char(c) = key.code {
+                if let Some(title) = app.find_semantic_hint_article(c) {
+                    app.open_article(&title);
+                    return;
+                }
+            }
+        }
+
         match key.code {
             KeyCode::Esc => {
                 app.clear_local_search();
@@ -311,17 +322,6 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             }
             KeyCode::Enter => {
                 app.activate_selected(term_height);
-            }
-            KeyCode::Char(c)
-                if matches!(app.active_pane().content, crate::app::PaneContent::Empty)
-                    && (key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT) =>
-            {
-                let recents = app.get_continue_reading_articles();
-                let hints = crate::app::recent::compute_semantic_hints(&recents);
-                let target_c = c.to_ascii_lowercase();
-                if let Some(Some(hint)) = hints.into_iter().find(|h| h.as_ref().map(|x| x.key) == Some(target_c)) {
-                    app.open_article(&hint.title);
-                }
             }
             _ => {}
         }
