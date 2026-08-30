@@ -176,18 +176,16 @@ pub fn format_relative_time(timestamp: u64) -> String {
 #[derive(Clone, Debug)]
 pub struct SemanticHint {
     pub key: char,
-    pub char_idx: Option<usize>,
+    pub char_idx: usize,
     pub title: String,
 }
 
 pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
     const RESERVED_KEYS: &[char] = &[
-        'f', 'n', 'd', 't', 'r', 'q', 'z', 'a', 'o', 'c', 'm', 'y', 'x', 'u', 's', 'v', 'j', 'k',
-        'F', 'N', 'D', 'T', 'R', 'Q', 'Z', 'A', 'O', 'C', 'M', 'Y', 'X', 'U', 'S', 'V', 'J', 'K',
+        'f', 'n', 'd', 't', 'r', 'q', 'z', 'a', 'x', 'u', 'j', 'k', 'g',
+        'F', 'N', 'D', 'T', 'R', 'Q', 'Z', 'A', 'S', 'U', 'G',
         ':', '?', ',', '/', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
     ];
-
-    const FALLBACK_POOL: &[char] = &['b', 'e', 'p', 'w', 'i', 'g', 'h', 'l', 'v', 'k'];
 
     let mut used_keys = std::collections::HashSet::new();
     let mut hints = Vec::with_capacity(titles.len());
@@ -204,7 +202,7 @@ pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
                 if !RESERVED_KEYS.contains(&lower) && used_keys.insert(lower) {
                     assigned = Some(SemanticHint {
                         key: lower,
-                        char_idx: Some(idx),
+                        char_idx: idx,
                         title: title.clone(),
                     });
                     break;
@@ -219,24 +217,11 @@ pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
                     if !RESERVED_KEYS.contains(&lower) && used_keys.insert(lower) {
                         assigned = Some(SemanticHint {
                             key: lower,
-                            char_idx: Some(idx),
+                            char_idx: idx,
                             title: title.clone(),
                         });
                         break;
                     }
-                }
-            }
-        }
-
-        if assigned.is_none() {
-            for &candidate in FALLBACK_POOL {
-                if !RESERVED_KEYS.contains(&candidate) && used_keys.insert(candidate) {
-                    assigned = Some(SemanticHint {
-                        key: candidate,
-                        char_idx: None,
-                        title: title.clone(),
-                    });
-                    break;
                 }
             }
         }
