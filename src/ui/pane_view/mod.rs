@@ -2,6 +2,7 @@ pub mod article;
 pub mod scrollbar;
 pub mod search;
 
+pub use article::get_link_at_coord;
 pub use search::{
     compute_search_result_lines_count, count_wrapped_lines, get_search_result_at_line, wrap_text,
 };

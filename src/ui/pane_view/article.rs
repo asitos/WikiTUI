@@ -254,3 +254,47 @@ pub fn apply_search_highlights_to_line(
 
     line.spans = new_spans;
 }
+
+pub fn get_link_at_coord(
+    parsed_doc: &crate::parser::ParsedDocument,
+    scroll_offset: usize,
+    pane_rect: Rect,
+    col: u16,
+    row: u16,
+) -> Option<usize> {
+    if pane_rect.width < 3 || pane_rect.height < 3 {
+        return None;
+    }
+    let inner_x = pane_rect.x + 1;
+    let inner_y = pane_rect.y + 1;
+    let inner_w = pane_rect.width.saturating_sub(2);
+    let inner_h = pane_rect.height.saturating_sub(2);
+
+    if col < inner_x || col >= inner_x + inner_w || row < inner_y || row >= inner_y + inner_h {
+        return None;
+    }
+
+    let row_in_pane = (row - inner_y) as usize;
+    let line_idx = scroll_offset + row_in_pane;
+    let line = parsed_doc.lines.get(line_idx)?;
+
+    let target_x = (col - inner_x) as usize;
+    let mut cur_x = 0;
+    let mut target_span_idx = None;
+
+    for (span_idx, span) in line.spans.iter().enumerate() {
+        let span_w = unicode_width::UnicodeWidthStr::width(span.content.as_ref());
+        if target_x >= cur_x && target_x < cur_x + span_w {
+            target_span_idx = Some(span_idx);
+            break;
+        }
+        cur_x += span_w;
+    }
+
+    let span_idx = target_span_idx?;
+
+    parsed_doc
+        .links
+        .iter()
+        .position(|link| link.span_indices.contains(&(line_idx, span_idx)))
+}

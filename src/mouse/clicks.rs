@@ -367,7 +367,31 @@ fn handle_workspace_left_click(
     term_width: u16,
     term_height: u16,
 ) {
-    if app.input_mode != InputMode::Normal || app.zen_mode {
+    if app.input_mode != InputMode::Normal {
+        return;
+    }
+
+    if app.zen_mode {
+        let zen_rect = crate::ui::compute_zen_area(Rect::new(0, 0, term_width, term_height));
+        if col >= zen_rect.x
+            && col < zen_rect.x + zen_rect.width
+            && row >= zen_rect.y
+            && row < zen_rect.y + zen_rect.height
+        {
+            let pane = app.active_pane_mut();
+            if let PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+                if let Some(link_idx) = crate::ui::pane_view::get_link_at_coord(
+                    parsed_doc,
+                    pane.scroll_offset,
+                    zen_rect,
+                    col,
+                    row,
+                ) {
+                    pane.selected_link_idx = Some(link_idx);
+                    app.activate_selected(term_height);
+                }
+            }
+        }
         return;
     }
 
@@ -435,6 +459,18 @@ fn handle_workspace_left_click(
                                     app.open_article(&title);
                                 }
                             }
+                        }
+                    }
+                    PaneContent::ArticleText { parsed_doc, .. } => {
+                        if let Some(link_idx) = crate::ui::pane_view::get_link_at_coord(
+                            parsed_doc,
+                            pane.scroll_offset,
+                            rect,
+                            col,
+                            row,
+                        ) {
+                            pane.selected_link_idx = Some(link_idx);
+                            app.activate_selected(term_height);
                         }
                     }
                     _ => {}
