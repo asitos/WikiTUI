@@ -425,64 +425,43 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
     let hint_len = if show_hint { hint.len() + 1 } else { 0 };
 
     let bar_width = available_width
-        .saturating_sub(fixed_len + hint_len + 2)
-        .clamp(6, 24);
+        .saturating_sub(fixed_len + hint_len + 4)
+        .clamp(4, 20);
 
     if bar_width > 0 {
-        let knob_color = if is_buffering {
+        let fill_color = if is_buffering {
             theme::ORANGE
         } else {
-            theme::LIME
+            theme::TEAL
         };
 
-        if let Some(total) = total_opt {
-            let ratio = if total > 0 {
-                (elapsed as f64 / total as f64).clamp(0.0, 1.0)
+        let ratio = if let Some(total) = total_opt {
+            if total > 0 {
+                (elapsed as f32 / total as f32).clamp(0.0, 1.0)
             } else {
                 0.0
-            };
-            let filled_len = ((bar_width as f64) * ratio).round() as usize;
-            let filled_len = filled_len.min(bar_width);
-
-            let filled_part = "━".repeat(filled_len.saturating_sub(1));
-            let knob = if filled_len > 0 { "●" } else { "─" };
-            let unfilled_len = bar_width.saturating_sub(filled_len.max(1));
-            let unfilled_part = "─".repeat(unfilled_len);
-
-            if !filled_part.is_empty() {
-                spans.push(Span::styled(filled_part, Style::default().fg(theme::TEAL)));
-            }
-            spans.push(Span::styled(
-                knob,
-                Style::default()
-                    .fg(knob_color)
-                    .add_modifier(Modifier::BOLD),
-            ));
-            if !unfilled_part.is_empty() {
-                spans.push(Span::styled(
-                    unfilled_part,
-                    Style::default().fg(theme::DARK_GREY),
-                ));
             }
         } else {
-            let pos = (elapsed as usize) % bar_width.max(1);
-            let before = "━".repeat(pos);
-            let knob = "●";
-            let after = "─".repeat(bar_width.saturating_sub(pos + 1));
+            ((elapsed as f32 % 10.0) / 10.0).clamp(0.0, 1.0)
+        };
 
-            if !before.is_empty() {
-                spans.push(Span::styled(before, Style::default().fg(theme::TEAL)));
-            }
+        let filled = ((bar_width as f32) * ratio) as usize;
+        let empty = bar_width.saturating_sub(filled);
+
+        spans.push(Span::styled("▐", Style::default().fg(theme::DARK_GREY)));
+        if filled > 0 {
             spans.push(Span::styled(
-                knob,
-                Style::default()
-                    .fg(knob_color)
-                    .add_modifier(Modifier::BOLD),
+                "█".repeat(filled),
+                Style::default().fg(fill_color),
             ));
-            if !after.is_empty() {
-                spans.push(Span::styled(after, Style::default().fg(theme::DARK_GREY)));
-            }
         }
+        if empty > 0 {
+            spans.push(Span::styled(
+                "░".repeat(empty),
+                Style::default().fg(theme::DARK_GREY),
+            ));
+        }
+        spans.push(Span::styled("▌", Style::default().fg(theme::DARK_GREY)));
         spans.push(Span::raw(" "));
     }
 
