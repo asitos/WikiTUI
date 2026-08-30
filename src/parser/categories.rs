@@ -55,7 +55,8 @@ fn collect_categories_recursive(
         if let Some(href_attr) = tag.attributes().get("href").flatten() {
             let href = href_attr.as_utf8_str();
             if href.contains("/wiki/Category:") || href.starts_with("Category:") {
-                let text = decode_html_entities(&tag.inner_text(parser));
+                let binding = tag.inner_text(parser);
+                let text = decode_html_entities(&binding);
                 let trimmed = text.trim();
                 if !trimmed.is_empty()
                     && trimmed != "Categories"

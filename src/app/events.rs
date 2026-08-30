@@ -38,28 +38,30 @@ impl App {
 
                 if is_current {
                     self.record_recent_article(&title);
-                    let show_footnotes = self.config.reader.show_footnotes;
-                    let show_external_links = self.config.reader.show_external_links;
-                    let heading_marker = self.config.reader.heading_marker;
-                    let code_line_numbers = self.config.reader.code_line_numbers;
-                    let show_icons = self.config.ui.icons;
-                    let show_images = self.config.reader.show_images;
-                    let max_image_height = self.config.reader.max_image_height;
+                    let render_opts = crate::app::pane::ArticleRenderOptions {
+                        width: 80,
+                        show_footnotes: self.config.reader.show_footnotes,
+                        show_external_links: self.config.reader.show_external_links,
+                        heading_marker: self.config.reader.heading_marker,
+                        code_line_numbers: self.config.reader.code_line_numbers,
+                        show_icons: self.config.ui.icons,
+                        show_images: self.config.reader.show_images,
+                        max_image_height: self.config.reader.max_image_height,
+                    };
                     if let Some(pane) = self.find_pane_mut(pane_id) {
                         pane.is_loading = false;
                         pane.loading_title = None;
                         pane.toc_focused = false;
-                        let initial_width = 80;
                         let parsed_doc = parse_wikipedia_html(
                             &content,
-                            initial_width,
-                            show_footnotes,
-                            show_external_links,
-                            heading_marker,
-                            code_line_numbers,
-                            show_icons,
-                            show_images,
-                            max_image_height,
+                            render_opts.width,
+                            render_opts.show_footnotes,
+                            render_opts.show_external_links,
+                            render_opts.heading_marker,
+                            render_opts.code_line_numbers,
+                            render_opts.show_icons,
+                            render_opts.show_images,
+                            render_opts.max_image_height,
                         );
                         pane.scroll_offset = pane
                             .scroll_offset
@@ -75,14 +77,7 @@ impl App {
                             title,
                             raw_html: content,
                             parsed_doc: Box::new(parsed_doc),
-                            last_width: initial_width,
-                            last_show_footnotes: show_footnotes,
-                            last_show_external_links: show_external_links,
-                            last_heading_marker: heading_marker,
-                            last_code_line_numbers: code_line_numbers,
-                            last_show_icons: show_icons,
-                            last_show_images: show_images,
-                            last_max_image_height: max_image_height,
+                            last_render_options: render_opts,
                         };
                         pane.selected_link_idx = initial_link_idx;
                         for img_url in image_urls {

@@ -37,7 +37,7 @@ pub fn heading_info<'a>(
         .attributes()
         .get("id")
         .flatten()
-        .map(|b| decode_html_entities(&b.as_utf8_str()));
+        .map(|b| decode_html_entities(&b.as_utf8_str()).into_owned());
 
     if matches!(tag_name.as_ref(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
         let level = tag_name
@@ -74,7 +74,7 @@ pub fn heading_info<'a>(
                             .attributes()
                             .get("id")
                             .flatten()
-                            .map(|b| decode_html_entities(&b.as_utf8_str()))
+                            .map(|b| decode_html_entities(&b.as_utf8_str()).into_owned())
                             .or(id_attr);
                         return Some((level, title, child_id));
                     }

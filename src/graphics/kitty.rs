@@ -20,23 +20,12 @@ pub fn base64_encode(data: &[u8]) -> String {
         let b0 = chunk[0] as usize;
         let b1 = chunk.get(1).copied().unwrap_or(0) as usize;
         let b2 = chunk.get(2).copied().unwrap_or(0) as usize;
-
         let triple = (b0 << 16) | (b1 << 8) | b2;
 
         out.push(BASE64_ALPHABET[(triple >> 18) & 0x3F] as char);
         out.push(BASE64_ALPHABET[(triple >> 12) & 0x3F] as char);
-
-        if chunk.len() > 1 {
-            out.push(BASE64_ALPHABET[(triple >> 6) & 0x3F] as char);
-        } else {
-            out.push('=');
-        }
-
-        if chunk.len() > 2 {
-            out.push(BASE64_ALPHABET[triple & 0x3F] as char);
-        } else {
-            out.push('=');
-        }
+        out.push(if chunk.len() > 1 { BASE64_ALPHABET[(triple >> 6) & 0x3F] as char } else { '=' });
+        out.push(if chunk.len() > 2 { BASE64_ALPHABET[triple & 0x3F] as char } else { '=' });
     }
     out
 }

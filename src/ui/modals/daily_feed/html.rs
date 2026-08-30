@@ -32,7 +32,7 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
         };
         let decoded = decode_html_entities(current_text);
         chunks.push(StyledChunk {
-            text: decoded,
+            text: decoded.into_owned(),
             style,
         });
         current_text.clear();

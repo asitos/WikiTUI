@@ -37,7 +37,7 @@ pub(crate) fn process_node<'a>(
             } else if is_sub {
                 to_subscript_str(&decoded_text)
             } else {
-                decoded_text
+                decoded_text.into_owned()
             };
             let cleaned_text = transformed.replace(['\n', '\r', '\t'], " ");
             if !cleaned_text.trim().is_empty() {
@@ -70,12 +70,12 @@ pub(crate) fn process_node<'a>(
                 .attributes()
                 .get("class")
                 .flatten()
-                .map(|b| decode_html_entities(&b.as_utf8_str()));
+                .map(|b| decode_html_entities(&b.as_utf8_str()).into_owned());
             let id_attr = tag
                 .attributes()
                 .get("id")
                 .flatten()
-                .map(|b| decode_html_entities(&b.as_utf8_str()));
+                .map(|b| decode_html_entities(&b.as_utf8_str()).into_owned());
 
             if spoken::is_spoken_wikipedia_tag(tag, ctx.parser) {
                 if let Some(spoken_audio) = spoken::extract_spoken_audio(tag, ctx.parser) {
@@ -378,7 +378,7 @@ pub(crate) fn process_node<'a>(
                         .attributes()
                         .get("title")
                         .flatten()
-                        .map(|b| decode_html_entities(&b.as_utf8_str()))
+                        .map(|b| decode_html_entities(&b.as_utf8_str()).into_owned())
                     {
                         current_link = Some(title_attr);
                     }

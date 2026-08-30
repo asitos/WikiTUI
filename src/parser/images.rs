@@ -170,13 +170,13 @@ fn parse_img_tag(tag: &HTMLTag) -> (String, Option<String>, Option<usize>, Optio
         })
         .unwrap_or_default();
 
-    let src = crate::parser::utils::decode_html_entities(&raw_src);
+    let src = crate::parser::utils::decode_html_entities(&raw_src).into_owned();
 
     let alt = tag
         .attributes()
         .get("alt")
         .flatten()
-        .map(|b| crate::parser::utils::decode_html_entities(&b.as_utf8_str()))
+        .map(|b| crate::parser::utils::decode_html_entities(&b.as_utf8_str()).into_owned())
         .filter(|s| !s.trim().is_empty());
 
     let width = tag
@@ -213,7 +213,7 @@ fn extract_caption(tag: &HTMLTag, parser: &Parser) -> Option<String> {
             if name == "figcaption" || cls.contains("thumbcaption") || cls.contains("gallerytext") {
                 let text = cap_tag.inner_text(parser).trim().to_string();
                 if !text.is_empty() {
-                    return Some(crate::parser::utils::decode_html_entities(&text));
+                    return Some(crate::parser::utils::decode_html_entities(&text).into_owned());
                 }
             }
             if let Some(sub) = extract_caption(cap_tag, parser) {

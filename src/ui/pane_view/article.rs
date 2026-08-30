@@ -76,23 +76,24 @@ pub fn render_article_pane(
         return;
     };
 
-    let has_underline = if app.config.reader.underline_links {
-        let first_link_idx = parsed_doc.links.partition_point(|link| {
+    let (has_underline, first_link_idx) = if app.config.reader.underline_links {
+        let first_idx = parsed_doc.links.partition_point(|link| {
             link.span_indices
                 .last()
                 .map(|&(l, _)| l < view_start)
                 .unwrap_or(true)
         });
-        parsed_doc.links[first_link_idx..]
+        let has = parsed_doc.links[first_idx..]
             .iter()
             .take_while(|l| {
                 l.span_indices
                     .first()
                     .is_some_and(|&(first_line, _)| first_line < view_end)
             })
-            .any(|l| !l.is_citation())
+            .any(|l| !l.is_citation());
+        (has, first_idx)
     } else {
-        false
+        (false, 0)
     };
 
     let selected_link = pane
@@ -111,17 +112,6 @@ pub fn render_article_pane(
         };
 
     let mut rendered_lines: Vec<Line<'_>> = Vec::with_capacity(view_len);
-
-    let first_link_idx = if has_underline {
-        parsed_doc.links.partition_point(|link| {
-            link.span_indices
-                .last()
-                .map(|&(l, _)| l < view_start)
-                .unwrap_or(true)
-        })
-    } else {
-        0
-    };
 
     let mut link_ptr = first_link_idx;
     let query_len = pane.local_search_query.len();
@@ -292,13 +282,15 @@ pub fn render_article_pane(
                         let left_pad = (inner_width.saturating_sub(visible_cols)) / 2;
                         let screen_x = rect.x + 1 + left_pad;
                         if visible_rows > 0 && visible_cols > 0 {
-                            app.pending_image_renders.push(crate::app::ImageRenderTask {
-                                path,
-                                screen_x,
-                                screen_y,
-                                cols: visible_cols,
-                                rows: visible_rows,
-                            });
+                            app.graphics
+                                .pending_image_renders
+                                .push(crate::app::ImageRenderTask {
+                                    path,
+                                    screen_x,
+                                    screen_y,
+                                    cols: visible_cols,
+                                    rows: visible_rows,
+                                });
                         }
                     }
                 } else {

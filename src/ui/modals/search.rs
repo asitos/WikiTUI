@@ -1,40 +1,27 @@
-use super::utils::create_modal_block;
 use crate::app::App;
 use crate::theme;
+use crate::ui::modals::utils::render_modal_frame_at;
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::Rect,
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Clear, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
 pub fn compute_search_modal_area(size: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(33),
-            Constraint::Length(3),
-            Constraint::Min(0),
-        ])
-        .split(size);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(36),
-            Constraint::Percentage(28),
-            Constraint::Percentage(36),
-        ])
-        .split(popup_layout[1])[1]
+    let width = (size.width * 30 / 100).clamp(30, 60).min(size.width);
+    let x = (size.width.saturating_sub(width)) / 2;
+    let y = (size.height * 40 / 100).min(size.height.saturating_sub(3));
+    Rect::new(x, y, width, 3.min(size.height))
 }
 
 pub fn render_search_modal(f: &mut Frame, app: &App, size: Rect) {
     let area = compute_search_modal_area(size);
-    f.render_widget(Clear, area);
-
     let icon = if app.config.ui.icons { "󰍉" } else { "" };
-    let search_block = create_modal_block(
+    let search_block = render_modal_frame_at(
+        f,
+        area,
         icon,
         "search wikipedia",
         theme::BEIGE,

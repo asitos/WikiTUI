@@ -19,7 +19,8 @@ pub fn is_spoken_wikipedia_tag(tag: &tl::HTMLTag, _parser: &tl::Parser) -> bool 
 }
 
 pub fn extract_spoken_audio(tag: &tl::HTMLTag, parser: &tl::Parser) -> Option<SpokenAudio> {
-    let raw_text = decode_html_entities(&tag.inner_text(parser));
+    let binding = tag.inner_text(parser);
+    let raw_text = decode_html_entities(&binding);
 
     let duration = if let Some(open) = raw_text.find('(') {
         if let Some(close) = raw_text[open..].find(')') {
@@ -68,15 +69,18 @@ fn collect_audio_sources<'a>(
 
     if name == "source" || name == "audio" {
         if let Some(src_attr) = tag.attributes().get("src").flatten() {
-            let mut src = decode_html_entities(&src_attr.as_utf8_str());
-            if src.starts_with("//") {
-                src = format!("https:{}", src);
-            }
+            let src_bytes = src_attr.as_utf8_str();
+            let src_raw = decode_html_entities(&src_bytes);
+            let src = if src_raw.starts_with("//") {
+                format!("https:{}", src_raw)
+            } else {
+                src_raw.into_owned()
+            };
             if (src.starts_with("http://") || src.starts_with("https://"))
                 && !tracks.iter().any(|t| t.url == src)
             {
                 let title = if let Some(title_attr) = tag.attributes().get("title").flatten() {
-                    decode_html_entities(&title_attr.as_utf8_str())
+                    decode_html_entities(&title_attr.as_utf8_str()).into_owned()
                 } else {
                     format!("Part {}", tracks.len() + 1)
                 };

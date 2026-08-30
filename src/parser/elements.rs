@@ -57,7 +57,7 @@ pub(crate) fn handle_img_tag(
         .get("alt")
         .flatten()
         .or_else(|| tag.attributes().get("title").flatten())
-        .map(|b| utils::decode_html_entities(&b.as_utf8_str()))
+        .map(|b| utils::decode_html_entities(&b.as_utf8_str()).into_owned())
         .unwrap_or_else(|| "image".to_string());
 
     let clean_alt = alt_text.trim();
