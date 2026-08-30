@@ -1,36 +1,24 @@
 use std::path::PathBuf;
 
+fn env_path(var: &str) -> Option<PathBuf> {
+    std::env::var(var)
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .map(PathBuf::from)
+}
+
 pub fn config_dir() -> PathBuf {
-    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
-        if !xdg.trim().is_empty() {
-            return PathBuf::from(xdg).join("wikid");
-        }
-    }
-    if let Ok(home) = std::env::var("HOME") {
-        if !home.trim().is_empty() {
-            return PathBuf::from(home).join(".config").join("wikid");
-        }
-    }
-    PathBuf::from(".")
+    env_path("XDG_CONFIG_HOME")
+        .map(|p| p.join("wikid"))
+        .or_else(|| env_path("HOME").map(|p| p.join(".config").join("wikid")))
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 pub fn cache_dir() -> PathBuf {
-    if let Ok(override_dir) = std::env::var("WIKID_CACHE_DIR") {
-        if !override_dir.trim().is_empty() {
-            return PathBuf::from(override_dir);
-        }
-    }
-    if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
-        if !xdg.trim().is_empty() {
-            return PathBuf::from(xdg).join("wikid");
-        }
-    }
-    if let Ok(home) = std::env::var("HOME") {
-        if !home.trim().is_empty() {
-            return PathBuf::from(home).join(".cache").join("wikid");
-        }
-    }
-    PathBuf::from("cache")
+    env_path("WIKID_CACHE_DIR")
+        .or_else(|| env_path("XDG_CACHE_HOME").map(|p| p.join("wikid")))
+        .or_else(|| env_path("HOME").map(|p| p.join(".cache").join("wikid")))
+        .unwrap_or_else(|| PathBuf::from("cache"))
 }
 
 pub fn audio_cache_dir() -> PathBuf {

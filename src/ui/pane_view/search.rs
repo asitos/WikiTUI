@@ -38,22 +38,10 @@ pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
 
 pub fn count_wrapped_lines(text: &str, max_width: usize) -> usize {
     if text.trim().is_empty() {
-        return 0;
+        0
+    } else {
+        wrap_text(text, max_width).len()
     }
-    let mut count = 1;
-    let mut current_width = 0;
-    for word in text.split_whitespace() {
-        let word_width = unicode_width::UnicodeWidthStr::width(word);
-        if current_width == 0 {
-            current_width = word_width;
-        } else if current_width + 1 + word_width <= max_width {
-            current_width += 1 + word_width;
-        } else {
-            count += 1;
-            current_width = word_width;
-        }
-    }
-    count
 }
 
 pub fn compute_search_result_lines_count(

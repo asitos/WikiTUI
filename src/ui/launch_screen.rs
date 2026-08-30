@@ -43,13 +43,8 @@ fn center_spans<'a>(spans: Vec<Span<'a>>, inner_width: usize) -> Line<'a> {
     Line::from(line)
 }
 
-fn center_styled(text: &str, style: Style, inner_width: usize) -> Line<'static> {
-    let width = unicode_width::UnicodeWidthStr::width(text);
-    let pad = (inner_width.saturating_sub(width)) / 2;
-    Line::from(vec![
-        Span::raw(" ".repeat(pad)),
-        Span::styled(text.to_string(), style),
-    ])
+fn center_styled<'a>(text: &'a str, style: Style, inner_width: usize) -> Line<'a> {
+    center_spans(vec![Span::styled(text, style)], inner_width)
 }
 
 pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) {

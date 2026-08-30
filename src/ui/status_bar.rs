@@ -31,7 +31,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             InputMode::Help => (" HELP ", theme::GREY),
             InputMode::Confirm => (" PROMPT ", theme::RED),
             InputMode::Categories => (" CATEGORIES ", theme::TEAL),
-            InputMode::DailyFeedModal => (" FEED ", theme::TEAL),
+            InputMode::DailyFeedModal => (" DAILY ", theme::TEAL),
         }
     };
 
