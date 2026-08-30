@@ -73,5 +73,9 @@ pub fn render_halfblock_image_from_bytes(
             b: p[2],
         })
         .collect();
-    Some(render_halfblock_lines(&pixels, target_cols, target_px_height))
+    let mut lines = render_halfblock_lines(&pixels, target_cols, target_px_height);
+    for line in &mut lines {
+        line.alignment = Some(ratatui::layout::Alignment::Center);
+    }
+    Some(lines)
 }

@@ -56,17 +56,21 @@ pub(crate) fn render_image_node(
         } else {
             format!("│{}│", " ".repeat(inner_width))
         };
-        doc.lines.push(Line::from(vec![
+        let mut line = Line::from(vec![
             Span::styled(content, Style::default().fg(crate::theme::GREY))
-        ]));
+        ]);
+        line.alignment = Some(ratatui::layout::Alignment::Center);
+        doc.lines.push(line);
     }
 
     if let Some(cap) = caption {
         if !cap.trim().is_empty() {
             let cap_line = format!("▲ {}", cap.trim());
-            doc.lines.push(Line::from(vec![
+            let mut line = Line::from(vec![
                 Span::styled(cap_line, Style::default().fg(crate::theme::GREY).add_modifier(Modifier::ITALIC))
-            ]));
+            ]);
+            line.alignment = Some(ratatui::layout::Alignment::Center);
+            doc.lines.push(line);
         }
     }
     doc.lines.push(Line::from(""));

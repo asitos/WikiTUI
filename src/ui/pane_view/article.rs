@@ -268,9 +268,10 @@ pub fn render_article_pane(
                             )
                         };
 
-                        let screen_x = rect.x + 2;
-                        let visible_cols =
-                            (img.width_cols as u16).min(rect.width.saturating_sub(4));
+                        let inner_width = rect.width.saturating_sub(2);
+                        let visible_cols = (img.width_cols as u16).min(inner_width);
+                        let left_pad = (inner_width.saturating_sub(visible_cols)) / 2;
+                        let screen_x = rect.x + 1 + left_pad;
                         if visible_rows > 0 && visible_cols > 0 {
                             app.pending_image_renders.push(crate::app::ImageRenderTask {
                                 path,
