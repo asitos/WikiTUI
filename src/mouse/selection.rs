@@ -134,29 +134,97 @@ pub fn extract_selected_text(
     let ((start_line, start_col), (end_line, end_col)) = selection.normalized();
     let mut lines_out = Vec::new();
 
+    let citation_spans: std::collections::HashSet<(usize, usize)> = doc
+        .links
+        .iter()
+        .filter(|l| l.is_citation())
+        .flat_map(|l| l.span_indices.iter().copied())
+        .collect();
+
     for line_idx in start_line..=end_line.min(doc.lines.len().saturating_sub(1)) {
         if let Some(line) = doc.lines.get(line_idx) {
-            let full_line: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
-            let char_count = full_line.chars().count();
-            let from = if line_idx == start_line {
-                start_col.min(char_count)
-            } else {
-                0
-            };
-            let to = if line_idx == end_line {
-                end_col.min(char_count)
-            } else {
-                char_count
-            };
+            let mut line_buf = String::new();
+            let mut global_char_pos = 0;
 
-            if from < to {
-                let slice: String = full_line.chars().skip(from).take(to - from).collect();
-                lines_out.push(slice);
-            } else if start_line != end_line {
-                lines_out.push(String::new());
+            let line_from = if line_idx == start_line { start_col } else { 0 };
+            let line_to = if line_idx == end_line { end_col } else { usize::MAX };
+
+            for (span_idx, span) in line.spans.iter().enumerate() {
+                let span_len = span.content.chars().count();
+                let span_start = global_char_pos;
+                let span_end = span_start + span_len;
+                global_char_pos = span_end;
+
+                if citation_spans.contains(&(line_idx, span_idx)) {
+                    continue;
+                }
+
+                if span_end <= line_from || span_start >= line_to {
+                    continue;
+                }
+
+                let rel_from = line_from.saturating_sub(span_start).min(span_len);
+                let rel_to = (line_to.saturating_sub(span_start)).min(span_len);
+
+                if rel_from < rel_to {
+                    let chars: String = span.content.chars().skip(rel_from).take(rel_to - rel_from).collect();
+                    line_buf.push_str(&chars);
+                }
             }
+
+            lines_out.push(line_buf);
         }
     }
 
-    lines_out.join("\n")
+    let joined = lines_out.join("\n");
+    strip_citations(&joined)
+}
+
+fn strip_citations(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '[' {
+            let mut bracket_content = String::new();
+            let mut found_close = false;
+
+            while let Some(&next_c) = chars.peek() {
+                if next_c == ']' {
+                    chars.next();
+                    found_close = true;
+                    break;
+                } else if next_c == '\n' {
+                    break;
+                } else {
+                    bracket_content.push(chars.next().unwrap());
+                    if bracket_content.len() > 30 {
+                        break;
+                    }
+                }
+            }
+
+            if found_close {
+                let trimmed = bracket_content.trim();
+                let is_citation = trimmed.chars().all(|ch| ch.is_ascii_digit())
+                    || trimmed.starts_with("note ")
+                    || trimmed.starts_with("nb ")
+                    || trimmed == "citation needed"
+                    || (trimmed.len() <= 3 && trimmed.chars().all(|ch| ch.is_ascii_alphabetic()));
+
+                if !is_citation {
+                    out.push('[');
+                    out.push_str(&bracket_content);
+                    out.push(']');
+                }
+            } else {
+                out.push('[');
+                out.push_str(&bracket_content);
+            }
+        } else {
+            out.push(c);
+        }
+    }
+
+    out
 }
