@@ -1,64 +1,47 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub fn get_cached_duration(url: &str) -> Option<u64> {
-    let path = crate::paths::audio_cache_dir().join("durations.json");
-    if let Ok(content) = std::fs::read_to_string(&path) {
-        if let Ok(map) = serde_json::from_str::<HashMap<String, u64>>(&content) {
-            return map.get(url).copied();
-        }
+fn load_json_map(filename: &str) -> HashMap<String, u64> {
+    let path = crate::paths::audio_cache_dir().join(filename);
+    std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|c| serde_json::from_str(&c).ok())
+        .unwrap_or_default()
+}
+
+fn save_json_map(filename: &str, map: &HashMap<String, u64>) {
+    let dir = crate::paths::audio_cache_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join(filename);
+    if let Ok(json) = serde_json::to_string_pretty(map) {
+        let _ = std::fs::write(&path, json);
     }
-    None
+}
+
+pub fn get_cached_duration(url: &str) -> Option<u64> {
+    load_json_map("durations.json").get(url).copied()
 }
 
 pub fn save_cached_duration(url: &str, duration_secs: u64) {
-    let dir = crate::paths::audio_cache_dir();
-    let _ = std::fs::create_dir_all(&dir);
-    let path = dir.join("durations.json");
-    let mut map = std::fs::read_to_string(&path)
-        .ok()
-        .and_then(|c| serde_json::from_str::<HashMap<String, u64>>(&c).ok())
-        .unwrap_or_default();
+    let mut map = load_json_map("durations.json");
     map.insert(url.to_string(), duration_secs);
-    if let Ok(json) = serde_json::to_string_pretty(&map) {
-        let _ = std::fs::write(&path, json);
-    }
+    save_json_map("durations.json", &map);
 }
 
 pub fn get_saved_position(url: &str) -> Option<u64> {
-    let path = crate::paths::audio_cache_dir().join("positions.json");
-    if let Ok(content) = std::fs::read_to_string(&path) {
-        if let Ok(map) = serde_json::from_str::<HashMap<String, u64>>(&content) {
-            return map.get(url).copied();
-        }
-    }
-    None
+    load_json_map("positions.json").get(url).copied()
 }
 
 pub fn save_position(url: &str, elapsed_secs: u64) {
-    let dir = crate::paths::audio_cache_dir();
-    let _ = std::fs::create_dir_all(&dir);
-    let path = dir.join("positions.json");
-    let mut map = std::fs::read_to_string(&path)
-        .ok()
-        .and_then(|c| serde_json::from_str::<HashMap<String, u64>>(&c).ok())
-        .unwrap_or_default();
+    let mut map = load_json_map("positions.json");
     map.insert(url.to_string(), elapsed_secs);
-    if let Ok(json) = serde_json::to_string_pretty(&map) {
-        let _ = std::fs::write(&path, json);
-    }
+    save_json_map("positions.json", &map);
 }
 
 pub fn clear_position(url: &str) {
-    let path = crate::paths::audio_cache_dir().join("positions.json");
-    if let Ok(content) = std::fs::read_to_string(&path) {
-        if let Ok(mut map) = serde_json::from_str::<HashMap<String, u64>>(&content) {
-            if map.remove(url).is_some() {
-                if let Ok(json) = serde_json::to_string_pretty(&map) {
-                    let _ = std::fs::write(&path, json);
-                }
-            }
-        }
+    let mut map = load_json_map("positions.json");
+    if map.remove(url).is_some() {
+        save_json_map("positions.json", &map);
     }
 }
 
