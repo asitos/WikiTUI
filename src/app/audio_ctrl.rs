@@ -22,7 +22,7 @@ impl App {
                     spoken
                         .tracks
                         .first()
-                        .map(|t| (title.clone(), t.url.clone()))
+                        .map(|t| (title.clone(), t.url.clone(), spoken.duration.clone()))
                 } else {
                     None
                 }
@@ -30,8 +30,10 @@ impl App {
             _ => None,
         };
 
-        if let Some((play_title, track_url)) = track_info {
-            let success = self.audio_player.play(&play_title, &track_url);
+        if let Some((play_title, track_url, duration)) = track_info {
+            let success =
+                self.audio_player
+                    .play(&play_title, &track_url, duration.as_deref());
             if success {
                 self.set_status_message(format!("playing spoken article: {}", play_title));
             } else if self.audio_player.backend.is_none() {
@@ -43,6 +45,25 @@ impl App {
             }
         } else {
             self.set_status_message("no spoken audio available for this article".to_string());
+        }
+    }
+
+    pub fn seek_spoken_audio(&mut self, delta_secs: i64) {
+        if self.audio_player.is_active() {
+            let success = self.audio_player.seek(delta_secs);
+            if success {
+                let elapsed = self.audio_player.elapsed_secs;
+                let m = elapsed / 60;
+                let s = elapsed % 60;
+                let dir = if delta_secs >= 0 { "forward" } else { "backward" };
+                self.set_status_message(format!(
+                    "seeked {} {}s ({:02}:{:02})",
+                    dir,
+                    delta_secs.abs(),
+                    m,
+                    s
+                ));
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 use std::process::{Child, Command, Stdio};
+use std::time::Instant;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AudioBackend {
@@ -22,6 +23,9 @@ pub struct AudioPlayer {
     pub state: PlaybackState,
     pub current_title: Option<String>,
     pub current_url: Option<String>,
+    pub elapsed_secs: u64,
+    pub total_duration_secs: Option<u64>,
+    pub last_tick: Option<Instant>,
 }
 
 impl Default for AudioPlayer {
@@ -38,6 +42,9 @@ impl AudioPlayer {
             state: PlaybackState::Stopped,
             current_title: None,
             current_url: None,
+            elapsed_secs: 0,
+            total_duration_secs: None,
+            last_tick: None,
         }
     }
 
@@ -75,7 +82,18 @@ impl AudioPlayer {
         self.state != PlaybackState::Stopped
     }
 
-    pub fn play(&mut self, title: &str, url: &str) -> bool {
+    pub fn play(&mut self, title: &str, url: &str, duration_str: Option<&str>) -> bool {
+        let total_duration_secs = duration_str.and_then(parse_duration_to_secs);
+        self.play_at_offset(title, url, 0, total_duration_secs)
+    }
+
+    pub fn play_at_offset(
+        &mut self,
+        title: &str,
+        url: &str,
+        start_secs: u64,
+        total_duration_secs: Option<u64>,
+    ) -> bool {
         self.stop();
 
         let backend = match self.backend {
@@ -83,51 +101,76 @@ impl AudioPlayer {
             None => return false,
         };
 
+        let start_str = start_secs.to_string();
+        let mpv_start = format!("--start={}", start_secs);
+        let vlc_start = format!("--start-time={}", start_secs);
+
         let child_res = match backend {
-            AudioBackend::Mpv => Command::new("mpv")
-                .args(["--no-video", "--really-quiet", url])
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn(),
-            AudioBackend::Ffplay => Command::new("ffplay")
-                .args(["-nodisp", "-autoexit", "-loglevel", "quiet", url])
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn(),
-            AudioBackend::Cvlc => Command::new("cvlc")
-                .args([
-                    "--play-and-exit",
-                    "--no-video",
-                    "-I",
-                    "dummy",
-                    url,
-                    "vlc://quit",
-                ])
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn(),
-            AudioBackend::Vlc => Command::new("vlc")
-                .args([
-                    "--play-and-exit",
-                    "--no-video",
-                    "-I",
-                    "dummy",
-                    url,
-                    "vlc://quit",
-                ])
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn(),
-            AudioBackend::Afplay => Command::new("afplay")
-                .arg(url)
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn(),
+            AudioBackend::Mpv => {
+                let mut args = vec!["--no-video", "--really-quiet"];
+                if start_secs > 0 {
+                    args.push(&mpv_start);
+                }
+                args.push(url);
+                Command::new("mpv")
+                    .args(&args)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+            }
+            AudioBackend::Ffplay => {
+                let mut args = vec!["-nodisp", "-autoexit", "-loglevel", "quiet"];
+                if start_secs > 0 {
+                    args.extend(["-ss", &start_str]);
+                }
+                args.push(url);
+                Command::new("ffplay")
+                    .args(&args)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+            }
+            AudioBackend::Cvlc => {
+                let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy"];
+                if start_secs > 0 {
+                    args.push(&vlc_start);
+                }
+                args.extend([url, "vlc://quit"]);
+                Command::new("cvlc")
+                    .args(&args)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+            }
+            AudioBackend::Vlc => {
+                let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy"];
+                if start_secs > 0 {
+                    args.push(&vlc_start);
+                }
+                args.extend([url, "vlc://quit"]);
+                Command::new("vlc")
+                    .args(&args)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+            }
+            AudioBackend::Afplay => {
+                let mut args = Vec::new();
+                if start_secs > 0 {
+                    args.extend(["-t", &start_str]);
+                }
+                args.push(url);
+                Command::new("afplay")
+                    .args(&args)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+            }
         };
 
         match child_res {
@@ -136,6 +179,9 @@ impl AudioPlayer {
                 self.state = PlaybackState::Playing;
                 self.current_title = Some(title.to_string());
                 self.current_url = Some(url.to_string());
+                self.elapsed_secs = start_secs;
+                self.total_duration_secs = total_duration_secs;
+                self.last_tick = Some(Instant::now());
                 true
             }
             Err(_) => {
@@ -143,6 +189,50 @@ impl AudioPlayer {
                 false
             }
         }
+    }
+
+    pub fn seek(&mut self, delta_secs: i64) -> bool {
+        if !self.is_active() {
+            return false;
+        }
+
+        let new_offset = if delta_secs >= 0 {
+            self.elapsed_secs.saturating_add(delta_secs as u64)
+        } else {
+            self.elapsed_secs.saturating_sub((-delta_secs) as u64)
+        };
+
+        let target_offset = if let Some(total) = self.total_duration_secs {
+            new_offset.min(total)
+        } else {
+            new_offset
+        };
+
+        if let Some(child) = &mut self.child {
+            if self.backend == Some(AudioBackend::Mpv) {
+                if let Some(stdin) = child.stdin.as_mut() {
+                    use std::io::Write;
+                    let cmd = format!("seek {}\n", delta_secs);
+                    if stdin.write_all(cmd.as_bytes()).is_ok() && stdin.flush().is_ok() {
+                        self.elapsed_secs = target_offset;
+                        self.last_tick = Some(Instant::now());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if let (Some(title), Some(url)) = (self.current_title.clone(), self.current_url.clone()) {
+            let total = self.total_duration_secs;
+            let was_paused = self.state == PlaybackState::Paused;
+            let success = self.play_at_offset(&title, &url, target_offset, total);
+            if success && was_paused {
+                self.pause();
+            }
+            return success;
+        }
+
+        false
     }
 
     pub fn pause(&mut self) {
@@ -154,6 +244,7 @@ impl AudioPlayer {
                     .stderr(Stdio::null())
                     .output();
                 self.state = PlaybackState::Paused;
+                self.last_tick = None;
             }
         }
     }
@@ -167,6 +258,7 @@ impl AudioPlayer {
                     .stderr(Stdio::null())
                     .output();
                 self.state = PlaybackState::Playing;
+                self.last_tick = Some(Instant::now());
             }
         }
     }
@@ -187,17 +279,100 @@ impl AudioPlayer {
         self.state = PlaybackState::Stopped;
         self.current_title = None;
         self.current_url = None;
+        self.elapsed_secs = 0;
+        self.total_duration_secs = None;
+        self.last_tick = None;
     }
 
     pub fn poll_status(&mut self) {
+        if self.state == PlaybackState::Playing {
+            if let Some(last) = self.last_tick {
+                let now = Instant::now();
+                let delta = now.duration_since(last).as_secs();
+                if delta > 0 {
+                    self.elapsed_secs = self.elapsed_secs.saturating_add(delta);
+                    self.last_tick = Some(now);
+                }
+            } else {
+                self.last_tick = Some(Instant::now());
+            }
+        }
+
         if let Some(child) = &mut self.child {
             if let Ok(Some(_)) = child.try_wait() {
                 self.child = None;
                 self.state = PlaybackState::Stopped;
                 self.current_title = None;
                 self.current_url = None;
+                self.elapsed_secs = 0;
+                self.total_duration_secs = None;
+                self.last_tick = None;
             }
         }
+    }
+}
+
+pub fn parse_duration_to_secs(dur_str: &str) -> Option<u64> {
+    let s = dur_str.trim().to_lowercase();
+    if s.is_empty() {
+        return None;
+    }
+
+    if s.contains(':') {
+        let parts: Vec<&str> = s.split(':').collect();
+        match parts.len() {
+            2 => {
+                let m: u64 = parts[0].trim().parse().ok()?;
+                let sec: u64 = parts[1].trim().parse().ok()?;
+                return Some(m * 60 + sec);
+            }
+            3 => {
+                let h: u64 = parts[0].trim().parse().ok()?;
+                let m: u64 = parts[1].trim().parse().ok()?;
+                let sec: u64 = parts[2].trim().parse().ok()?;
+                return Some(h * 3600 + m * 60 + sec);
+            }
+            _ => {}
+        }
+    }
+
+    let mut total_secs = 0u64;
+    let mut found_any = false;
+
+    let words: Vec<&str> = s
+        .split(|c: char| c.is_whitespace() || c == ',')
+        .filter(|w| !w.is_empty())
+        .collect();
+    let mut i = 0;
+    while i < words.len() {
+        if let Ok(num) = words[i].parse::<u64>() {
+            if i + 1 < words.len() {
+                let unit = words[i + 1];
+                if unit.starts_with("hour") || unit.starts_with("hr") {
+                    total_secs += num * 3600;
+                    found_any = true;
+                    i += 2;
+                    continue;
+                } else if unit.starts_with("minute") || unit.starts_with("min") {
+                    total_secs += num * 60;
+                    found_any = true;
+                    i += 2;
+                    continue;
+                } else if unit.starts_with("second") || unit.starts_with("sec") {
+                    total_secs += num;
+                    found_any = true;
+                    i += 2;
+                    continue;
+                }
+            }
+        }
+        i += 1;
+    }
+
+    if found_any {
+        Some(total_secs)
+    } else {
+        None
     }
 }
 
