@@ -56,6 +56,49 @@ pub struct ParsedDocument {
     pub categories: Vec<String>,
 }
 
+impl ParsedDocument {
+    #[inline]
+    pub fn validate_invariants(&self) {
+        #[cfg(debug_assertions)]
+        {
+            let mut last_first_line = 0;
+            for link in &self.links {
+                if let Some(&(first_line, _)) = link.span_indices.first() {
+                    debug_assert!(
+                        first_line >= last_first_line,
+                        "ParsedDocument link invariant violated: links must be monotonically sorted by line (found {} < {})",
+                        first_line,
+                        last_first_line
+                    );
+                    last_first_line = first_line;
+                }
+                for &(line_idx, span_idx) in &link.span_indices {
+                    if let Some(line) = self.lines.get(line_idx) {
+                        debug_assert!(
+                            span_idx < line.spans.len(),
+                            "ParsedDocument link invariant violated: span index {} out of bounds for line {} (len {})",
+                            span_idx,
+                            line_idx,
+                            line.spans.len()
+                        );
+                    }
+                }
+            }
+
+            for heading in &self.headings {
+                if !self.lines.is_empty() {
+                    debug_assert!(
+                        heading.line_idx < self.lines.len(),
+                        "ParsedDocument heading invariant violated: heading line {} out of bounds (lines len {})",
+                        heading.line_idx,
+                        self.lines.len()
+                    );
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct StyledToken {
     pub text: String,
