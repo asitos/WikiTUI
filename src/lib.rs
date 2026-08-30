@@ -4,6 +4,7 @@ pub mod audio;
 pub mod clipboard;
 pub mod config;
 pub mod feed;
+pub mod graphics;
 pub mod keybinds;
 pub mod layout;
 pub mod mouse;

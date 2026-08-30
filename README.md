@@ -128,6 +128,9 @@ show_external_links = true # enable/disable external links section
 toc_section_numbers = true # enable/disable table of contents section markers
 heading_marker = true # enable/disable colored heading marker in section headings
 code_line_numbers = true # enable/disable line numbers in code blocks
+show_images = true # enable/disable inline article images
+image_protocol = "auto" # graphics protocol: "auto", "kitty", "halfblocks", "off"
+max_image_height = 25 # maximum terminal rows allocated per image
 
 [ui]
 rounded_borders = false # enable/disable rounded borders
