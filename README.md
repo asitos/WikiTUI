@@ -100,6 +100,7 @@ sudo install -Dm755 target/release/wikid /usr/bin/wikid
 | **categories** | `c` | view categories of current article |
 | **daily feeds (home)** | `f` / `n` / `d` / `t` | open featured article (`f`), news (`n`), on this day (`d`), trending (`t`) |
 | **spoken audio** | `a` / `A` | play/pause / stop spoken audio |
+| **seek audio** | `<` / `>` | scrub audio backward / forward 10s |
 | **restore session** | `S` | restore previous session (from home tab) |
 | **settings modal** | `,` | open interactive settings modal |
 | **help popup** | `?` | toggle keybindings cheat sheet |

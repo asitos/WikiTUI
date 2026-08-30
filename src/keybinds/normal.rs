@@ -94,6 +94,12 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('A') => {
                 app.stop_spoken_audio();
             }
+            KeyCode::Char('>') => {
+                app.seek_spoken_audio(10);
+            }
+            KeyCode::Char('<') => {
+                app.seek_spoken_audio(-10);
+            }
             KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.intra_jump_back(term_height);
             }
@@ -121,7 +127,7 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('?') => {
                 app.toggle_help_popup();
             }
-            KeyCode::Char(',') => {
+            KeyCode::Char(',') if key.modifiers.is_empty() => {
                 app.input_mode = crate::app::InputMode::Settings;
             }
             KeyCode::Char('/') => {

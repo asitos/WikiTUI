@@ -100,6 +100,7 @@ fn run_app(
 
         let has_loading = app.feed.is_fetching
             || (app.feed.active && app.feed.items.is_empty())
+            || app.audio_player.is_playing()
             || app
                 .tabs
                 .iter()
