@@ -34,6 +34,12 @@ pub fn cache_dir() -> PathBuf {
     crate::paths::cache_dir().join("articles")
 }
 
+fn fnv1a_hash(s: &str) -> u64 {
+    s.bytes().fold(0xcbf29ce484222325, |h, b| {
+        (h ^ (b as u64)).wrapping_mul(0x100000001b3)
+    })
+}
+
 pub fn cache_file_path(title: &str) -> PathBuf {
     let safe_name: String = title
         .chars()
@@ -46,12 +52,7 @@ pub fn cache_file_path(title: &str) -> PathBuf {
         })
         .collect();
 
-    let mut hash: u64 = 0xcbf29ce484222325;
-    for b in title.bytes() {
-        hash ^= b as u64;
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-
+    let hash = fnv1a_hash(title);
     cache_dir().join(format!("{}_{:016x}.html", safe_name, hash))
 }
 
