@@ -187,7 +187,8 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
         ),
     ]));
 
-    let paragraph = Paragraph::new(lines);
+    let scroll = compute_settings_scroll(app.settings_modal.cursor_idx, inner.height as usize);
+    let paragraph = Paragraph::new(lines).scroll((scroll as u16, 0));
     f.render_widget(paragraph, inner);
 }
 
@@ -199,11 +200,59 @@ fn bool_span(val: bool) -> Span<'static> {
     }
 }
 
-pub fn get_setting_row_at(inner: Rect, target_y: u16) -> Option<(usize, SettingItem, u16)> {
+pub fn get_item_line_index(item_idx: usize) -> usize {
+    let mut cur_line = 0;
+    let mut current_section = "";
+    for (idx, item) in SettingItem::ALL.iter().enumerate() {
+        let section = item.section();
+        if section != current_section {
+            if !current_section.is_empty() {
+                cur_line += 1;
+            }
+            cur_line += 1;
+            current_section = section;
+        }
+        if idx == item_idx {
+            return cur_line;
+        }
+        cur_line += 1;
+    }
+    cur_line
+}
+
+pub fn compute_settings_total_lines() -> usize {
+    let mut cur_line = 0;
+    let mut current_section = "";
+    for item in SettingItem::ALL.iter() {
+        let section = item.section();
+        if section != current_section {
+            if !current_section.is_empty() {
+                cur_line += 1;
+            }
+            cur_line += 1;
+            current_section = section;
+        }
+        cur_line += 1;
+    }
+    cur_line + 4
+}
+
+pub fn compute_settings_scroll(cursor_idx: usize, inner_height: usize) -> usize {
+    let total_lines = compute_settings_total_lines();
+    let target_line = get_item_line_index(cursor_idx);
+    crate::ui::modals::utils::compute_centered_scroll(target_line, inner_height, total_lines)
+}
+
+pub fn get_setting_row_at(
+    inner: Rect,
+    target_y: u16,
+    cursor_idx: usize,
+) -> Option<(usize, SettingItem, u16)> {
     if target_y < inner.y || target_y >= inner.y + inner.height {
         return None;
     }
-    let row_in_inner = (target_y - inner.y) as usize;
+    let scroll = compute_settings_scroll(cursor_idx, inner.height as usize);
+    let row_in_inner = (target_y - inner.y) as usize + scroll;
     let mut cur_line = 0;
     let mut current_section = "";
 
