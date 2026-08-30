@@ -79,6 +79,17 @@ impl Pane {
         }
     }
 
+    pub fn prepare_for_article_fetch(&mut self, title: &str) {
+        self.is_loading = true;
+        self.loading_title = Some(title.to_string());
+        self.selected_link_idx = None;
+        self.intra_jump_back.clear();
+        self.intra_jump_forward.clear();
+        self.scroll_offset = 0;
+        self.show_toc = false;
+        self.selected_toc_idx = None;
+    }
+
     pub fn ensure_parsed_width(
         &mut self,
         width: usize,

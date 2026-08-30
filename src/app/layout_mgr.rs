@@ -143,10 +143,10 @@ impl App {
             self.next_pane_id += 1;
 
             let mut pane = Pane::new(pane_id);
+            pane.prepare_for_article_fetch(&closed.title);
             pane.scroll_offset = closed.scroll_offset;
             pane.history_back = closed.history_back;
             pane.history_forward = closed.history_forward;
-            pane.is_loading = true;
 
             self.send_fetch_article(pane_id, closed.title.clone());
 

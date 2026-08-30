@@ -194,8 +194,7 @@ impl App {
             self.new_tab();
             let pane_id = self.active_pane().id;
             let active_pane = self.active_pane_mut();
-            active_pane.is_loading = true;
-            active_pane.selected_link_idx = None;
+            active_pane.prepare_for_article_fetch(&title);
             self.send_fetch_article(pane_id, title);
         }
     }
@@ -223,8 +222,7 @@ impl App {
             self.split_active_pane(direction);
             let pane_id = self.active_pane().id;
             let active_pane = self.active_pane_mut();
-            active_pane.is_loading = true;
-            active_pane.selected_link_idx = None;
+            active_pane.prepare_for_article_fetch(&title);
             self.send_fetch_article(pane_id, title);
         }
     }

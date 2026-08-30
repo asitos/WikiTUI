@@ -11,11 +11,7 @@ impl App {
                 active_pane.history_forward.clear();
             }
         }
-        active_pane.is_loading = true;
-        active_pane.selected_link_idx = None;
-        active_pane.intra_jump_back.clear();
-        active_pane.intra_jump_forward.clear();
-        active_pane.scroll_offset = 0;
+        active_pane.prepare_for_article_fetch(title);
         self.send_fetch_article(pane_id, title.to_string());
     }
 
@@ -47,11 +43,7 @@ impl App {
                 active_pane.history_forward.push(cur);
             }
             let pane_id = active_pane.id;
-            active_pane.is_loading = true;
-            active_pane.selected_link_idx = None;
-            active_pane.intra_jump_back.clear();
-            active_pane.intra_jump_forward.clear();
-            active_pane.scroll_offset = 0;
+            active_pane.prepare_for_article_fetch(&target_title);
             self.send_fetch_article(pane_id, target_title);
         }
     }
@@ -64,11 +56,7 @@ impl App {
                 active_pane.history_back.push(cur);
             }
             let pane_id = active_pane.id;
-            active_pane.is_loading = true;
-            active_pane.selected_link_idx = None;
-            active_pane.intra_jump_back.clear();
-            active_pane.intra_jump_forward.clear();
-            active_pane.scroll_offset = 0;
+            active_pane.prepare_for_article_fetch(&target_title);
             self.send_fetch_article(pane_id, target_title);
         }
     }
