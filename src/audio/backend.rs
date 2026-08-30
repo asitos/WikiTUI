@@ -66,8 +66,9 @@ pub fn spawn_player(
             let mut args = vec![
                 "-nodisp",
                 "-autoexit",
+                "-stats",
                 "-loglevel",
-                "error",
+                "info",
                 "-user_agent",
                 USER_AGENT,
             ];
@@ -79,7 +80,7 @@ pub fn spawn_player(
                 .args(&args)
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
-                .stderr(Stdio::null())
+                .stderr(Stdio::piped())
                 .spawn()
         }
         AudioBackend::Cvlc => {

@@ -362,10 +362,13 @@ fn format_audio_time(secs: u64, include_hours: bool) -> String {
 }
 
 fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'static>> {
+    let is_buffering = app.audio_player.is_buffering;
     let is_playing = app.audio_player.is_playing();
     let is_icons = app.config.ui.icons;
 
-    let icon = if is_icons {
+    let icon = if is_buffering {
+        "󰑐 "
+    } else if is_icons {
         if is_playing {
             "󰐊 "
         } else {
@@ -377,7 +380,9 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
         "❚❚ "
     };
 
-    let icon_color = if is_playing {
+    let icon_color = if is_buffering {
+        theme::ORANGE
+    } else if is_playing {
         theme::LIME
     } else {
         theme::YELLOW
@@ -393,7 +398,9 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
         |t| format_audio_time(t, include_hours),
     );
 
-    let hint = if is_playing {
+    let hint = if is_buffering {
+        "[buffering... · A stop]"
+    } else if is_playing {
         "[< / > seek · a pause · A stop]"
     } else {
         "[< / > seek · a resume · A stop]"
@@ -422,6 +429,12 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
         .clamp(6, 24);
 
     if bar_width > 0 {
+        let knob_color = if is_buffering {
+            theme::ORANGE
+        } else {
+            theme::LIME
+        };
+
         if let Some(total) = total_opt {
             let ratio = if total > 0 {
                 (elapsed as f64 / total as f64).clamp(0.0, 1.0)
@@ -442,7 +455,7 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
             spans.push(Span::styled(
                 knob,
                 Style::default()
-                    .fg(theme::LIME)
+                    .fg(knob_color)
                     .add_modifier(Modifier::BOLD),
             ));
             if !unfilled_part.is_empty() {
@@ -463,7 +476,7 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
             spans.push(Span::styled(
                 knob,
                 Style::default()
-                    .fg(theme::LIME)
+                    .fg(knob_color)
                     .add_modifier(Modifier::BOLD),
             ));
             if !after.is_empty() {

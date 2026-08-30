@@ -1,11 +1,13 @@
 pub mod backend;
 pub mod duration;
 pub mod probe;
+pub mod sync;
 pub mod types;
 
 pub use backend::{detect_backend, AudioBackend};
 pub use duration::parse_duration_to_secs;
 pub use probe::probe_exact_duration;
+pub use sync::{spawn_playhead_monitor, PlayheadUpdate};
 pub use types::PlaybackState;
 
 use std::process::{Child, Command, Stdio};
@@ -22,6 +24,8 @@ pub struct AudioPlayer {
     pub total_duration_secs: Option<u64>,
     pub last_tick: Option<Instant>,
     pub probe_rx: Option<Receiver<u64>>,
+    pub playhead_rx: Option<Receiver<PlayheadUpdate>>,
+    pub is_buffering: bool,
 }
 
 impl Default for AudioPlayer {
@@ -42,6 +46,8 @@ impl AudioPlayer {
             total_duration_secs: None,
             last_tick: None,
             probe_rx: None,
+            playhead_rx: None,
+            is_buffering: false,
         }
     }
 
@@ -73,7 +79,8 @@ impl AudioPlayer {
         };
 
         match backend::spawn_player(backend, url, start_secs) {
-            Ok(child) => {
+            Ok(mut child) => {
+                let playhead_rx = child.stderr.take().map(spawn_playhead_monitor);
                 self.child = Some(child);
                 self.state = PlaybackState::Playing;
                 self.current_title = Some(title.to_string());
@@ -81,6 +88,8 @@ impl AudioPlayer {
                 self.elapsed_secs = start_secs;
                 self.total_duration_secs = total_duration_secs;
                 self.last_tick = Some(Instant::now());
+                self.is_buffering = playhead_rx.is_some();
+                self.playhead_rx = playhead_rx;
 
                 let (tx, rx) = std::sync::mpsc::channel();
                 let probe_url = url.to_string();
@@ -192,6 +201,8 @@ impl AudioPlayer {
         self.total_duration_secs = None;
         self.last_tick = None;
         self.probe_rx = None;
+        self.playhead_rx = None;
+        self.is_buffering = false;
     }
 
     pub fn poll_status(&mut self) {
@@ -202,7 +213,17 @@ impl AudioPlayer {
             }
         }
 
-        if self.state == PlaybackState::Playing {
+        if let Some(rx) = &self.playhead_rx {
+            while let Ok(update) = rx.try_recv() {
+                self.is_buffering = update.is_buffering;
+                if let Some(sec) = update.exact_playhead {
+                    self.elapsed_secs = sec.round() as u64;
+                    self.last_tick = Some(Instant::now());
+                }
+            }
+        }
+
+        if self.state == PlaybackState::Playing && !self.is_buffering {
             if let Some(last) = self.last_tick {
                 let now = Instant::now();
                 let delta = now.duration_since(last).as_secs();
@@ -225,6 +246,8 @@ impl AudioPlayer {
                 self.total_duration_secs = None;
                 self.last_tick = None;
                 self.probe_rx = None;
+                self.playhead_rx = None;
+                self.is_buffering = false;
             }
         }
     }
