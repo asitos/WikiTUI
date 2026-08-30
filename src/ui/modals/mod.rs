@@ -3,6 +3,7 @@ pub mod daily_feed;
 pub mod help;
 pub mod lists;
 pub mod onboarding;
+pub mod palette;
 pub mod search;
 pub mod settings;
 pub mod toc;
@@ -21,6 +22,7 @@ pub use lists::{
     render_create_new_list_modal, render_save_to_list_modal, render_saved_lists_viewer_modal,
 };
 pub use onboarding::{compute_onboarding_modal_area, render_category_onboarding_modal};
+pub use palette::{compute_palette_modal_area, render_palette_modal};
 pub use search::{compute_search_modal_area, render_search_modal};
 pub use settings::{compute_settings_modal_area, render_settings_modal};
 pub use toc::{compute_toc_modal_area, render_toc_modal};
