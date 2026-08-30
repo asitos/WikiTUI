@@ -2,14 +2,21 @@ use super::scrollbar::active_pane_rect;
 use crate::app::{App, InputMode, PaneContent};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 
-pub fn handle_left_click(app: &mut App, col: u16, row: u16, term_width: u16, term_height: u16) {
+pub fn handle_left_click(
+    app: &mut App,
+    col: u16,
+    row: u16,
+    term_width: u16,
+    term_height: u16,
+    alt: bool,
+) {
     let size = Rect::new(0, 0, term_width, term_height);
 
-    if handle_modal_left_click(app, col, row, size, term_width, term_height) {
+    if handle_modal_left_click(app, col, row, size, term_width, term_height, alt) {
         return;
     }
 
-    handle_workspace_left_click(app, col, row, term_width, term_height);
+    handle_workspace_left_click(app, col, row, term_width, term_height, alt);
 }
 
 fn handle_modal_left_click(
@@ -19,6 +26,7 @@ fn handle_modal_left_click(
     size: Rect,
     term_width: u16,
     term_height: u16,
+    alt: bool,
 ) -> bool {
     if app.feed.active {
         let chunks = Layout::default()
@@ -34,6 +42,9 @@ fn handle_modal_left_click(
             app.toggle_feed_like();
         } else if let Some(item) = app.feed.current_item().cloned() {
             app.feed.active = false;
+            if alt {
+                app.new_tab();
+            }
             app.open_article(&item.title);
         }
         return true;
@@ -345,6 +356,9 @@ fn handle_modal_left_click(
                             app.lists_modal.viewer_article_idx = clicked_art_idx;
                             let title = list.articles[clicked_art_idx].clone();
                             app.input_mode = InputMode::Normal;
+                            if alt {
+                                app.new_tab();
+                            }
                             app.open_article(&title);
                         }
                     }
@@ -366,6 +380,7 @@ fn handle_workspace_left_click(
     row: u16,
     term_width: u16,
     term_height: u16,
+    alt: bool,
 ) {
     if app.input_mode != InputMode::Normal {
         return;
@@ -388,7 +403,11 @@ fn handle_workspace_left_click(
                     row,
                 ) {
                     pane.selected_link_idx = Some(link_idx);
-                    app.activate_selected(term_height);
+                    if alt {
+                        app.activate_selected_in_new_tab();
+                    } else {
+                        app.activate_selected(term_height);
+                    }
                 }
             }
         }
@@ -431,6 +450,9 @@ fn handle_workspace_left_click(
                             ) {
                                 pane.selected_idx = item_idx;
                                 let title = items[item_idx].title.clone();
+                                if alt {
+                                    app.new_tab();
+                                }
                                 app.open_article(&title);
                             }
                         }
@@ -456,6 +478,9 @@ fn handle_workspace_left_click(
                                 let idx = (row - start_row) as usize;
                                 if idx < recent_articles.len() {
                                     let title = recent_articles[idx].clone();
+                                    if alt {
+                                        app.new_tab();
+                                    }
                                     app.open_article(&title);
                                 }
                             }
@@ -470,7 +495,11 @@ fn handle_workspace_left_click(
                             row,
                         ) {
                             pane.selected_link_idx = Some(link_idx);
-                            app.activate_selected(term_height);
+                            if alt {
+                                app.activate_selected_in_new_tab();
+                            } else {
+                                app.activate_selected(term_height);
+                            }
                         }
                     }
                     _ => {}
