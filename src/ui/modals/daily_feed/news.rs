@@ -11,14 +11,13 @@ use ratatui::{
 };
 
 pub fn get_ongoing_links(ongoing: &[crate::api::daily_feed::OngoingItem]) -> Vec<(String, String)> {
-    let mut links = Vec::new();
-    for og in ongoing {
-        links.push((og.target.clone(), og.display.clone()));
-        for (sub_target, sub_display) in &og.sub_events {
-            links.push((sub_target.clone(), sub_display.clone()));
-        }
-    }
-    links
+    ongoing
+        .iter()
+        .flat_map(|og| {
+            std::iter::once((og.target.clone(), og.display.clone()))
+                .chain(og.sub_events.iter().cloned())
+        })
+        .collect()
 }
 
 pub fn get_recent_deaths_links(
