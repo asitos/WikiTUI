@@ -151,11 +151,11 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
 
 pub fn strip_html_tags(input: &str) -> String {
     let mut result = String::with_capacity(input.len());
-    let mut chars = input.chars().peekable();
+    let mut chars = input.chars();
 
     while let Some(c) = chars.next() {
         if c == '<' {
-            if chars.clone().take(3).collect::<String>() == "!--" {
+            if chars.as_str().starts_with("!--") {
                 chars.next();
                 chars.next();
                 chars.next();

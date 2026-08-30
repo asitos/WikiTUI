@@ -104,9 +104,9 @@ pub struct DailyFeed {
 
 pub fn strip_wikitext_comments(s: &str) -> String {
     let mut res = String::with_capacity(s.len());
-    let mut chars = s.chars().peekable();
+    let mut chars = s.chars();
     while let Some(c) = chars.next() {
-        if c == '<' && chars.clone().take(3).collect::<String>() == "!--" {
+        if c == '<' && chars.as_str().starts_with("!--") {
             chars.next();
             chars.next();
             chars.next();
