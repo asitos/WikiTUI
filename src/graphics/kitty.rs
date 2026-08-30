@@ -43,12 +43,22 @@ pub fn render_kitty_image_at<W: Write>(
     cols: u16,
     rows: u16,
 ) -> io::Result<()> {
-    let b64 = base64_encode(image_bytes);
-    write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
-    render_kitty_image_chunked(writer, &b64, cols, rows)
+    if image_bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        let b64 = base64_encode(image_bytes);
+        write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
+        render_kitty_png_chunked(writer, &b64, cols, rows)
+    } else if let Ok(img) = image::load_from_memory(image_bytes) {
+        let (w, h) = (img.width(), img.height());
+        let rgba = img.to_rgba8();
+        let b64 = base64_encode(&rgba);
+        write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
+        render_kitty_rgba_chunked(writer, &b64, w, h, cols, rows)
+    } else {
+        Ok(())
+    }
 }
 
-pub fn render_kitty_image_chunked<W: Write>(
+pub fn render_kitty_png_chunked<W: Write>(
     writer: &mut W,
     png_base64: &str,
     cols: u16,
@@ -69,6 +79,40 @@ pub fn render_kitty_image_chunked<W: Write>(
                 writer,
                 "\x1b_Ga=T,f=100,c={},r={},m={};{}\x1b\\",
                 cols, rows, more, chunk
+            )?;
+        } else {
+            write!(writer, "\x1b_Gm={};{}\x1b\\", more, chunk)?;
+        }
+
+        offset = end;
+    }
+
+    writer.flush()
+}
+
+pub fn render_kitty_rgba_chunked<W: Write>(
+    writer: &mut W,
+    rgba_base64: &str,
+    img_w: u32,
+    img_h: u32,
+    cols: u16,
+    rows: u16,
+) -> io::Result<()> {
+    let chunk_size = 4096;
+    let bytes = rgba_base64.as_bytes();
+    let total = bytes.len();
+    let mut offset = 0;
+
+    while offset < total {
+        let end = (offset + chunk_size).min(total);
+        let chunk = &rgba_base64[offset..end];
+        let more = if end < total { 1 } else { 0 };
+
+        if offset == 0 {
+            write!(
+                writer,
+                "\x1b_Ga=T,f=32,s={},v={},c={},r={},m={};{}\x1b\\",
+                img_w, img_h, cols, rows, more, chunk
             )?;
         } else {
             write!(writer, "\x1b_Gm={};{}\x1b\\", more, chunk)?;

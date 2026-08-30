@@ -12,6 +12,10 @@ impl GraphicsProtocol {
         matches!(self, Self::Kitty)
     }
 
+    pub fn is_halfblocks(&self) -> bool {
+        matches!(self, Self::Halfblocks)
+    }
+
     pub fn name(&self) -> &'static str {
         match self {
             Self::Kitty => "kitty",

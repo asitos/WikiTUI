@@ -171,6 +171,37 @@ pub fn render_article_pane(
 
         let mut line = Line::from(spans);
         line.alignment = orig_line.alignment;
+
+        let resolved_proto = crate::graphics::resolve_protocol(app.config.reader.image_protocol);
+        if resolved_proto.is_halfblocks() && app.config.reader.show_images {
+            for img in &parsed_doc.images {
+                if line_idx >= img.line_idx && line_idx < img.line_idx + img.height_lines {
+                    let rel_row = line_idx - img.line_idx;
+                    let img_path = pane
+                        .loaded_images
+                        .get(&img.url)
+                        .cloned()
+                        .or_else(|| crate::graphics::cache::get_cached_image_path(&img.url));
+                    if let Some(path) = img_path {
+                        if let Ok(bytes) = std::fs::read(&path) {
+                            if let Some(hb_lines) =
+                                crate::graphics::halfblocks::render_halfblock_image_from_bytes(
+                                    &bytes,
+                                    img.width_cols.saturating_sub(2),
+                                    img.height_lines,
+                                )
+                            {
+                                if let Some(hb_line) = hb_lines.get(rel_row) {
+                                    line = hb_line.clone();
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         rendered_lines.push(line);
     }
 

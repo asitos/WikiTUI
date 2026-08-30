@@ -51,3 +51,27 @@ pub fn render_halfblock_lines(
 
     lines
 }
+
+pub fn render_halfblock_image_from_bytes(
+    image_bytes: &[u8],
+    target_cols: usize,
+    target_rows: usize,
+) -> Option<Vec<Line<'static>>> {
+    let img = image::load_from_memory(image_bytes).ok()?;
+    let target_px_height = target_rows * 2;
+    let resized = img.resize_exact(
+        target_cols as u32,
+        target_px_height as u32,
+        image::imageops::FilterType::Triangle,
+    );
+    let rgb = resized.to_rgb8();
+    let pixels: Vec<RgbPixel> = rgb
+        .pixels()
+        .map(|p| RgbPixel {
+            r: p[0],
+            g: p[1],
+            b: p[2],
+        })
+        .collect();
+    Some(render_halfblock_lines(&pixels, target_cols, target_px_height))
+}
