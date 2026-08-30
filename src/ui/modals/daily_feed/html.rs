@@ -4,17 +4,16 @@ use crate::parser::utils::decode_html_entities;
 pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
     let mut chunks = Vec::new();
     let mut links = Vec::new();
-    let mut chars = input.chars();
     let mut current_text = String::new();
     let mut in_bold = false;
     let mut in_italic = false;
     let mut current_link: Option<(usize, String)> = None;
 
     let flush = |chunks: &mut Vec<StyledChunk>,
-                 current_text: &mut String,
-                 in_bold: bool,
-                 in_italic: bool,
-                 current_link: &Option<(usize, String)>| {
+                     current_text: &mut String,
+                     in_bold: bool,
+                     in_italic: bool,
+                     current_link: &Option<(usize, String)>| {
         if current_text.is_empty() {
             return;
         }
@@ -39,20 +38,15 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
         current_text.clear();
     };
 
+    let mut chars = input.chars();
     while let Some(c) = chars.next() {
         if c == '<' {
             if chars.as_str().starts_with("!--") {
-                chars.next();
-                chars.next();
-                chars.next();
-                let mut dashes = 0;
-                for nc in chars.by_ref() {
-                    if nc == '-' {
-                        dashes += 1;
-                    } else if nc == '>' && dashes >= 2 {
+                while let Some(nc) = chars.next() {
+                    if nc == '-' && chars.as_str().starts_with("->") {
+                        chars.next();
+                        chars.next();
                         break;
-                    } else {
-                        dashes = 0;
                     }
                 }
                 continue;
@@ -67,71 +61,45 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
             }
 
             let tag_lower = tag.to_lowercase();
-            if tag_lower.starts_with("b") && !tag_lower.starts_with("br") {
-                flush(
-                    &mut chunks,
-                    &mut current_text,
-                    in_bold,
-                    in_italic,
-                    &current_link,
-                );
-                in_bold = true;
-            } else if tag_lower == "/b" {
-                flush(
-                    &mut chunks,
-                    &mut current_text,
-                    in_bold,
-                    in_italic,
-                    &current_link,
-                );
-                in_bold = false;
-            } else if tag_lower.starts_with("i") {
-                flush(
-                    &mut chunks,
-                    &mut current_text,
-                    in_bold,
-                    in_italic,
-                    &current_link,
-                );
-                in_italic = true;
-            } else if tag_lower == "/i" {
-                flush(
-                    &mut chunks,
-                    &mut current_text,
-                    in_bold,
-                    in_italic,
-                    &current_link,
-                );
-                in_italic = false;
-            } else if tag_lower.starts_with("a ") || tag_lower == "a" {
-                flush(
-                    &mut chunks,
-                    &mut current_text,
-                    in_bold,
-                    in_italic,
-                    &current_link,
-                );
-                let title = if let Some(pos) = tag.find("title=\"") {
-                    let rest = &tag[pos + 7..];
-                    rest.split('"').next().unwrap_or("").to_string()
-                } else if let Some(pos) = tag.find("href=\"./") {
-                    let rest = &tag[pos + 8..];
-                    rest.split('"').next().unwrap_or("").replace('_', " ")
-                } else {
-                    String::new()
-                };
-                let l_idx = links.len();
-                links.push(title.clone());
-                current_link = Some((l_idx, title));
-            } else if tag_lower == "/a" {
-                flush(
-                    &mut chunks,
-                    &mut current_text,
-                    in_bold,
-                    in_italic,
-                    &current_link,
-                );
-                current_link = None;
+            let tag_name = tag_lower.split_whitespace().next().unwrap_or("");
+
+            match tag_name {
+                "b" | "strong" => {
+                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    in_bold = true;
+                }
+                "/b" | "/strong" => {
+                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    in_bold = false;
+                }
+                "i" | "em" => {
+                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    in_italic = true;
+                }
+                "/i" | "/em" => {
+                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    in_italic = false;
+                }
+                "a" => {
+                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    let title = if let Some(pos) = tag.find("title=\"") {
+                        let rest = &tag[pos + 7..];
+                        rest.split('"').next().unwrap_or("").to_string()
+                    } else if let Some(pos) = tag.find("href=\"./") {
+                        let rest = &tag[pos + 8..];
+                        rest.split('"').next().unwrap_or("").replace('_', " ")
+                    } else {
+                        String::new()
+                    };
+                    let l_idx = links.len();
+                    links.push(title.clone());
+                    current_link = Some((l_idx, title));
+                }
+                "/a" => {
+                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    current_link = None;
+                }
+                _ => {}
             }
             continue;
         }
@@ -139,52 +107,46 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
         current_text.push(c);
     }
 
-    flush(
-        &mut chunks,
-        &mut current_text,
-        in_bold,
-        in_italic,
-        &current_link,
-    );
+    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
     (chunks, links)
 }
 
 pub fn strip_html_tags(input: &str) -> String {
+    let mut in_tag = false;
+    let mut in_comment = false;
     let mut result = String::with_capacity(input.len());
     let mut chars = input.chars();
 
     while let Some(c) = chars.next() {
+        if in_comment {
+            if c == '-' && chars.as_str().starts_with("->") {
+                chars.next();
+                chars.next();
+                in_comment = false;
+            }
+            continue;
+        }
         if c == '<' {
             if chars.as_str().starts_with("!--") {
                 chars.next();
                 chars.next();
                 chars.next();
-                let mut dashes = 0;
-                for nc in chars.by_ref() {
-                    if nc == '-' {
-                        dashes += 1;
-                    } else if nc == '>' && dashes >= 2 {
-                        break;
-                    } else {
-                        dashes = 0;
-                    }
-                }
-                continue;
-            }
-
-            for nc in chars.by_ref() {
-                if nc == '>' {
-                    break;
-                }
+                in_comment = true;
+            } else {
+                in_tag = true;
             }
             continue;
         }
-
-        result.push(c);
+        if c == '>' && in_tag {
+            in_tag = false;
+            continue;
+        }
+        if !in_tag {
+            result.push(c);
+        }
     }
 
     let decoded = decode_html_entities(&result);
-
     decoded.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
