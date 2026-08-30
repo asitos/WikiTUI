@@ -26,7 +26,7 @@ pub fn choose_strategy() -> SelectionStrategy {
     }
 }
 
-pub fn select_best_item(candidates: Vec<FeedItem>, profile: &FeedProfile) -> Option<FeedItem> {
+pub fn select_best_item(mut candidates: Vec<FeedItem>, profile: &FeedProfile) -> Option<FeedItem> {
     if candidates.is_empty() {
         return None;
     }
@@ -35,24 +35,28 @@ pub fn select_best_item(candidates: Vec<FeedItem>, profile: &FeedProfile) -> Opt
     match strategy {
         SelectionStrategy::RandomExploration => {
             let idx = fastrand::usize(0..candidates.len());
-            Some(candidates[idx].clone())
+            Some(candidates.swap_remove(idx))
         }
         SelectionStrategy::TopCategory | SelectionStrategy::WeightedCategory => {
-            let mut best_item = None;
+            let mut best_idx = None;
             let mut best_score = i32::MIN;
 
-            for item in &candidates {
+            for (idx, item) in candidates.iter().enumerate() {
                 if profile.seen_articles.contains(&item.title) {
                     continue;
                 }
                 let score = profile.score_for_categories(&item.categories);
                 if score > best_score {
                     best_score = score;
-                    best_item = Some(item);
+                    best_idx = Some(idx);
                 }
             }
 
-            best_item.cloned().or_else(|| candidates.first().cloned())
+            if let Some(idx) = best_idx {
+                Some(candidates.swap_remove(idx))
+            } else {
+                candidates.into_iter().next()
+            }
         }
     }
 }
