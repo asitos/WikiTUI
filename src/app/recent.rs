@@ -217,9 +217,9 @@ pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
 
         let mut prev_is_space = true;
         for (idx, ch) in title.char_indices() {
-            let is_word_start = prev_is_space && ch.is_alphanumeric();
-            prev_is_space = !ch.is_alphanumeric();
-            if is_word_start && ch.is_ascii_alphabetic() {
+            let is_word_start = prev_is_space && (ch.is_alphanumeric() || ch == '.');
+            prev_is_space = ch.is_whitespace() || ch == '(' || ch == '[' || ch == '-';
+            if is_word_start && !ch.is_whitespace() {
                 let lower = ch.to_ascii_lowercase();
                 if !RESERVED_KEYS.contains(&lower) && used_keys.insert(lower) {
                     assigned = Some(SemanticHint {
@@ -234,7 +234,7 @@ pub fn compute_semantic_hints(titles: &[String]) -> Vec<Option<SemanticHint>> {
 
         if assigned.is_none() {
             for (idx, ch) in title.char_indices() {
-                if ch.is_ascii_alphabetic() {
+                if !ch.is_whitespace() {
                     let lower = ch.to_ascii_lowercase();
                     if !RESERVED_KEYS.contains(&lower) && used_keys.insert(lower) {
                         assigned = Some(SemanticHint {
