@@ -177,6 +177,39 @@ pub fn render_article_pane(
     let paragraph = Paragraph::new(rendered_lines).block(block);
     f.render_widget(paragraph, rect);
 
+    let resolved_proto = crate::graphics::resolve_protocol(app.config.reader.image_protocol);
+    if resolved_proto.is_kitty() && app.config.reader.show_images {
+        for img in &parsed_doc.images {
+            let img_top = img.line_idx;
+            let img_bot = img.line_idx + img.height_lines;
+            if img_bot > view_start && img_top < view_end {
+                let img_path = pane
+                    .loaded_images
+                    .get(&img.url)
+                    .cloned()
+                    .or_else(|| crate::graphics::cache::get_cached_image_path(&img.url));
+
+                if let Some(path) = img_path {
+                    let rel_line = img_top.saturating_sub(view_start);
+                    let screen_y = rect.y + 1 + (rel_line as u16);
+                    let screen_x = rect.x + 2;
+                    let visible_rows = (img.height_lines as u16)
+                        .min(rect.height.saturating_sub(rel_line as u16 + 2));
+                    let visible_cols = (img.width_cols as u16).min(rect.width.saturating_sub(4));
+                    if visible_rows > 0 && visible_cols > 0 {
+                        app.pending_image_renders.push(crate::app::ImageRenderTask {
+                            path,
+                            screen_x,
+                            screen_y,
+                            cols: visible_cols,
+                            rows: visible_rows,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     render_scroll_indicator(
         f,
         rect,

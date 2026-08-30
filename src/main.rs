@@ -20,6 +20,7 @@ use wikid::mouse;
 use wikid::ui;
 
 fn restore_terminal() {
+    let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut io::stdout());
     let _ = disable_raw_mode();
     let _ = execute!(
         io::stdout(),
@@ -97,6 +98,22 @@ fn run_app(
         }
 
         terminal.draw(|f| ui::draw(f, app))?;
+
+        if !app.pending_image_renders.is_empty() {
+            let mut stdout = io::stdout();
+            for task in app.pending_image_renders.drain(..) {
+                if let Ok(bytes) = std::fs::read(&task.path) {
+                    let _ = wikid::graphics::kitty::render_kitty_image_at(
+                        &mut stdout,
+                        &bytes,
+                        task.screen_x,
+                        task.screen_y,
+                        task.cols,
+                        task.rows,
+                    );
+                }
+            }
+        }
 
         let has_loading = app.feed.is_fetching
             || (app.feed.active && app.feed.items.is_empty())
