@@ -123,6 +123,7 @@ pub fn render_article_pane(
         0
     };
 
+    let mut link_ptr = first_link_idx;
     let query_len = pane.local_search_query.len();
     let mut match_ptr = if has_search_matches {
         pane.local_matches
@@ -144,22 +145,40 @@ pub fn render_article_pane(
             .collect();
 
         if has_underline {
-            for link in &parsed_doc.links[first_link_idx..] {
+            let mut curr_ptr = link_ptr;
+            while curr_ptr < parsed_doc.links.len() {
+                let link = &parsed_doc.links[curr_ptr];
                 let Some(&(first_line, _)) = link.span_indices.first() else {
+                    curr_ptr += 1;
                     continue;
                 };
+                let last_line = link
+                    .span_indices
+                    .last()
+                    .map(|&(l, _)| l)
+                    .unwrap_or(first_line);
                 if first_line > line_idx {
                     break;
                 }
-                if link.is_citation() {
+                if last_line < line_idx {
+                    curr_ptr += 1;
+                    link_ptr = curr_ptr;
                     continue;
                 }
-                for &(l_idx, span_idx) in &link.span_indices {
-                    if l_idx == line_idx {
-                        if let Some(span) = spans.get_mut(span_idx) {
-                            span.style = span.style.add_modifier(Modifier::UNDERLINED);
+                if !link.is_citation() {
+                    for &(l_idx, span_idx) in &link.span_indices {
+                        if l_idx == line_idx {
+                            if let Some(span) = spans.get_mut(span_idx) {
+                                span.style = span.style.add_modifier(Modifier::UNDERLINED);
+                            }
                         }
                     }
+                }
+                if last_line == line_idx {
+                    curr_ptr += 1;
+                    link_ptr = curr_ptr;
+                } else {
+                    curr_ptr += 1;
                 }
             }
         }
