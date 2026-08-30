@@ -43,21 +43,22 @@ pub(crate) fn extract_title_from_href(href: &str) -> Option<String> {
         return None;
     }
 
-    let wiki_path = if let Some(p) = trimmed.strip_prefix("/wiki/") {
-        Some(p)
-    } else if let Some(p) = trimmed.strip_prefix("./") {
-        Some(p)
-    } else if let Some(p) = trimmed.strip_prefix("https://en.wikipedia.org/wiki/") {
-        Some(p)
-    } else if let Some(p) = trimmed.strip_prefix("http://en.wikipedia.org/wiki/") {
-        Some(p)
-    } else if let Some(p) = trimmed.strip_prefix("//en.wikipedia.org/wiki/") {
-        Some(p)
-    } else {
-        trimmed
-            .find("/w/index.php?title=")
-            .map(|idx| &trimmed[idx + 19..])
-    };
+    const WIKI_PREFIXES: &[&str] = &[
+        "/wiki/",
+        "./",
+        "https://en.wikipedia.org/wiki/",
+        "http://en.wikipedia.org/wiki/",
+        "//en.wikipedia.org/wiki/",
+    ];
+
+    let wiki_path = WIKI_PREFIXES
+        .iter()
+        .find_map(|p| trimmed.strip_prefix(p))
+        .or_else(|| {
+            trimmed
+                .find("/w/index.php?title=")
+                .map(|idx| &trimmed[idx + 19..])
+        });
 
     if let Some(path) = wiki_path {
         let raw_title = path.split('#').next().unwrap_or(path);
