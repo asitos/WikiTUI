@@ -1,6 +1,7 @@
 pub mod article;
 pub mod daily_feed;
 pub mod feed;
+pub mod images;
 pub mod random;
 pub mod search;
 pub mod stats;
@@ -82,6 +83,10 @@ pub enum NetworkCommand {
     CheckForUpdates {
         timeout: u64,
     },
+    FetchImage {
+        url: String,
+        timeout: u64,
+    },
 }
 
 pub enum NetworkEvent {
@@ -104,6 +109,10 @@ pub enum NetworkEvent {
     StatsLoaded(WikiStatistics),
     UpdateCheckResult {
         latest_tag: Result<String, String>,
+    },
+    ImageLoaded {
+        url: String,
+        path: std::path::PathBuf,
     },
     Error {
         request_id: u64,
@@ -229,6 +238,11 @@ pub fn run_worker(cmd_rx: Receiver<NetworkCommand>, ev_tx: Sender<NetworkEvent>)
             NetworkCommand::CheckForUpdates { timeout } => {
                 let res = updates::check_latest_release(&agent, timeout).map_err(|e| e.to_string());
                 let _ = ev_tx.send(NetworkEvent::UpdateCheckResult { latest_tag: res });
+            }
+            NetworkCommand::FetchImage { url, timeout } => {
+                if let Ok(path) = images::fetch_and_cache_image(&agent, &url, timeout) {
+                    let _ = ev_tx.send(NetworkEvent::ImageLoaded { url, path });
+                }
             }
         });
     }

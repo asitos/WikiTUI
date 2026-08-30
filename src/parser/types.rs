@@ -45,6 +45,16 @@ pub struct SpokenAudio {
     pub tracks: Vec<AudioTrack>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImageBlock {
+    pub url: String,
+    pub alt: Option<String>,
+    pub caption: Option<String>,
+    pub line_idx: usize,
+    pub height_lines: usize,
+    pub width_cols: usize,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ParsedDocument {
     pub lines: Vec<Line<'static>>,
@@ -54,6 +64,7 @@ pub struct ParsedDocument {
     pub reference_targets: HashMap<String, usize>,
     pub spoken_audio: Option<SpokenAudio>,
     pub categories: Vec<String>,
+    pub images: Vec<ImageBlock>,
 }
 
 impl ParsedDocument {
@@ -114,6 +125,8 @@ pub(crate) struct ParserContext<'a> {
     pub heading_marker: bool,
     pub code_line_numbers: bool,
     pub show_icons: bool,
+    pub show_images: bool,
+    pub max_image_height: usize,
     pub skipping_external_section: bool,
     pub skipping_references_section: bool,
 }

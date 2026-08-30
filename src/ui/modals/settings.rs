@@ -129,6 +129,23 @@ pub fn render_settings_modal(f: &mut Frame, app: &App, size: Rect) {
                 let val = app.config.reader.code_line_numbers;
                 bool_span(val)
             }
+            SettingItem::ShowImages => {
+                let val = app.config.reader.show_images;
+                bool_span(val)
+            }
+            SettingItem::ImageProtocol => {
+                let val = app.config.reader.image_protocol;
+                let text = match val {
+                    crate::config::ImageProtocol::Auto => "auto",
+                    crate::config::ImageProtocol::Kitty => "kitty",
+                    crate::config::ImageProtocol::Halfblocks => "halfblocks",
+                    crate::config::ImageProtocol::Off => "off",
+                };
+                Span::styled(
+                    format!("◄  {:>10}  ►", text),
+                    Style::default().fg(theme::TEAL).bold(),
+                )
+            }
             SettingItem::SearchLimit => {
                 let val = app.config.search.limit;
                 Span::styled(

@@ -43,6 +43,8 @@ impl App {
                     let heading_marker = self.config.reader.heading_marker;
                     let code_line_numbers = self.config.reader.code_line_numbers;
                     let show_icons = self.config.ui.icons;
+                    let show_images = self.config.reader.show_images;
+                    let max_image_height = self.config.reader.max_image_height;
                     if let Some(pane) = self.find_pane_mut(pane_id) {
                         pane.is_loading = false;
                         pane.loading_title = None;
@@ -56,6 +58,8 @@ impl App {
                             heading_marker,
                             code_line_numbers,
                             show_icons,
+                            show_images,
+                            max_image_height,
                         );
                         pane.scroll_offset = pane
                             .scroll_offset
@@ -65,6 +69,8 @@ impl App {
                         } else {
                             None
                         };
+                        let image_urls: Vec<String> =
+                            parsed_doc.images.iter().map(|img| img.url.clone()).collect();
                         pane.content = PaneContent::ArticleText {
                             title,
                             raw_html: content,
@@ -75,8 +81,20 @@ impl App {
                             last_heading_marker: heading_marker,
                             last_code_line_numbers: code_line_numbers,
                             last_show_icons: show_icons,
+                            last_show_images: show_images,
+                            last_max_image_height: max_image_height,
                         };
                         pane.selected_link_idx = initial_link_idx;
+                        for img_url in image_urls {
+                            self.send_fetch_image(img_url);
+                        }
+                    }
+                }
+            }
+            NetworkEvent::ImageLoaded { url, path } => {
+                for tab in &mut self.tabs {
+                    for pane in &mut tab.panes {
+                        pane.loaded_images.insert(url.clone(), path.clone());
                     }
                 }
             }

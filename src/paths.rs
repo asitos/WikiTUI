@@ -24,3 +24,7 @@ pub fn cache_dir() -> PathBuf {
 pub fn audio_cache_dir() -> PathBuf {
     cache_dir().join("audio")
 }
+
+pub fn image_cache_dir() -> PathBuf {
+    cache_dir().join("images")
+}

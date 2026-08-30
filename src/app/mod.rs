@@ -17,8 +17,8 @@ pub use pane::{LocalMatch, Pane, PaneContent, TextSelection};
 pub use settings::SettingItem;
 pub use tab::Tab;
 pub use types::{
-    is_article_link, CategoriesModalState, ClosedTabState, ConfirmAction, InputMode,
-    ListsModalState, OnboardingModalState, SearchModalState, SettingsModalState,
+    is_article_link, CategoriesModalState, ClosedTabState, ConfirmAction, ImageRenderTask,
+    InputMode, ListsModalState, OnboardingModalState, SearchModalState, SettingsModalState,
 };
 
 use crate::api::NetworkCommand;
@@ -55,6 +55,9 @@ pub struct App {
     pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
     pub audio_player: crate::audio::AudioPlayer,
     pub command_palette: crate::app::types::CommandPaletteState,
+    pub pending_image_renders: Vec<ImageRenderTask>,
+    pub last_kitty_render_tasks: Vec<ImageRenderTask>,
+    pub has_active_kitty_images: bool,
 
     pub(crate) next_pane_id: usize,
     pub(crate) next_request_id: u64,
@@ -109,6 +112,9 @@ impl App {
             scroll_drag: None,
             audio_player: crate::audio::AudioPlayer::new(),
             command_palette: crate::app::types::CommandPaletteState::default(),
+            pending_image_renders: Vec::new(),
+            last_kitty_render_tasks: Vec::new(),
+            has_active_kitty_images: false,
 
             next_pane_id: 1,
             next_request_id: 1,
@@ -201,5 +207,15 @@ impl App {
         }
         let idx = tab.active_pane_idx;
         &mut tab.panes[idx]
+    }
+
+    pub fn toggle_images(&mut self) {
+        self.config.reader.show_images = !self.config.reader.show_images;
+        let status = if self.config.reader.show_images {
+            "enabled"
+        } else {
+            "disabled"
+        };
+        self.set_status_message(format!("inline images {}", status));
     }
 }

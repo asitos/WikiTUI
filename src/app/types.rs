@@ -1,3 +1,12 @@
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ImageRenderTask {
+    pub path: std::path::PathBuf,
+    pub screen_x: u16,
+    pub screen_y: u16,
+    pub cols: u16,
+    pub rows: u16,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConfirmAction {
     DeleteList { list_id: String, title: String },

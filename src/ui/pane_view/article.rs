@@ -31,6 +31,51 @@ pub fn render_article_pane(
         (pane.viewport_height + 2).min(parsed_doc.lines.len().saturating_sub(view_start));
     let view_end = view_start + view_len;
 
+    let resolved_proto = crate::graphics::resolve_protocol(app.config.reader.image_protocol);
+    if resolved_proto.is_halfblocks() && app.config.reader.show_images {
+        let pane = &mut app.tabs[tab_idx].panes[pane_idx];
+        if let crate::app::PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            let images_to_render: Vec<(String, usize, usize, std::path::PathBuf)> = parsed_doc
+                .images
+                .iter()
+                .filter(|img| {
+                    img.line_idx + img.height_lines > view_start && img.line_idx < view_end
+                })
+                .filter_map(|img| {
+                    let cols = img.width_cols.saturating_sub(2);
+                    let rows = img.height_lines;
+                    let key = (img.url.clone(), cols, rows);
+                    if !pane.halfblock_cache.contains_key(&key) {
+                        let path = pane
+                            .loaded_images
+                            .get(&img.url)
+                            .cloned()
+                            .or_else(|| crate::graphics::cache::get_cached_image_path(&img.url))?;
+                        Some((img.url.clone(), cols, rows, path))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            for (url, cols, rows, path) in images_to_render {
+                if let Ok(bytes) = std::fs::read(&path) {
+                    if let Some(hb_lines) =
+                        crate::graphics::halfblocks::render_halfblock_image_from_bytes(
+                            &bytes, cols, rows,
+                        )
+                    {
+                        pane.halfblock_cache.insert((url, cols, rows), hb_lines);
+                    }
+                }
+            }
+        }
+    }
+
+    let pane = &app.tabs[tab_idx].panes[pane_idx];
+    let crate::app::PaneContent::ArticleText { parsed_doc, .. } = &pane.content else {
+        return;
+    };
+
     let has_underline = if app.config.reader.underline_links {
         let first_link_idx = parsed_doc.links.partition_point(|link| {
             link.span_indices
@@ -78,6 +123,7 @@ pub fn render_article_pane(
         0
     };
 
+    let mut link_ptr = first_link_idx;
     let query_len = pane.local_search_query.len();
     let mut match_ptr = if has_search_matches {
         pane.local_matches
@@ -99,22 +145,40 @@ pub fn render_article_pane(
             .collect();
 
         if has_underline {
-            for link in &parsed_doc.links[first_link_idx..] {
+            let mut curr_ptr = link_ptr;
+            while curr_ptr < parsed_doc.links.len() {
+                let link = &parsed_doc.links[curr_ptr];
                 let Some(&(first_line, _)) = link.span_indices.first() else {
+                    curr_ptr += 1;
                     continue;
                 };
+                let last_line = link
+                    .span_indices
+                    .last()
+                    .map(|&(l, _)| l)
+                    .unwrap_or(first_line);
                 if first_line > line_idx {
                     break;
                 }
-                if link.is_citation() {
+                if last_line < line_idx {
+                    curr_ptr += 1;
+                    link_ptr = curr_ptr;
                     continue;
                 }
-                for &(l_idx, span_idx) in &link.span_indices {
-                    if l_idx == line_idx {
-                        if let Some(span) = spans.get_mut(span_idx) {
-                            span.style = span.style.add_modifier(Modifier::UNDERLINED);
+                if !link.is_citation() {
+                    for &(l_idx, span_idx) in &link.span_indices {
+                        if l_idx == line_idx {
+                            if let Some(span) = spans.get_mut(span_idx) {
+                                span.style = span.style.add_modifier(Modifier::UNDERLINED);
+                            }
                         }
                     }
+                }
+                if last_line == line_idx {
+                    curr_ptr += 1;
+                    link_ptr = curr_ptr;
+                } else {
+                    curr_ptr += 1;
                 }
             }
         }
@@ -171,11 +235,78 @@ pub fn render_article_pane(
 
         let mut line = Line::from(spans);
         line.alignment = orig_line.alignment;
+
+        let resolved_proto = crate::graphics::resolve_protocol(app.config.reader.image_protocol);
+        if resolved_proto.is_halfblocks() && app.config.reader.show_images {
+            for img in &parsed_doc.images {
+                if line_idx >= img.line_idx && line_idx < img.line_idx + img.height_lines {
+                    let rel_row = line_idx - img.line_idx;
+                    let cols = img.width_cols.saturating_sub(2);
+                    let rows = img.height_lines;
+                    let key = (img.url.clone(), cols, rows);
+                    if let Some(hb_lines) = pane.halfblock_cache.get(&key) {
+                        if let Some(hb_line) = hb_lines.get(rel_row) {
+                            line = hb_line.clone();
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         rendered_lines.push(line);
     }
 
     let paragraph = Paragraph::new(rendered_lines).block(block);
     f.render_widget(paragraph, rect);
+
+    let resolved_proto = crate::graphics::resolve_protocol(app.config.reader.image_protocol);
+    if app.config.reader.show_images {
+        for img in &parsed_doc.images {
+            let img_top = img.line_idx;
+            let img_bot = img.line_idx + img.height_lines;
+            if img_bot > view_start && img_top < view_end {
+                let img_path = pane
+                    .loaded_images
+                    .get(&img.url)
+                    .cloned()
+                    .or_else(|| crate::graphics::cache::get_cached_image_path(&img.url));
+
+                if let Some(path) = img_path {
+                    if resolved_proto.is_kitty() {
+                        let (screen_y, visible_rows) = if img_top < view_start {
+                            let top_clipped = view_start - img_top;
+                            let rows = img.height_lines.saturating_sub(top_clipped);
+                            (rect.y + 1, (rows as u16).min(pane.viewport_height as u16))
+                        } else {
+                            let rel_line = img_top - view_start;
+                            let max_rows = pane.viewport_height.saturating_sub(rel_line);
+                            (
+                                rect.y + 1 + (rel_line as u16),
+                                (img.height_lines as u16).min(max_rows as u16),
+                            )
+                        };
+
+                        let inner_width = rect.width.saturating_sub(2);
+                        let visible_cols = (img.width_cols as u16).min(inner_width);
+                        let left_pad = (inner_width.saturating_sub(visible_cols)) / 2;
+                        let screen_x = rect.x + 1 + left_pad;
+                        if visible_rows > 0 && visible_cols > 0 {
+                            app.pending_image_renders.push(crate::app::ImageRenderTask {
+                                path,
+                                screen_x,
+                                screen_y,
+                                cols: visible_cols,
+                                rows: visible_rows,
+                            });
+                        }
+                    }
+                } else {
+                    app.send_fetch_image(img.url.clone());
+                }
+            }
+        }
+    }
 
     render_scroll_indicator(
         f,

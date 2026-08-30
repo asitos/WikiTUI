@@ -18,6 +18,8 @@ pub enum SettingItem {
     ShowExternalLinks,
     TocSectionNumbers,
     CodeLineNumbers,
+    ShowImages,
+    ImageProtocol,
     SearchLimit,
     NetworkTimeout,
     OfflineCache,
@@ -43,6 +45,8 @@ impl SettingItem {
         SettingItem::ShowExternalLinks,
         SettingItem::TocSectionNumbers,
         SettingItem::CodeLineNumbers,
+        SettingItem::ShowImages,
+        SettingItem::ImageProtocol,
         SettingItem::SearchLimit,
         SettingItem::NetworkTimeout,
         SettingItem::OfflineCache,
@@ -67,7 +71,9 @@ impl SettingItem {
             | SettingItem::ShowFootnotes
             | SettingItem::ShowExternalLinks
             | SettingItem::TocSectionNumbers
-            | SettingItem::CodeLineNumbers => "reader",
+            | SettingItem::CodeLineNumbers
+            | SettingItem::ShowImages
+            | SettingItem::ImageProtocol => "reader",
             SettingItem::SearchLimit => "search",
             SettingItem::NetworkTimeout
             | SettingItem::OfflineCache
@@ -93,6 +99,8 @@ impl SettingItem {
             SettingItem::ShowExternalLinks => "show external links section",
             SettingItem::TocSectionNumbers => "toc section numbers",
             SettingItem::CodeLineNumbers => "code line numbers",
+            SettingItem::ShowImages => "render images",
+            SettingItem::ImageProtocol => "graphics protocol",
             SettingItem::SearchLimit => "search results limit",
             SettingItem::NetworkTimeout => "request timeout",
             SettingItem::OfflineCache => "offline article cache",
@@ -123,6 +131,10 @@ impl SettingItem {
             SettingItem::ShowExternalLinks => "show the external links section at the bottom",
             SettingItem::TocSectionNumbers => "display hierarchical numbers in table of contents",
             SettingItem::CodeLineNumbers => "display line numbers in code blocks",
+            SettingItem::ShowImages => "render inline article images and diagrams",
+            SettingItem::ImageProtocol => {
+                "graphics rendering protocol (auto, kitty, halfblocks, off)"
+            }
             SettingItem::SearchLimit => "maximum number of search results to fetch (5-50)",
             SettingItem::NetworkTimeout => "network request timeout in seconds (2-60s)",
             SettingItem::OfflineCache => {
@@ -221,6 +233,41 @@ impl App {
                 }
                 SettingItem::CodeLineNumbers => {
                     self.config.reader.code_line_numbers = !self.config.reader.code_line_numbers;
+                }
+                SettingItem::ShowImages => {
+                    self.config.reader.show_images = !self.config.reader.show_images;
+                }
+                SettingItem::ImageProtocol => {
+                    self.config.reader.image_protocol = match self.config.reader.image_protocol {
+                        crate::config::ImageProtocol::Auto => {
+                            if delta < 0 {
+                                crate::config::ImageProtocol::Off
+                            } else {
+                                crate::config::ImageProtocol::Kitty
+                            }
+                        }
+                        crate::config::ImageProtocol::Kitty => {
+                            if delta < 0 {
+                                crate::config::ImageProtocol::Auto
+                            } else {
+                                crate::config::ImageProtocol::Halfblocks
+                            }
+                        }
+                        crate::config::ImageProtocol::Halfblocks => {
+                            if delta < 0 {
+                                crate::config::ImageProtocol::Kitty
+                            } else {
+                                crate::config::ImageProtocol::Off
+                            }
+                        }
+                        crate::config::ImageProtocol::Off => {
+                            if delta < 0 {
+                                crate::config::ImageProtocol::Halfblocks
+                            } else {
+                                crate::config::ImageProtocol::Auto
+                            }
+                        }
+                    };
                 }
                 SettingItem::SearchLimit => {
                     let cur = self.config.search.limit as i32;
@@ -343,6 +390,12 @@ impl App {
                 }
                 SettingItem::CodeLineNumbers => {
                     self.config.reader.code_line_numbers = default_config.reader.code_line_numbers;
+                }
+                SettingItem::ShowImages => {
+                    self.config.reader.show_images = default_config.reader.show_images;
+                }
+                SettingItem::ImageProtocol => {
+                    self.config.reader.image_protocol = default_config.reader.image_protocol;
                 }
                 SettingItem::SearchLimit => {
                     self.config.search.limit = default_config.search.limit;

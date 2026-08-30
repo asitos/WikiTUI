@@ -84,6 +84,16 @@ impl UiConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ImageProtocol {
+    #[default]
+    Auto,
+    Kitty,
+    Halfblocks,
+    Off,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ReaderConfig {
@@ -94,6 +104,9 @@ pub struct ReaderConfig {
     pub toc_section_numbers: bool,
     pub heading_marker: bool,
     pub code_line_numbers: bool,
+    pub show_images: bool,
+    pub image_protocol: ImageProtocol,
+    pub max_image_height: usize,
 }
 
 impl Default for ReaderConfig {
@@ -106,6 +119,9 @@ impl Default for ReaderConfig {
             toc_section_numbers: true,
             heading_marker: true,
             code_line_numbers: true,
+            show_images: true,
+            image_protocol: ImageProtocol::Auto,
+            max_image_height: 25,
         }
     }
 }

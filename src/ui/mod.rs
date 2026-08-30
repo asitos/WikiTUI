@@ -108,4 +108,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.input_mode == InputMode::CommandPalette {
         modals::render_palette_modal(f, app, size);
     }
+
+    let is_modal_open = (app.input_mode != InputMode::Normal
+        && app.input_mode != InputMode::LocalSearch)
+        || app.tabs.iter().any(|t| t.panes.iter().any(|p| p.show_toc))
+        || app.daily_feed_modal.is_some();
+
+    if is_modal_open {
+        app.pending_image_renders.clear();
+    }
 }
