@@ -133,7 +133,7 @@ impl SettingItem {
             SettingItem::CodeLineNumbers => "display line numbers in code blocks",
             SettingItem::ShowImages => "render inline article images and diagrams",
             SettingItem::ImageProtocol => {
-                "graphics rendering protocol (auto, kitty, sixel, iterm2, halfblocks, off)"
+                "graphics rendering protocol (auto, kitty, halfblocks, off)"
             }
             SettingItem::SearchLimit => "maximum number of search results to fetch (5-50)",
             SettingItem::NetworkTimeout => "network request timeout in seconds (2-60s)",

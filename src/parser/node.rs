@@ -265,6 +265,34 @@ pub(crate) fn process_node<'a>(
                 }
             }
 
+            if ctx.show_images
+                && (tag_name == "figure"
+                    || tag_name == "figure-inline"
+                    || (tag_name == "div"
+                        && class_attr
+                            .as_ref()
+                            .map(|c| c.contains("thumb"))
+                            .unwrap_or(false)))
+            {
+                if !current_tokens.is_empty() {
+                    wrap_and_append_block(current_tokens, doc, ctx.max_width);
+                    current_tokens.clear();
+                }
+                crate::parser::images::render_image_node(tag, ctx.parser, doc, ctx);
+                return;
+            }
+
+            if tag_name == "img" {
+                if ctx.show_images && !current_tokens.is_empty() {
+                    wrap_and_append_block(current_tokens, doc, ctx.max_width);
+                    current_tokens.clear();
+                }
+                if ctx.show_images {
+                    crate::parser::images::render_image_node(tag, ctx.parser, doc, ctx);
+                }
+                return;
+            }
+
             let is_block_element = matches!(
                 tag_name,
                 "p" | "h1"

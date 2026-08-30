@@ -18,6 +18,8 @@ pub enum PaneContent {
         last_heading_marker: bool,
         last_code_line_numbers: bool,
         last_show_icons: bool,
+        last_show_images: bool,
+        last_max_image_height: usize,
     },
     Error(String),
 }
@@ -120,6 +122,7 @@ impl Pane {
         self.selected_toc_idx = None;
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn ensure_parsed_width(
         &mut self,
         width: usize,
@@ -128,6 +131,8 @@ impl Pane {
         heading_marker: bool,
         code_line_numbers: bool,
         show_icons: bool,
+        show_images: bool,
+        max_image_height: usize,
     ) {
         if let PaneContent::ArticleText {
             raw_html,
@@ -138,6 +143,8 @@ impl Pane {
             last_heading_marker,
             last_code_line_numbers,
             last_show_icons,
+            last_show_images,
+            last_max_image_height,
             ..
         } = &mut self.content
         {
@@ -147,6 +154,8 @@ impl Pane {
                 && *last_heading_marker == heading_marker
                 && *last_code_line_numbers == code_line_numbers
                 && *last_show_icons == show_icons
+                && *last_show_images == show_images
+                && *last_max_image_height == max_image_height
             {
                 return;
             }
@@ -158,6 +167,8 @@ impl Pane {
                 heading_marker,
                 code_line_numbers,
                 show_icons,
+                show_images,
+                max_image_height,
             );
             *last_width = width;
             *last_show_footnotes = show_footnotes;
@@ -165,6 +176,8 @@ impl Pane {
             *last_heading_marker = heading_marker;
             *last_code_line_numbers = code_line_numbers;
             *last_show_icons = show_icons;
+            *last_show_images = show_images;
+            *last_max_image_height = max_image_height;
             self.recompute_local_matches();
         }
     }
