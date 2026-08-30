@@ -103,6 +103,14 @@ impl App {
             }
             NetworkEvent::DailyFeedLoaded(feed) => {
                 self.daily_feed = Some(*feed);
+                if self.pending_open_tfa {
+                    self.pending_open_tfa = false;
+                    self.active_pane_mut().is_loading = false;
+                    if let Some(tfa) = self.daily_feed.as_ref().and_then(|f| f.tfa.as_ref()) {
+                        let title = tfa.display_title();
+                        self.open_article(&title);
+                    }
+                }
             }
             NetworkEvent::StatsLoaded(stats) => {
                 self.wiki_stats = stats;

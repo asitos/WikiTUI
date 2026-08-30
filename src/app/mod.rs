@@ -48,6 +48,7 @@ pub struct App {
     pub wiki_stats: crate::api::WikiStatistics,
     pub daily_feed: Option<crate::api::DailyFeed>,
     pub daily_feed_modal: Option<crate::ui::modals::DailyFeedModalState>,
+    pub pending_open_tfa: bool,
     pub recent_articles: Vec<crate::app::recent::RecentArticleEntry>,
     pub launch_quote_idx: usize,
     pub scroll_drag: Option<crate::mouse::ScrollDragTarget>,
@@ -72,10 +73,6 @@ impl App {
         } else {
             None
         };
-        let _ = cmd_tx.send(NetworkCommand::FetchDailyFeed {
-            timeout: config.network.timeout,
-            offline_cache: config.network.offline_cache,
-        });
         let quote_idx = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as usize)
@@ -104,6 +101,7 @@ impl App {
             wiki_stats: crate::api::WikiStatistics::default(),
             daily_feed: cached_feed,
             daily_feed_modal: None,
+            pending_open_tfa: false,
             recent_articles: Self::load_recent_articles(),
             launch_quote_idx: quote_idx,
             scroll_drag: None,

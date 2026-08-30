@@ -162,6 +162,8 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
                         let title = tfa.display_title();
                         app.open_article(&title);
                     } else {
+                        app.pending_open_tfa = true;
+                        app.active_pane_mut().is_loading = true;
                         app.send_fetch_daily_feed();
                     }
                 } else {

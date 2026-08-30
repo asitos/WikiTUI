@@ -2,6 +2,9 @@ use crate::app::{App, InputMode};
 
 impl App {
     pub fn open_daily_feed_modal(&mut self, kind: crate::ui::modals::DailyFeedKind) {
+        if self.daily_feed.is_none() {
+            self.send_fetch_daily_feed();
+        }
         self.daily_feed_modal = Some(crate::ui::modals::DailyFeedModalState {
             kind,
             cursor_idx: 0,
