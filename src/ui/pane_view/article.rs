@@ -149,6 +149,18 @@ pub fn render_article_pane(
             }
         }
 
+        if let Some(selection) = &pane.text_selection {
+            if selection.contains_line(line_idx) {
+                let (start, end) = selection.normalized();
+                let line_len: usize = spans.iter().map(|s| s.content.chars().count()).sum();
+                let from = if line_idx == start.0 { start.1.min(line_len) } else { 0 };
+                let to = if line_idx == end.0 { end.1.min(line_len) } else { line_len };
+                if from < to {
+                    spans = build_selection_highlighted_spans(&spans, from, to);
+                }
+            }
+        }
+
         let mut line = Line::from(spans);
         line.alignment = orig_line.alignment;
         rendered_lines.push(line);
@@ -250,6 +262,50 @@ pub fn build_search_highlighted_spans<'a>(
                 }
             };
             new_spans.push(trailing_span);
+        }
+
+        global_offset = span_end;
+    }
+
+    new_spans
+}
+
+fn build_selection_highlighted_spans<'a>(
+    spans: &[Span<'a>],
+    sel_start: usize,
+    sel_end: usize,
+) -> Vec<Span<'a>> {
+    let mut new_spans = Vec::new();
+    let mut global_offset = 0;
+
+    for span in spans {
+        let span_len = span.content.chars().count();
+        let span_start = global_offset;
+        let span_end = span_start + span_len;
+
+        if sel_end <= span_start || sel_start >= span_end {
+            new_spans.push(span.clone());
+        } else {
+            let rel_start = sel_start.saturating_sub(span_start).min(span_len);
+            let rel_end = sel_end.saturating_sub(span_start).min(span_len);
+
+            let chars: Vec<char> = span.content.chars().collect();
+
+            if rel_start > 0 {
+                let prefix: String = chars[0..rel_start].iter().collect();
+                new_spans.push(Span::styled(prefix, span.style));
+            }
+
+            if rel_end > rel_start {
+                let selected: String = chars[rel_start..rel_end].iter().collect();
+                let sel_style = Style::default().bg(theme::PINK).fg(theme::BG).bold();
+                new_spans.push(Span::styled(selected, sel_style));
+            }
+
+            if rel_end < span_len {
+                let suffix: String = chars[rel_end..].iter().collect();
+                new_spans.push(Span::styled(suffix, span.style));
+            }
         }
 
         global_offset = span_end;
