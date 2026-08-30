@@ -105,28 +105,20 @@ pub fn render_kitty_rgba_chunked<W: Write>(
     cols: u16,
     rows: u16,
 ) -> io::Result<()> {
-    let chunk_size = 4096;
-    let bytes = rgba_base64.as_bytes();
-    let total = bytes.len();
-    let mut offset = 0;
-
-    while offset < total {
-        let end = (offset + chunk_size).min(total);
-        let chunk = &rgba_base64[offset..end];
-        let more = if end < total { 1 } else { 0 };
-
-        if offset == 0 {
-            write!(
-                writer,
-                "\x1b_Ga=T,f=32,s={},v={},c={},r={},m={};{}\x1b\\",
-                img_w, img_h, cols, rows, more, chunk
-            )?;
-        } else {
-            write!(writer, "\x1b_Gm={};{}\x1b\\", more, chunk)?;
+    let mut chunks = rgba_base64.as_bytes().chunks(4096).peekable();
+    if let Some(first) = chunks.next() {
+        let first_str = std::str::from_utf8(first).unwrap_or_default();
+        let more = if chunks.peek().is_some() { 1 } else { 0 };
+        write!(
+            writer,
+            "\x1b_Ga=T,f=32,s={},v={},c={},r={},m={};{}\x1b\\",
+            img_w, img_h, cols, rows, more, first_str
+        )?;
+        while let Some(chunk) = chunks.next() {
+            let chunk_str = std::str::from_utf8(chunk).unwrap_or_default();
+            let more = if chunks.peek().is_some() { 1 } else { 0 };
+            write!(writer, "\x1b_Gm={};{}\x1b\\", more, chunk_str)?;
         }
-
-        offset = end;
     }
-
     writer.flush()
 }
