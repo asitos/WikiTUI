@@ -191,7 +191,12 @@ pub fn handle_normal_mode(app: &mut App, key: KeyEvent, term_width: u16, term_he
             KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.enter_search_mode();
             }
-            KeyCode::Char('i') => {
+            KeyCode::Char('i')
+                if matches!(
+                    app.active_pane().content,
+                    crate::app::PaneContent::SearchResults { .. }
+                ) =>
+            {
                 app.edit_search_mode();
             }
             KeyCode::Char('s') => {
