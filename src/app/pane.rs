@@ -72,6 +72,8 @@ pub struct Pane {
     pub selected_toc_idx: Option<usize>,
     pub toc_focused: bool,
     pub loaded_images: std::collections::HashMap<String, std::path::PathBuf>,
+    pub halfblock_cache:
+        std::collections::HashMap<(String, usize, usize), Vec<ratatui::text::Line<'static>>>,
 
     pub history_back: Vec<String>,
     pub history_forward: Vec<String>,
@@ -101,6 +103,7 @@ impl Pane {
             selected_toc_idx: None,
             toc_focused: false,
             loaded_images: std::collections::HashMap::new(),
+            halfblock_cache: std::collections::HashMap::new(),
 
             history_back: Vec::new(),
             history_forward: Vec::new(),

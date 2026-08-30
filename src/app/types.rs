@@ -1,4 +1,4 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ImageRenderTask {
     pub path: std::path::PathBuf,
     pub screen_x: u16,

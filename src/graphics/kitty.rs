@@ -1,7 +1,21 @@
+use std::collections::HashMap;
 use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 const BASE64_ALPHABET: &[u8; 64] =
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+enum CachedKittyPayload {
+    Png(String),
+    Rgba {
+        b64: String,
+        width: u32,
+        height: u32,
+    },
+}
+
+static KITTY_PAYLOAD_CACHE: Mutex<Option<HashMap<PathBuf, CachedKittyPayload>>> = Mutex::new(None);
 
 pub fn base64_encode(data: &[u8]) -> String {
     let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
@@ -35,27 +49,54 @@ pub fn clear_all_kitty_images<W: Write>(writer: &mut W) -> io::Result<()> {
     writer.flush()
 }
 
-pub fn render_kitty_image_at<W: Write>(
+pub fn render_kitty_image_from_path<W: Write>(
     writer: &mut W,
-    image_bytes: &[u8],
+    path: &Path,
     screen_x: u16,
     screen_y: u16,
     cols: u16,
     rows: u16,
 ) -> io::Result<()> {
-    if image_bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
-        let b64 = base64_encode(image_bytes);
+    let mut cache_guard = KITTY_PAYLOAD_CACHE.lock().unwrap();
+    let cache = cache_guard.get_or_insert_with(HashMap::new);
+
+    if let Some(payload) = cache.get(path) {
         write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
-        render_kitty_png_chunked(writer, &b64, cols, rows)
-    } else if let Ok(img) = image::load_from_memory(image_bytes) {
+        match payload {
+            CachedKittyPayload::Png(b64) => render_kitty_png_chunked(writer, b64, cols, rows)?,
+            CachedKittyPayload::Rgba { b64, width, height } => {
+                render_kitty_rgba_chunked(writer, b64, *width, *height, cols, rows)?
+            }
+        }
+        return Ok(());
+    }
+
+    let Ok(image_bytes) = std::fs::read(path) else {
+        return Ok(());
+    };
+
+    if image_bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        let b64 = base64_encode(&image_bytes);
+        write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
+        render_kitty_png_chunked(writer, &b64, cols, rows)?;
+        cache.insert(path.to_path_buf(), CachedKittyPayload::Png(b64));
+    } else if let Ok(img) = image::load_from_memory(&image_bytes) {
         let (w, h) = (img.width(), img.height());
         let rgba = img.to_rgba8();
         let b64 = base64_encode(&rgba);
         write!(writer, "\x1b[{};{}H", screen_y + 1, screen_x + 1)?;
-        render_kitty_rgba_chunked(writer, &b64, w, h, cols, rows)
-    } else {
-        Ok(())
+        render_kitty_rgba_chunked(writer, &b64, w, h, cols, rows)?;
+        cache.insert(
+            path.to_path_buf(),
+            CachedKittyPayload::Rgba {
+                b64,
+                width: w,
+                height: h,
+            },
+        );
     }
+
+    Ok(())
 }
 
 pub fn render_kitty_png_chunked<W: Write>(

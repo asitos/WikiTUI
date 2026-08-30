@@ -56,6 +56,7 @@ pub struct App {
     pub audio_player: crate::audio::AudioPlayer,
     pub command_palette: crate::app::types::CommandPaletteState,
     pub pending_image_renders: Vec<ImageRenderTask>,
+    pub last_kitty_render_tasks: Vec<ImageRenderTask>,
     pub has_active_kitty_images: bool,
 
     pub(crate) next_pane_id: usize,
@@ -112,6 +113,7 @@ impl App {
             audio_player: crate::audio::AudioPlayer::new(),
             command_palette: crate::app::types::CommandPaletteState::default(),
             pending_image_renders: Vec::new(),
+            last_kitty_render_tasks: Vec::new(),
             has_active_kitty_images: false,
 
             next_pane_id: 1,

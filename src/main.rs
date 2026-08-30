@@ -99,27 +99,28 @@ fn run_app(
 
         terminal.draw(|f| ui::draw(f, app))?;
 
-        if !app.pending_image_renders.is_empty() {
+        if app.pending_image_renders != app.last_kitty_render_tasks {
             let mut stdout = io::stdout();
-            let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut stdout);
-            for task in app.pending_image_renders.drain(..) {
-                if let Ok(bytes) = std::fs::read(&task.path) {
-                    let _ = wikid::graphics::kitty::render_kitty_image_at(
+            if !app.pending_image_renders.is_empty() {
+                let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut stdout);
+                for task in &app.pending_image_renders {
+                    let _ = wikid::graphics::kitty::render_kitty_image_from_path(
                         &mut stdout,
-                        &bytes,
+                        &task.path,
                         task.screen_x,
                         task.screen_y,
                         task.cols,
                         task.rows,
                     );
                 }
+                app.has_active_kitty_images = true;
+            } else if app.has_active_kitty_images {
+                let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut stdout);
+                app.has_active_kitty_images = false;
             }
-            app.has_active_kitty_images = true;
-        } else if app.has_active_kitty_images {
-            let mut stdout = io::stdout();
-            let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut stdout);
-            app.has_active_kitty_images = false;
+            app.last_kitty_render_tasks = app.pending_image_renders.clone();
         }
+        app.pending_image_renders.clear();
 
         let has_loading = app.feed.is_fetching
             || (app.feed.active && app.feed.items.is_empty())

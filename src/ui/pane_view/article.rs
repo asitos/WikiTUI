@@ -31,6 +31,51 @@ pub fn render_article_pane(
         (pane.viewport_height + 2).min(parsed_doc.lines.len().saturating_sub(view_start));
     let view_end = view_start + view_len;
 
+    let resolved_proto = crate::graphics::resolve_protocol(app.config.reader.image_protocol);
+    if resolved_proto.is_halfblocks() && app.config.reader.show_images {
+        let pane = &mut app.tabs[tab_idx].panes[pane_idx];
+        if let crate::app::PaneContent::ArticleText { parsed_doc, .. } = &pane.content {
+            let images_to_render: Vec<(String, usize, usize, std::path::PathBuf)> = parsed_doc
+                .images
+                .iter()
+                .filter(|img| {
+                    img.line_idx + img.height_lines > view_start && img.line_idx < view_end
+                })
+                .filter_map(|img| {
+                    let cols = img.width_cols.saturating_sub(2);
+                    let rows = img.height_lines;
+                    let key = (img.url.clone(), cols, rows);
+                    if !pane.halfblock_cache.contains_key(&key) {
+                        let path = pane
+                            .loaded_images
+                            .get(&img.url)
+                            .cloned()
+                            .or_else(|| crate::graphics::cache::get_cached_image_path(&img.url))?;
+                        Some((img.url.clone(), cols, rows, path))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            for (url, cols, rows, path) in images_to_render {
+                if let Ok(bytes) = std::fs::read(&path) {
+                    if let Some(hb_lines) =
+                        crate::graphics::halfblocks::render_halfblock_image_from_bytes(
+                            &bytes, cols, rows,
+                        )
+                    {
+                        pane.halfblock_cache.insert((url, cols, rows), hb_lines);
+                    }
+                }
+            }
+        }
+    }
+
+    let pane = &app.tabs[tab_idx].panes[pane_idx];
+    let crate::app::PaneContent::ArticleText { parsed_doc, .. } = &pane.content else {
+        return;
+    };
+
     let has_underline = if app.config.reader.underline_links {
         let first_link_idx = parsed_doc.links.partition_point(|link| {
             link.span_indices
@@ -177,24 +222,12 @@ pub fn render_article_pane(
             for img in &parsed_doc.images {
                 if line_idx >= img.line_idx && line_idx < img.line_idx + img.height_lines {
                     let rel_row = line_idx - img.line_idx;
-                    let img_path = pane
-                        .loaded_images
-                        .get(&img.url)
-                        .cloned()
-                        .or_else(|| crate::graphics::cache::get_cached_image_path(&img.url));
-                    if let Some(path) = img_path {
-                        if let Ok(bytes) = std::fs::read(&path) {
-                            if let Some(hb_lines) =
-                                crate::graphics::halfblocks::render_halfblock_image_from_bytes(
-                                    &bytes,
-                                    img.width_cols.saturating_sub(2),
-                                    img.height_lines,
-                                )
-                            {
-                                if let Some(hb_line) = hb_lines.get(rel_row) {
-                                    line = hb_line.clone();
-                                }
-                            }
+                    let cols = img.width_cols.saturating_sub(2);
+                    let rows = img.height_lines;
+                    let key = (img.url.clone(), cols, rows);
+                    if let Some(hb_lines) = pane.halfblock_cache.get(&key) {
+                        if let Some(hb_line) = hb_lines.get(rel_row) {
+                            line = hb_line.clone();
                         }
                     }
                     break;
