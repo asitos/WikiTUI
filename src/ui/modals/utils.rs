@@ -26,6 +26,20 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
+pub fn compute_centered_scroll(
+    cursor_idx: usize,
+    visible_rows: usize,
+    total_items: usize,
+) -> usize {
+    if total_items <= visible_rows || visible_rows == 0 {
+        0
+    } else {
+        cursor_idx
+            .saturating_sub(visible_rows / 2)
+            .min(total_items.saturating_sub(visible_rows))
+    }
+}
+
 pub fn create_modal_block(
     icon: &str,
     title: &str,

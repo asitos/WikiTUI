@@ -94,13 +94,7 @@ pub fn compute_toc_scroll(
     visible_rows: usize,
     total_headings: usize,
 ) -> usize {
-    if total_headings <= visible_rows || visible_rows == 0 {
-        0
-    } else {
-        selected_idx
-            .saturating_sub(visible_rows / 2)
-            .min(total_headings.saturating_sub(visible_rows))
-    }
+    crate::ui::modals::utils::compute_centered_scroll(selected_idx, visible_rows, total_headings)
 }
 
 pub fn get_toc_heading_at(

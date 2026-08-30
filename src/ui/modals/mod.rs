@@ -24,4 +24,4 @@ pub use onboarding::{compute_onboarding_modal_area, render_category_onboarding_m
 pub use search::{compute_search_modal_area, render_search_modal};
 pub use settings::{compute_settings_modal_area, render_settings_modal};
 pub use toc::{compute_toc_modal_area, render_toc_modal};
-pub use utils::centered_rect;
+pub use utils::{centered_rect, compute_centered_scroll};

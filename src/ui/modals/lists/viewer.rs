@@ -29,13 +29,7 @@ pub fn compute_list_viewer_scroll(
     visible_rows: usize,
     total_items: usize,
 ) -> usize {
-    if total_items <= visible_rows || visible_rows == 0 {
-        0
-    } else {
-        cursor_idx
-            .saturating_sub(visible_rows / 2)
-            .min(total_items.saturating_sub(visible_rows))
-    }
+    crate::ui::modals::utils::compute_centered_scroll(cursor_idx, visible_rows, total_items)
 }
 
 pub fn get_saved_lists_viewer_item_at(
