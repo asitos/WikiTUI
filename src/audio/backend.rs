@@ -44,13 +44,21 @@ pub fn spawn_player(
     let mpv_start = format!("--start={}", start_secs);
     let vlc_start = format!("--start-time={}", start_secs);
 
-    const USER_AGENT: &str = "wikid/2.6.0 (https://github.com/sharkthakftw/wikid)";
+    let is_http = url.starts_with("http://") || url.starts_with("https://");
+    const USER_AGENT: &str = concat!(
+        "wikid/",
+        env!("CARGO_PKG_VERSION"),
+        " (https://github.com/sharkthakftw/wikid)"
+    );
     let mpv_ua = format!("--user-agent={}", USER_AGENT);
     let vlc_ua = format!("--http-user-agent={}", USER_AGENT);
 
     match backend {
         AudioBackend::Mpv => {
-            let mut args = vec!["--no-video", "--really-quiet", &mpv_ua];
+            let mut args = vec!["--no-video", "--really-quiet"];
+            if is_http {
+                args.push(&mpv_ua);
+            }
             if start_secs > 0 {
                 args.push(&mpv_start);
             }
@@ -69,9 +77,10 @@ pub fn spawn_player(
                 "-stats",
                 "-loglevel",
                 "info",
-                "-user_agent",
-                USER_AGENT,
             ];
+            if is_http {
+                args.extend(["-user_agent", USER_AGENT]);
+            }
             if start_secs > 0 {
                 args.extend(["-ss", &start_str]);
             }
@@ -84,7 +93,10 @@ pub fn spawn_player(
                 .spawn()
         }
         AudioBackend::Cvlc => {
-            let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy", &vlc_ua];
+            let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy"];
+            if is_http {
+                args.push(&vlc_ua);
+            }
             if start_secs > 0 {
                 args.push(&vlc_start);
             }
@@ -97,7 +109,10 @@ pub fn spawn_player(
                 .spawn()
         }
         AudioBackend::Vlc => {
-            let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy", &vlc_ua];
+            let mut args = vec!["--play-and-exit", "--no-video", "-I", "dummy"];
+            if is_http {
+                args.push(&vlc_ua);
+            }
             if start_secs > 0 {
                 args.push(&vlc_start);
             }

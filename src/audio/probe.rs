@@ -1,18 +1,28 @@
 use std::process::{Command, Stdio};
 
 pub fn probe_exact_duration(url: &str) -> Option<u64> {
+    let is_http = url.starts_with("http://") || url.starts_with("https://");
+    const USER_AGENT: &str = concat!(
+        "wikid/",
+        env!("CARGO_PKG_VERSION"),
+        " (https://github.com/sharkthakftw/wikid)"
+    );
+
+    let mut ffprobe_args = vec![
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+    ];
+    if is_http {
+        ffprobe_args.extend(["-user_agent", USER_AGENT]);
+    }
+    ffprobe_args.push(url);
+
     if let Ok(output) = Command::new("ffprobe")
-        .args([
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=noprint_wrappers=1:nokey=1",
-            "-user_agent",
-            "wikid/2.6.0 (https://github.com/sharkthakftw/wikid)",
-            url,
-        ])
+        .args(&ffprobe_args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -55,7 +65,7 @@ pub fn probe_exact_duration(url: &str) -> Option<u64> {
             .args([
                 "-s",
                 "-A",
-                "wikid/2.6.0 (https://github.com/sharkthakftw/wikid)",
+                USER_AGENT,
                 &api_url,
             ])
             .stdin(Stdio::null())
