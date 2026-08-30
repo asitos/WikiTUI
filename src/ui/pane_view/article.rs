@@ -26,99 +26,150 @@ pub fn render_article_pane(
         return;
     };
 
-    let view_start = pane.scroll_offset;
+    let view_start = pane.scroll_offset.min(parsed_doc.lines.len());
     let view_len =
         (pane.viewport_height + 2).min(parsed_doc.lines.len().saturating_sub(view_start));
     let view_end = view_start + view_len;
 
-    let mut rendered_lines: Vec<Line<'static>> = parsed_doc
-        .lines
-        .iter()
-        .skip(view_start)
-        .take(view_len)
-        .cloned()
-        .collect();
-
-    if app.config.reader.underline_links {
+    let has_underline = if app.config.reader.underline_links {
         let first_link_idx = parsed_doc.links.partition_point(|link| {
             link.span_indices
                 .last()
                 .map(|&(l, _)| l < view_start)
                 .unwrap_or(true)
         });
+        parsed_doc.links[first_link_idx..]
+            .iter()
+            .take_while(|l| {
+                l.span_indices
+                    .first()
+                    .is_some_and(|&(first_line, _)| first_line < view_end)
+            })
+            .any(|l| !l.is_citation())
+    } else {
+        false
+    };
 
-        for link in &parsed_doc.links[first_link_idx..] {
-            let Some(&(first_line, _)) = link.span_indices.first() else {
-                continue;
-            };
-            if first_line >= view_end {
-                break;
-            }
-            if link.is_citation() {
-                continue;
-            }
-            for &(line_idx, span_idx) in &link.span_indices {
-                if line_idx >= view_start && line_idx < view_end {
-                    if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
-                        if let Some(span) = line.spans.get_mut(span_idx) {
-                            span.style = span.style.add_modifier(Modifier::UNDERLINED);
+    let has_selected_link = pane
+        .selected_link_idx
+        .and_then(|idx| parsed_doc.links.get(idx))
+        .is_some_and(|link| {
+            link.span_indices
+                .iter()
+                .any(|&(line_idx, _)| line_idx >= view_start && line_idx < view_end)
+        });
+
+    let has_search_matches =
+        if !pane.local_matches.is_empty() && !pane.local_search_query.trim().is_empty() {
+            let first_match_idx = pane
+                .local_matches
+                .partition_point(|m| m.line_idx < view_start);
+            first_match_idx < pane.local_matches.len()
+                && pane.local_matches[first_match_idx].line_idx < view_end
+        } else {
+            false
+        };
+
+    if !has_underline && !has_selected_link && !has_search_matches {
+        let borrowed_lines: Vec<Line<'_>> = parsed_doc.lines[view_start..view_end]
+            .iter()
+            .map(|line| {
+                let spans: Vec<Span<'_>> = line
+                    .spans
+                    .iter()
+                    .map(|s| Span::styled(s.content.as_ref(), s.style))
+                    .collect();
+                let mut l = Line::from(spans);
+                l.alignment = line.alignment;
+                l
+            })
+            .collect();
+        let paragraph = Paragraph::new(borrowed_lines).block(block);
+        f.render_widget(paragraph, rect);
+    } else {
+        let mut rendered_lines: Vec<Line<'static>> = parsed_doc.lines[view_start..view_end].to_vec();
+
+        if app.config.reader.underline_links {
+            let first_link_idx = parsed_doc.links.partition_point(|link| {
+                link.span_indices
+                    .last()
+                    .map(|&(l, _)| l < view_start)
+                    .unwrap_or(true)
+            });
+
+            for link in &parsed_doc.links[first_link_idx..] {
+                let Some(&(first_line, _)) = link.span_indices.first() else {
+                    continue;
+                };
+                if first_line >= view_end {
+                    break;
+                }
+                if link.is_citation() {
+                    continue;
+                }
+                for &(line_idx, span_idx) in &link.span_indices {
+                    if line_idx >= view_start && line_idx < view_end {
+                        if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
+                            if let Some(span) = line.spans.get_mut(span_idx) {
+                                span.style = span.style.add_modifier(Modifier::UNDERLINED);
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    if let Some(link) = pane
-        .selected_link_idx
-        .and_then(|idx| parsed_doc.links.get(idx))
-    {
-        for &(line_idx, span_idx) in &link.span_indices {
-            if line_idx >= view_start && line_idx < view_end {
-                if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
-                    if let Some(span) = line.spans.get_mut(span_idx) {
-                        span.style = Style::default()
-                            .fg(theme::VIOLET)
-                            .bold()
-                            .add_modifier(Modifier::UNDERLINED);
+        if let Some(link) = pane
+            .selected_link_idx
+            .and_then(|idx| parsed_doc.links.get(idx))
+        {
+            for &(line_idx, span_idx) in &link.span_indices {
+                if line_idx >= view_start && line_idx < view_end {
+                    if let Some(line) = rendered_lines.get_mut(line_idx - view_start) {
+                        if let Some(span) = line.spans.get_mut(span_idx) {
+                            span.style = Style::default()
+                                .fg(theme::VIOLET)
+                                .bold()
+                                .add_modifier(Modifier::UNDERLINED);
+                        }
                     }
                 }
             }
         }
-    }
 
-    if !pane.local_matches.is_empty() && !pane.local_search_query.trim().is_empty() {
-        let query_len = pane.local_search_query.len();
-        let first_match_idx = pane
-            .local_matches
-            .partition_point(|m| m.line_idx < view_start);
-        let selected_match = pane
-            .selected_match_idx
-            .and_then(|idx| pane.local_matches.get(idx));
+        if !pane.local_matches.is_empty() && !pane.local_search_query.trim().is_empty() {
+            let query_len = pane.local_search_query.len();
+            let first_match_idx = pane
+                .local_matches
+                .partition_point(|m| m.line_idx < view_start);
+            let selected_match = pane
+                .selected_match_idx
+                .and_then(|idx| pane.local_matches.get(idx));
 
-        let mut match_ptr = first_match_idx;
-        for (local_idx, line) in rendered_lines.iter_mut().enumerate() {
-            let line_idx = view_start + local_idx;
-            let mut line_matches = Vec::new();
+            let mut match_ptr = first_match_idx;
+            for (local_idx, line) in rendered_lines.iter_mut().enumerate() {
+                let line_idx = view_start + local_idx;
+                let mut line_matches = Vec::new();
 
-            while match_ptr < pane.local_matches.len()
-                && pane.local_matches[match_ptr].line_idx == line_idx
-            {
-                let m = &pane.local_matches[match_ptr];
-                let is_active = selected_match
-                    .is_some_and(|sm| sm.line_idx == m.line_idx && sm.char_offset == m.char_offset);
-                line_matches.push((m.char_offset, m.char_offset + query_len, is_active));
-                match_ptr += 1;
-            }
+                while match_ptr < pane.local_matches.len()
+                    && pane.local_matches[match_ptr].line_idx == line_idx
+                {
+                    let m = &pane.local_matches[match_ptr];
+                    let is_active = selected_match
+                        .is_some_and(|sm| sm.line_idx == m.line_idx && sm.char_offset == m.char_offset);
+                    line_matches.push((m.char_offset, m.char_offset + query_len, is_active));
+                    match_ptr += 1;
+                }
 
-            if !line_matches.is_empty() {
-                apply_search_highlights_to_line(line, &line_matches);
+                if !line_matches.is_empty() {
+                    apply_search_highlights_to_line(line, &line_matches);
+                }
             }
         }
-    }
 
-    let paragraph = Paragraph::new(rendered_lines).block(block);
-    f.render_widget(paragraph, rect);
+        let paragraph = Paragraph::new(rendered_lines).block(block);
+        f.render_widget(paragraph, rect);
+    }
 
     render_scroll_indicator(
         f,
