@@ -222,22 +222,21 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
         let titles: Vec<String> = displayed_recent.iter().map(|(t, _)| t.clone()).collect();
         let hints = crate::app::recent::compute_semantic_hints(&titles);
 
-        let items: Vec<(String, String, String, Option<crate::app::recent::SemanticHint>)> = displayed_recent
+        let items: Vec<(String, String, Option<crate::app::recent::SemanticHint>)> = displayed_recent
             .into_iter()
             .zip(hints)
-            .enumerate()
-            .map(|(idx, ((title, ts), hint))| {
+            .map(|((title, ts), hint)| {
                 let time_str = ts
                     .map(crate::app::recent::format_relative_time)
                     .unwrap_or_default();
-                (format!("{}. ", idx + 1), title, time_str, hint)
+                (title, time_str, hint)
             })
             .collect();
 
         let max_item_width = items
             .iter()
-            .map(|(p, t, time_str, _)| {
-                let base_w = p.len() + unicode_width::UnicodeWidthStr::width(t.as_str());
+            .map(|(t, time_str, _)| {
+                let base_w = unicode_width::UnicodeWidthStr::width(t.as_str());
                 if !time_str.is_empty() {
                     base_w + 3 + unicode_width::UnicodeWidthStr::width(time_str.as_str())
                 } else {
@@ -249,10 +248,9 @@ pub fn render_launch_screen(f: &mut Frame, app: &App, rect: Rect, block: Block) 
 
         let block_pad = (inner_width.saturating_sub(max_item_width)) / 2;
 
-        for (num_prefix, title, time_str, hint) in items {
+        for (title, time_str, hint) in items {
             let mut line_spans = vec![
                 Span::raw(" ".repeat(block_pad)),
-                Span::styled(num_prefix, Style::default().fg(theme::GREY)),
             ];
 
             if let Some(h) = hint {

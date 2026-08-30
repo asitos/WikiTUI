@@ -143,27 +143,16 @@ impl App {
         } else {
             (digit as usize) - ('1' as usize)
         };
-        let is_empty = matches!(self.active_pane().content, PaneContent::Empty);
-        let target_title = if is_empty {
-            let recent = self.get_continue_reading_articles();
-            if idx < recent.len() {
-                self.active_pane_mut().selected_idx = idx;
-                Some(recent[idx].clone())
+        let pane = self.active_pane_mut();
+        let target_title = if let PaneContent::SearchResults { items, .. } = &mut pane.content {
+            if idx < items.len() {
+                pane.selected_idx = idx;
+                Some(items[idx].title.clone())
             } else {
                 None
             }
         } else {
-            let pane = self.active_pane_mut();
-            if let PaneContent::SearchResults { items, .. } = &mut pane.content {
-                if idx < items.len() {
-                    pane.selected_idx = idx;
-                    Some(items[idx].title.clone())
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
+            None
         };
 
         if let Some(title) = target_title {
