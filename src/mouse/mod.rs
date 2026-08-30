@@ -21,7 +21,9 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent, term_width: u16, ter
         }
         MouseEventKind::Down(MouseButton::Left) => {
             if !handle_scrollbar_down(app, mouse.column, mouse.row, term_width, term_height) {
-                let alt = mouse.modifiers.contains(crossterm::event::KeyModifiers::ALT);
+                let alt = mouse
+                    .modifiers
+                    .contains(crossterm::event::KeyModifiers::ALT);
                 handle_left_click(app, mouse.column, mouse.row, term_width, term_height, alt);
             }
         }

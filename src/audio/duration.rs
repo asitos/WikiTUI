@@ -31,9 +31,10 @@ pub fn parse_duration_to_secs(dur_str: &str) -> Option<u64> {
             let parts: Vec<&str> = token.split(':').collect();
             match parts.len() {
                 2 => {
-                    if let (Ok(m), Ok(sec)) =
-                        (parts[0].trim().parse::<u64>(), parts[1].trim().parse::<u64>())
-                    {
+                    if let (Ok(m), Ok(sec)) = (
+                        parts[0].trim().parse::<u64>(),
+                        parts[1].trim().parse::<u64>(),
+                    ) {
                         return Some(m * 60 + sec);
                     }
                 }

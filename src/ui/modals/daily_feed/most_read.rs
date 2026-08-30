@@ -20,7 +20,8 @@ pub fn render_most_read_modal(
 ) {
     let total = entries.len();
     let inner_height = modal_area.height.saturating_sub(2) as usize;
-    let scroll = crate::ui::modals::utils::compute_centered_scroll(selected_idx, inner_height, total);
+    let scroll =
+        crate::ui::modals::utils::compute_centered_scroll(selected_idx, inner_height, total);
 
     let mut lines = Vec::new();
     if entries.is_empty() {

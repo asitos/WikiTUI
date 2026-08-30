@@ -133,7 +133,9 @@ pub fn fetch_article_wikipedia(
                 .unwrap_or("");
 
             if body_html.trim().is_empty() {
-                return Err(super::ApiError::NotFound("article HTML content not found".to_string()));
+                return Err(super::ApiError::NotFound(
+                    "article HTML content not found".to_string(),
+                ));
             }
 
             let combined_html = if cat_html.trim().is_empty() {

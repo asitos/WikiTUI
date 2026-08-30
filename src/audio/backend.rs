@@ -35,11 +35,7 @@ pub fn has_binary(bin: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn spawn_player(
-    backend: AudioBackend,
-    url: &str,
-    start_secs: u64,
-) -> std::io::Result<Child> {
+pub fn spawn_player(backend: AudioBackend, url: &str, start_secs: u64) -> std::io::Result<Child> {
     let start_str = start_secs.to_string();
     let mpv_start = format!("--start={}", start_secs);
     let vlc_start = format!("--start-time={}", start_secs);
@@ -71,13 +67,7 @@ pub fn spawn_player(
                 .spawn()
         }
         AudioBackend::Ffplay => {
-            let mut args = vec![
-                "-nodisp",
-                "-autoexit",
-                "-stats",
-                "-loglevel",
-                "info",
-            ];
+            let mut args = vec!["-nodisp", "-autoexit", "-stats", "-loglevel", "info"];
             if is_http {
                 args.extend(["-user_agent", USER_AGENT]);
             }

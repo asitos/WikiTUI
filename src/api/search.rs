@@ -49,8 +49,9 @@ pub fn search_wikipedia(
         .call()
         .map_err(|e| super::ApiError::Network(e.to_string()))?;
 
-    let search_resp: WikiGenSearchResponse =
-        res.into_json().map_err(|e| super::ApiError::Parse(e.to_string()))?;
+    let search_resp: WikiGenSearchResponse = res
+        .into_json()
+        .map_err(|e| super::ApiError::Parse(e.to_string()))?;
 
     let mut items = Vec::new();
     if let Some(q) = search_resp.query {

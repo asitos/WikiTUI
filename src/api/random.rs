@@ -34,8 +34,9 @@ pub fn fetch_random_article(
         .call()
         .map_err(|e| super::ApiError::Network(e.to_string()))?;
 
-    let rand_resp: WikiRandomResponse =
-        res.into_json().map_err(|e| super::ApiError::Parse(e.to_string()))?;
+    let rand_resp: WikiRandomResponse = res
+        .into_json()
+        .map_err(|e| super::ApiError::Parse(e.to_string()))?;
 
     let title = rand_resp
         .query

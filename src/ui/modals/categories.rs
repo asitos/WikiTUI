@@ -38,7 +38,8 @@ pub fn render_categories_modal(f: &mut Frame, app: &App, size: Rect) {
 
     let inner_height = modal_area.height.saturating_sub(2) as usize;
     let selected_idx = app.categories_modal.cursor_idx.min(total.saturating_sub(1));
-    let scroll = crate::ui::modals::utils::compute_centered_scroll(selected_idx, inner_height, total);
+    let scroll =
+        crate::ui::modals::utils::compute_centered_scroll(selected_idx, inner_height, total);
 
     let mut lines = Vec::new();
     if categories.is_empty() {

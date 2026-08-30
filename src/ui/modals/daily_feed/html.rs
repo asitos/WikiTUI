@@ -10,10 +10,10 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
     let mut current_link: Option<(usize, String)> = None;
 
     let flush = |chunks: &mut Vec<StyledChunk>,
-                     current_text: &mut String,
-                     in_bold: bool,
-                     in_italic: bool,
-                     current_link: &Option<(usize, String)>| {
+                 current_text: &mut String,
+                 in_bold: bool,
+                 in_italic: bool,
+                 current_link: &Option<(usize, String)>| {
         if current_text.is_empty() {
             return;
         }
@@ -65,23 +65,53 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
 
             match tag_name {
                 "b" | "strong" => {
-                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    flush(
+                        &mut chunks,
+                        &mut current_text,
+                        in_bold,
+                        in_italic,
+                        &current_link,
+                    );
                     in_bold = true;
                 }
                 "/b" | "/strong" => {
-                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    flush(
+                        &mut chunks,
+                        &mut current_text,
+                        in_bold,
+                        in_italic,
+                        &current_link,
+                    );
                     in_bold = false;
                 }
                 "i" | "em" => {
-                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    flush(
+                        &mut chunks,
+                        &mut current_text,
+                        in_bold,
+                        in_italic,
+                        &current_link,
+                    );
                     in_italic = true;
                 }
                 "/i" | "/em" => {
-                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    flush(
+                        &mut chunks,
+                        &mut current_text,
+                        in_bold,
+                        in_italic,
+                        &current_link,
+                    );
                     in_italic = false;
                 }
                 "a" => {
-                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    flush(
+                        &mut chunks,
+                        &mut current_text,
+                        in_bold,
+                        in_italic,
+                        &current_link,
+                    );
                     let title = if let Some(pos) = tag.find("title=\"") {
                         let rest = &tag[pos + 7..];
                         rest.split('"').next().unwrap_or("").to_string()
@@ -96,7 +126,13 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
                     current_link = Some((l_idx, title));
                 }
                 "/a" => {
-                    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+                    flush(
+                        &mut chunks,
+                        &mut current_text,
+                        in_bold,
+                        in_italic,
+                        &current_link,
+                    );
                     current_link = None;
                 }
                 _ => {}
@@ -107,7 +143,13 @@ pub fn parse_story_html(input: &str) -> (Vec<StyledChunk>, Vec<String>) {
         current_text.push(c);
     }
 
-    flush(&mut chunks, &mut current_text, in_bold, in_italic, &current_link);
+    flush(
+        &mut chunks,
+        &mut current_text,
+        in_bold,
+        in_italic,
+        &current_link,
+    );
     (chunks, links)
 }
 

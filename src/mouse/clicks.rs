@@ -129,9 +129,11 @@ fn handle_modal_left_click(
             return true;
         }
 
-        if let Some((idx, item, val_start_x)) =
-            crate::ui::modals::settings::get_setting_row_at(inner, row, app.settings_modal.cursor_idx)
-        {
+        if let Some((idx, item, val_start_x)) = crate::ui::modals::settings::get_setting_row_at(
+            inner,
+            row,
+            app.settings_modal.cursor_idx,
+        ) {
             app.settings_modal.cursor_idx = idx;
             let is_numeric = matches!(
                 item,
@@ -510,13 +512,7 @@ fn handle_workspace_left_click(
     }
 }
 
-pub fn handle_mouse_move(
-    app: &mut App,
-    col: u16,
-    row: u16,
-    term_width: u16,
-    term_height: u16,
-) {
+pub fn handle_mouse_move(app: &mut App, col: u16, row: u16, term_width: u16, term_height: u16) {
     if app.input_mode != InputMode::Normal {
         return;
     }

@@ -25,9 +25,9 @@ impl App {
         };
 
         if let Some((play_title, track_url, duration)) = track_info {
-            let success =
-                self.audio_player
-                    .play(&play_title, &track_url, duration.as_deref());
+            let success = self
+                .audio_player
+                .play(&play_title, &track_url, duration.as_deref());
             if !success {
                 if self.audio_player.backend.is_none() {
                     self.set_status_message(

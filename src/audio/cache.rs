@@ -90,7 +90,11 @@ pub fn safe_audio_filename(url: &str) -> String {
 pub fn get_cached_audio_path(url: &str) -> Option<PathBuf> {
     let filename = safe_audio_filename(url);
     let path = crate::paths::audio_cache_dir().join(&filename);
-    if path.exists() && std::fs::metadata(&path).map(|m| m.len() > 1024).unwrap_or(false) {
+    if path.exists()
+        && std::fs::metadata(&path)
+            .map(|m| m.len() > 1024)
+            .unwrap_or(false)
+    {
         Some(path)
     } else {
         None

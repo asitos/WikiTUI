@@ -44,12 +44,7 @@ pub fn probe_exact_duration(url: &str) -> Option<u64> {
             file_name
         );
         if let Ok(output) = Command::new("curl")
-            .args([
-                "-s",
-                "-A",
-                USER_AGENT,
-                &api_url,
-            ])
+            .args(["-s", "-A", USER_AGENT, &api_url])
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())

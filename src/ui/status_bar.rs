@@ -429,7 +429,10 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
 
     let display_title = if title_budget > 0 && !raw_title.is_empty() {
         if raw_title.chars().count() > title_budget {
-            let truncated: String = raw_title.chars().take(title_budget.saturating_sub(1)).collect();
+            let truncated: String = raw_title
+                .chars()
+                .take(title_budget.saturating_sub(1))
+                .collect();
             Some(format!("{}…", truncated))
         } else {
             Some(raw_title.to_string())
@@ -440,7 +443,8 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
 
     let title_len = display_title.as_ref().map_or(0, |t| t.chars().count() + 2);
 
-    let show_hint = available_width > icon.chars().count() + title_len + min_bar_width + hint.len() + 4;
+    let show_hint =
+        available_width > icon.chars().count() + title_len + min_bar_width + hint.len() + 4;
     let hint_len = if show_hint { hint.len() + 2 } else { 0 };
 
     let bar_width = available_width
@@ -477,9 +481,7 @@ fn build_audio_progress_bar(app: &App, available_width: usize) -> Vec<Span<'stat
     if let Some(t) = display_title {
         spans.push(Span::styled(
             format!("{}  ", t),
-            Style::default()
-                .fg(theme::FG)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(theme::FG).add_modifier(Modifier::BOLD),
         ));
     }
 
