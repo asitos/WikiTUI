@@ -246,6 +246,7 @@ pub fn render_article_pane(
         rendered_lines.push(line);
     }
 
+    let inner_rect = block.inner(rect);
     let paragraph = Paragraph::new(rendered_lines).block(block);
     f.render_widget(paragraph, rect);
 
@@ -263,28 +264,32 @@ pub fn render_article_pane(
 
                 if let Some(path) = img_path {
                     if resolved_proto.is_kitty() {
-                        let (screen_y, visible_rows, top_clipped, bot_clipped) = if img_top < view_start {
-                            let top_clipped = view_start - img_top;
-                            let rows = img.height_lines.saturating_sub(top_clipped);
-                            let visible = (rows as u16).min(pane.viewport_height as u16);
+                        let img_inner_top = img_top + 1;
+                        let img_inner_height = img.height_lines.saturating_sub(2);
+                        
+                        let (screen_y, visible_rows, top_clipped, bot_clipped) = if img_inner_top < view_start {
+                            let top_clipped = view_start - img_inner_top;
+                            let rows = img_inner_height.saturating_sub(top_clipped);
+                            let visible = (rows as u16).min(inner_rect.height);
                             let bot_clipped = rows.saturating_sub(visible as usize);
-                            (rect.y + 1, visible, top_clipped, bot_clipped)
+                            (inner_rect.y, visible, top_clipped, bot_clipped)
                         } else {
-                            let rel_line = img_top - view_start;
-                            let max_rows = pane.viewport_height.saturating_sub(rel_line);
-                            let visible = (img.height_lines as u16).min(max_rows as u16);
-                            let bot_clipped = img.height_lines.saturating_sub(visible as usize);
+                            let rel_line = img_inner_top - view_start;
+                            let max_rows = inner_rect.height.saturating_sub(rel_line as u16);
+                            let visible = (img_inner_height as u16).min(max_rows);
+                            let bot_clipped = img_inner_height.saturating_sub(visible as usize);
                             (
-                                rect.y + 1 + (rel_line as u16),
+                                inner_rect.y + (rel_line as u16),
                                 visible,
                                 0,
                                 bot_clipped,
                             )
                         };
-                        let inner_width = rect.width.saturating_sub(2);
-                        let visible_cols = (img.width_cols as u16).min(inner_width);
-                        let left_pad = (inner_width.saturating_sub(visible_cols)) / 2;
-                        let screen_x = rect.x + 1 + left_pad;
+
+                        let visible_cols = (img.width_cols.saturating_sub(2) as u16).min(inner_rect.width.saturating_sub(2));
+                        let left_pad = inner_rect.width.saturating_sub(img.width_cols as u16) / 2;
+                        let screen_x = inner_rect.x + left_pad + 1;
+
                         if visible_rows > 0 && visible_cols > 0 {
                             app.graphics
                                 .pending_image_renders
