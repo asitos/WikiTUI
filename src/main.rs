@@ -101,12 +101,12 @@ fn run_app(
 
         if app.graphics.pending_image_renders != app.graphics.last_kitty_render_tasks {
             let mut stdout = io::stdout();
-            
-            use std::io::Write;
+
             use crossterm::ExecutableCommand;
-            
+            use std::io::Write;
+
             let _ = stdout.execute(crossterm::cursor::SavePosition);
-            
+
             if !app.graphics.pending_image_renders.is_empty() {
                 let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut stdout);
                 for task in &app.graphics.pending_image_renders {
@@ -128,10 +128,10 @@ fn run_app(
                 let _ = wikid::graphics::kitty::clear_all_kitty_images(&mut stdout);
                 app.graphics.has_active_kitty_images = false;
             }
-            
+
             let _ = stdout.execute(crossterm::cursor::RestorePosition);
             let _ = stdout.flush();
-            
+
             app.graphics.last_kitty_render_tasks = app.graphics.pending_image_renders.clone();
         }
         app.graphics.pending_image_renders.clear();

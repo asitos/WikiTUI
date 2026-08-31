@@ -84,7 +84,7 @@ pub fn render_kitty_image_from_path<W: Write>(
             }
         }
         let b64 = base64_encode(&rgba);
-        
+
         let mut id_guard = KITTY_NEXT_ID.lock().unwrap();
         let id = *id_guard;
         *id_guard += 1;
@@ -94,10 +94,7 @@ pub fn render_kitty_image_from_path<W: Write>(
         place_kitty_image(writer, id, &args, h)?;
         cache.insert(
             args.path.to_path_buf(),
-            CachedKittyPayload {
-                height: h,
-                id,
-            },
+            CachedKittyPayload { height: h, id },
         );
     }
 
