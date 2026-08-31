@@ -1,12 +1,8 @@
-## new feature(s)
-- inline article image rendering powered by the **kitty graphics protocol** with universal **unicode halfblocks** fallback: [a165199](https://github.com/sharkthakftw/wikid/commit/a165199929cbbe7fb40c109fb61b40edc0ba6861)
-- async image fetching and local caching: [0775ef6](https://github.com/sharkthakftw/wikid/commit/0775ef66dd29341344fc100498c2317d27b8c5b0)
-- keybind (`I`) and settings toggle for image rendering: [e2efffb](https://github.com/sharkthakftw/wikid/commit/e2efffb164f20f91ed5e91f16d4f1666c3e3080e) [8767843](https://github.com/sharkthakftw/wikid/commit/876784385aa7dbf7622dc40c07800ba85d26d441)
-- responsive aspect ratio preservation: [4986eca](https://github.com/sharkthakftw/wikid/commit/4986eca07bf233aaa73fdb759bb234a95aef293d)
 ## bug fix(es)
-- eliminate graphics flickering and cpu spikes with diffed rendering & in-memory payload cache: [ea576f1](https://github.com/sharkthakftw/wikid/commit/ea576f14a315acdfd5acdbb83f858305a219a0ad)
-- composite transparent png backgrounds onto white to for readability on dark terminal themes: [168fd82](https://github.com/sharkthakftw/wikid/commit/168fd82edfa428745a5bd7b742e041bcdcb6eaec)
-- optimised viewport link underline traversal with advancing pointer: [7395bfe](https://github.com/sharkthakftw/wikid/commit/7395bfe66885bf47dfa60d82feae8f07abfe3c4b)
-- use `Cow` on `decode_html_entities` to eliminate allocations on clean strings: [d07bb03](https://github.com/sharkthakftw/wikid/commit/d07bb03a7bbc9e5679042db07f9be945312f6f1f)
-## qol/style change(s)
-- horizontally center images, placeholder boxes, and caption lines in article view: [02f2162](https://github.com/sharkthakftw/wikid/commit/02f216227456b9f0765cfa86ba2dfe2d880d60f2)
+- use `CatmullRom` filter for sharper halfblock image resampling: [df24c9c](https://github.com/sharkthakftw/wikid/commit/df24c9cced6f9b988b0e01ecd69a685474708be0)
+### by [asitos](https://github.com/asitos) in [#7](https://github.com/sharkthakftw/wikid/pull/7)
+- fix kitty graphics protocol placement
+- prevent aspect-ratio distortion during scrolling
+- preserve terminal cursor position during hardware image drawing
+- align image dimensions to `block.inner(rect)` to prevent overlap with borders
+- filter out `noviewer` and math fallback image tags during article parsing
