@@ -106,11 +106,15 @@ fn run_app(
                 for task in &app.graphics.pending_image_renders {
                     let _ = wikid::graphics::kitty::render_kitty_image_from_path(
                         &mut stdout,
-                        &task.path,
-                        task.screen_x,
-                        task.screen_y,
-                        task.cols,
-                        task.rows,
+                        wikid::graphics::kitty::KittyImageArgs {
+                            path: &task.path,
+                            screen_x: task.screen_x,
+                            screen_y: task.screen_y,
+                            cols: task.cols,
+                            rows: task.rows,
+                            crop_top_lines: task.crop_top_lines,
+                            crop_bot_lines: task.crop_bot_lines,
+                        },
                     );
                 }
                 app.graphics.has_active_kitty_images = true;

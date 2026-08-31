@@ -5,6 +5,8 @@ pub struct ImageRenderTask {
     pub screen_y: u16,
     pub cols: u16,
     pub rows: u16,
+    pub crop_top_lines: u16,
+    pub crop_bot_lines: u16,
 }
 
 #[derive(Clone, Debug, PartialEq)]

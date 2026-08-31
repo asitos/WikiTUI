@@ -20,9 +20,7 @@ pub fn fetch_and_cache_image(
 
     let mut reader = response.into_reader();
     let mut bytes = Vec::new();
-    reader
-        .read_to_end(&mut bytes)
-        .map_err(|e| e.to_string())?;
+    reader.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
 
     save_cached_image(url, &bytes).map_err(|e| e.to_string())
 }

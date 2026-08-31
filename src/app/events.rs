@@ -71,8 +71,11 @@ impl App {
                         } else {
                             None
                         };
-                        let image_urls: Vec<String> =
-                            parsed_doc.images.iter().map(|img| img.url.clone()).collect();
+                        let image_urls: Vec<String> = parsed_doc
+                            .images
+                            .iter()
+                            .map(|img| img.url.clone())
+                            .collect();
                         pane.content = PaneContent::ArticleText {
                             title,
                             raw_html: content,
