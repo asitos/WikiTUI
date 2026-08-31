@@ -62,7 +62,7 @@ pub fn render_halfblock_image_from_bytes(
     let resized = img.resize_exact(
         target_cols as u32,
         target_px_height as u32,
-        image::imageops::FilterType::Triangle,
+        image::imageops::FilterType::CatmullRom,
     );
     let rgba = resized.to_rgba8();
     let pixels: Vec<RgbPixel> = rgba
