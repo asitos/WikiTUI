@@ -49,16 +49,22 @@ pub(crate) fn render_image_node(
                 let pad = inner_width - label.chars().count();
                 let left_pad = pad / 2;
                 let right_pad = pad - left_pad;
-                format!("│{}{}{}│", " ".repeat(left_pad), label, " ".repeat(right_pad))
+                format!(
+                    "│{}{}{}│",
+                    " ".repeat(left_pad),
+                    label,
+                    " ".repeat(right_pad)
+                )
             } else {
                 format!("│{}│", " ".repeat(inner_width))
             }
         } else {
             format!("│{}│", " ".repeat(inner_width))
         };
-        let mut line = Line::from(vec![
-            Span::styled(content, Style::default().fg(crate::theme::GREY))
-        ]);
+        let mut line = Line::from(vec![Span::styled(
+            content,
+            Style::default().fg(crate::theme::GREY),
+        )]);
         line.alignment = Some(ratatui::layout::Alignment::Center);
         doc.lines.push(line);
     }
@@ -66,9 +72,12 @@ pub(crate) fn render_image_node(
     if let Some(cap) = caption {
         if !cap.trim().is_empty() {
             let cap_line = format!("▲ {}", cap.trim());
-            let mut line = Line::from(vec![
-                Span::styled(cap_line, Style::default().fg(crate::theme::GREY).add_modifier(Modifier::ITALIC))
-            ]);
+            let mut line = Line::from(vec![Span::styled(
+                cap_line,
+                Style::default()
+                    .fg(crate::theme::GREY)
+                    .add_modifier(Modifier::ITALIC),
+            )]);
             line.alignment = Some(ratatui::layout::Alignment::Center);
             doc.lines.push(line);
         }
@@ -125,7 +134,12 @@ fn extract_image_attributes(
     tag: &HTMLTag,
     parser: &Parser,
 ) -> (String, Option<String>, Option<usize>, Option<usize>) {
-    if let Some(cls) = tag.attributes().get("class").flatten().map(|b| b.as_utf8_str()) {
+    if let Some(cls) = tag
+        .attributes()
+        .get("class")
+        .flatten()
+        .map(|b| b.as_utf8_str())
+    {
         if cls.contains("mwe-math") || cls.contains("math-fallback") || cls.contains("noviewer") {
             return (String::new(), None, None, None);
         }
@@ -139,7 +153,12 @@ fn extract_image_attributes(
 }
 
 fn parse_img_tag(tag: &HTMLTag) -> (String, Option<String>, Option<usize>, Option<usize>) {
-    if let Some(cls) = tag.attributes().get("class").flatten().map(|b| b.as_utf8_str()) {
+    if let Some(cls) = tag
+        .attributes()
+        .get("class")
+        .flatten()
+        .map(|b| b.as_utf8_str())
+    {
         if cls.contains("mwe-math") || cls.contains("math-fallback") || cls.contains("noviewer") {
             return (String::new(), None, None, None);
         }

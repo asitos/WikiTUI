@@ -46,11 +46,10 @@ pub fn render_article_pane(
                     let rows = img.height_lines;
                     let key = (img.url.clone(), cols, rows);
                     if !pane.halfblock_cache.contains_key(&key) {
-                        let path = pane
-                            .loaded_images
-                            .get(&img.url)
-                            .cloned()
-                            .or_else(|| crate::graphics::cache::get_cached_image_path(&img.url))?;
+                        let path =
+                            pane.loaded_images.get(&img.url).cloned().or_else(|| {
+                                crate::graphics::cache::get_cached_image_path(&img.url)
+                            })?;
                         Some((img.url.clone(), cols, rows, path))
                     } else {
                         None
@@ -264,19 +263,24 @@ pub fn render_article_pane(
 
                 if let Some(path) = img_path {
                     if resolved_proto.is_kitty() {
-                        let (screen_y, visible_rows) = if img_top < view_start {
+                        let (screen_y, visible_rows, top_clipped, bot_clipped) = if img_top < view_start {
                             let top_clipped = view_start - img_top;
                             let rows = img.height_lines.saturating_sub(top_clipped);
-                            (rect.y + 1, (rows as u16).min(pane.viewport_height as u16))
+                            let visible = (rows as u16).min(pane.viewport_height as u16);
+                            let bot_clipped = rows.saturating_sub(visible as usize);
+                            (rect.y + 1, visible, top_clipped, bot_clipped)
                         } else {
                             let rel_line = img_top - view_start;
                             let max_rows = pane.viewport_height.saturating_sub(rel_line);
+                            let visible = (img.height_lines as u16).min(max_rows as u16);
+                            let bot_clipped = img.height_lines.saturating_sub(visible as usize);
                             (
                                 rect.y + 1 + (rel_line as u16),
-                                (img.height_lines as u16).min(max_rows as u16),
+                                visible,
+                                0,
+                                bot_clipped,
                             )
                         };
-
                         let inner_width = rect.width.saturating_sub(2);
                         let visible_cols = (img.width_cols as u16).min(inner_width);
                         let left_pad = (inner_width.saturating_sub(visible_cols)) / 2;
@@ -290,6 +294,8 @@ pub fn render_article_pane(
                                     screen_y,
                                     cols: visible_cols,
                                     rows: visible_rows,
+                                    crop_top_lines: top_clipped as u16,
+                                    crop_bot_lines: bot_clipped as u16,
                                 });
                         }
                     }
